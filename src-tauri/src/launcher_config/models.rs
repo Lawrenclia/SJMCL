@@ -92,7 +92,7 @@ pub enum GarbageCollector {
 // assert!(config.access("114514").is_err())
 //
 structstruck::strike! {
-  #[strikethrough[derive(Partial, Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]]
+  #[strikethrough[derive(Partial, Debug, PartialEq, Clone, Deserialize, Serialize)]]
   #[strikethrough[serde(rename_all = "camelCase")]]
   #[strikethrough[derive(SmartDefault)]]
   #[strikethrough[serde(default)]]
@@ -184,7 +184,7 @@ pub enum ProxyType {
 }
 
 structstruck::strike! {
-  #[strikethrough[derive(Partial, Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]]
+  #[strikethrough[derive(Partial, Debug, PartialEq, Clone, Deserialize, Serialize)]]
   #[strikethrough[serde(rename_all = "camelCase")]]
   #[strikethrough[derive(SmartDefault)]]
   #[strikethrough[serde(default)]]
@@ -354,6 +354,14 @@ structstruck::strike! {
         #[default([true, true])]
         pub accordion_states: [bool; 2],
       },
+    },
+    pub ai_chat_config: struct {
+      pub enabled: bool,
+      pub base_url: String,
+      pub api_key: String,
+      pub model: String,
+      #[default = 0.7]
+      pub response_temperature: f32,
     }
   }
 }
