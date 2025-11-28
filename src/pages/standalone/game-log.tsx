@@ -29,11 +29,28 @@ import styles from "@/styles/game-log.module.css";
 import { clamp } from "@/utils/math";
 import { parseIdFromWindowLabel } from "@/utils/window";
 
-type LogLevel = "FATAL" | "ERROR" | "WARN" | "INFO" | "DEBUG";
+export type LogLevel = "FATAL" | "ERROR" | "WARN" | "INFO" | "DEBUG";
 type LogSelectionRange = { start: number; end: number };
 type LogSelectionState = {
   range: LogSelectionRange | null;
   selecting: boolean;
+};
+
+export const getLogLevel = (
+  log: string,
+  lastLevel: LogLevel = "INFO"
+): LogLevel => {
+  const match = log.match(
+    /\[\d{2}:\d{2}:\d{2}]\s+\[.*?\/(INFO|WARN|ERROR|DEBUG|FATAL)]/i
+  );
+
+  if (match) return match[1].toUpperCase() as LogLevel;
+  if (/^\s+at /.test(log) || /^\s+Caused by:/.test(log) || /^\s+/.test(log)) {
+    return lastLevel;
+  }
+  if (/exception|error|invalid|failed|错误/i.test(log)) return "ERROR";
+
+  return lastLevel;
 };
 
 const GameLogPage: React.FC = () => {
@@ -124,23 +141,7 @@ const GameLogPage: React.FC = () => {
     let lastLevel: LogLevel = "INFO";
 
     for (const log of logs) {
-      const match = log.match(
-        /\[\d{2}:\d{2}:\d{2}]\s+\[.*?\/(INFO|WARN|ERROR|DEBUG|FATAL)]/i
-      );
-
-      if (match) {
-        lastLevel = match[1].toUpperCase() as LogLevel;
-      } else if (
-        !(
-          /^\s+at /.test(log) ||
-          /^\s+Caused by:/.test(log) ||
-          /^\s+/.test(log)
-        ) &&
-        /exception|error|invalid|failed|错误/i.test(log)
-      ) {
-        lastLevel = "ERROR";
-      }
-
+      lastLevel = getLogLevel(log, lastLevel);
       levels.push(lastLevel);
     }
 

@@ -40,6 +40,7 @@ import { analyzeCrashReport } from "@/utils/game-error";
 import { generateInstanceDesc } from "@/utils/instance";
 import { capitalizeFirstLetter } from "@/utils/string";
 import { parseIdFromWindowLabel } from "@/utils/window";
+import { getLogLevel, type LogLevel } from "./game-log";
 
 const GameErrorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -111,16 +112,16 @@ const GameErrorPage: React.FC = () => {
 
     LaunchService.retrieveGameLog(launchingId).then((response) => {
       if (response.status === "success") {
-        const rawLines: string[] = Array.isArray(response.data)
-          ? response.data
-          : response.data
-            ? String(response.data).split(/\r?\n/)
-            : [];
+        let lastLevel: LogLevel = "INFO";
+        const errorLogs = response.data.filter((line) => {
+          lastLevel = getLogLevel(line, lastLevel);
+          return lastLevel === "ERROR" || lastLevel === "FATAL";
+        });
 
-        const raw = rawLines.join("\n");
-        setGameLog(raw);
+        const errorLog = errorLogs.join("\n");
+        setGameLog(errorLog);
 
-        const { key, params } = analyzeCrashReport(rawLines);
+        const { key, params } = analyzeCrashReport(errorLogs); // old analyzer powered by regex
         setReason(
           t(`GameErrorPage.crashDetails.${key}`, {
             param1: params[0],
@@ -207,7 +208,7 @@ const GameErrorPage: React.FC = () => {
       }
     } catch {}
 
-    const m = raw.match(/```json\s*([\s\S]*?)\s*```/i);
+    const m = raw.match(/```[\w-]*\s*([\s\S]*?)\s*```/i);
     if (m) {
       try {
         const obj2 = JSON.parse(m[1]);
