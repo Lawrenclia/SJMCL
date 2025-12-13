@@ -2511,32 +2511,6 @@
         }
       }
     },
-    "ai": {
-      "checkAiServiceAvailability": {
-        "success": "GenAI service available",
-        "error": {
-          "title": "GenAI service unavailable",
-          "description": {
-            "NETWORK_ERROR": "Network error",
-            "API_PARSE_ERROR": "Failed to parse service API",
-            "NO_SUCH_MODEL": "The specified model does not exist, please check if the name is correct",
-            "INVALID_API_KEY": "Invalid API key"
-          }
-        }
-      },
-      "retrieveAiChatResponse": {
-        "error": {
-          "title": "Failed to retrieve AI chat response",
-          "description": {
-            "NETWORK_ERROR": "Network error",
-            "NOT_ENABLED": "GenAI feature not enabled",
-            "API_PARSE_ERROR": "Failed to parse service API",
-            "INVALID_API_KEY": "Invalid API key",
-            "NO_RESPONSE": "No response received"
-          }
-        }
-      }
-    },
     "launch": {
       "selectSuitableJRE": {
         "error": {
@@ -2976,6 +2950,32 @@
           "description": {
             "INVALID_IDENTIFIER": "Extension identifier is invalid",
             "EXTENSION_NOT_FOUND": "Extension not found"
+          }
+        }
+      }
+    },
+    "intelligence": {
+      "checkLLMServiceAvailability": {
+        "success": "GenAI service available",
+        "error": {
+          "title": "GenAI service unavailable",
+          "description": {
+            "NETWORK_ERROR": "Network error",
+            "API_PARSE_ERROR": "Failed to parse service API",
+            "NO_SUCH_MODEL": "The specified model does not exist, please check if the name is correct",
+            "INVALID_API_KEY": "Invalid API key"
+          }
+        }
+      },
+      "fetchLLMChatResponse": {
+        "error": {
+          "title": "Failed to retrieve AI chat response",
+          "description": {
+            "NETWORK_ERROR": "Network error",
+            "NOT_ENABLED": "GenAI feature not enabled",
+            "API_PARSE_ERROR": "Failed to parse service API",
+            "INVALID_API_KEY": "Invalid API key",
+            "NO_RESPONSE": "No response received"
           }
         }
       }

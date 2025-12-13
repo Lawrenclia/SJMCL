@@ -1,5 +1,4 @@
 mod account;
-mod ai;
 mod discover;
 mod error;
 mod extension;
@@ -117,8 +116,8 @@ pub async fn run() {
         account::commands::delete_auth_server,
         account::commands::retrieve_other_launcher_account_info,
         account::commands::import_external_account_info,
-        ai::commands::check_ai_service_availability,
-        ai::commands::retrieve_ai_chat_response,
+        intelligence::commands::check_llm_service_availability,
+        intelligence::commands::fetch_llm_chat_response,
         instance::commands::retrieve_instance_list,
         instance::commands::create_instance,
         instance::commands::update_instance_config,

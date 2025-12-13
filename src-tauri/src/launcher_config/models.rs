@@ -294,6 +294,12 @@ structstruck::strike! {
       }
     },
     pub intelligence: struct IntelligenceConfig {
+      pub enabled: bool,
+      pub model: struct LLMModelConfig {
+        pub base_url: String,
+        pub api_key: String,
+        pub model: String,
+      },
       pub mcp_server: struct {
         pub launcher: struct LauncherMcpServerConfig{
           #[default = true]
@@ -355,14 +361,6 @@ structstruck::strike! {
         pub accordion_states: [bool; 2],
       },
     },
-    pub ai_chat_config: struct {
-      pub enabled: bool,
-      pub base_url: String,
-      pub api_key: String,
-      pub model: String,
-      #[default = 0.7]
-      pub response_temperature: f32,
-    }
   }
 }
 

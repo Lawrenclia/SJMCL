@@ -138,6 +138,12 @@ export interface LauncherConfig {
     };
   };
   intelligence: {
+    enabled: boolean;
+    model: {
+      baseUrl: string;
+      apiKey: string;
+      model: string;
+    };
     mcpServer: {
       launcher: {
         enabled: boolean;
@@ -181,12 +187,6 @@ export interface LauncherConfig {
     instanceShaderPacksPage: {
       accordionStates: boolean[];
     };
-  };
-  aiChatConfig: {
-    enabled: boolean;
-    baseUrl: string;
-    apiKey: string;
-    model: string;
   };
 }
 
@@ -323,6 +323,12 @@ export const defaultConfig: LauncherConfig = {
     },
   },
   intelligence: {
+    enabled: false,
+    model: {
+      baseUrl: "",
+      apiKey: "",
+      model: "gpt-3.5-turbo",
+    },
     mcpServer: {
       launcher: {
         enabled: true,
@@ -334,8 +340,8 @@ export const defaultConfig: LauncherConfig = {
     enabled: [],
     homeWidgetState: [],
   },
-  localGameDirectories: [{ name: "Current", dir: ".minecraft/" }],
   globalGameConfig: defaultGameConfig,
+  localGameDirectories: [{ name: "Current", dir: ".minecraft/" }],
   discoverSourceEndpoints: [
     ["https://mc.sjtu.cn/api-sjmcl/article", true],
     ["https://mc.sjtu.cn/api-sjmcl/article/mua", true],
@@ -369,12 +375,6 @@ export const defaultConfig: LauncherConfig = {
     instanceShaderPacksPage: {
       accordionStates: [true, true],
     },
-  },
-  aiChatConfig: {
-    enabled: false,
-    baseUrl: "",
-    apiKey: "",
-    model: "",
   },
 };
 

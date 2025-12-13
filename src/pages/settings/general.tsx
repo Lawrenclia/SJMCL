@@ -205,9 +205,9 @@ const GeneralSettingsPage = () => {
             <HStack>
               <Switch
                 colorScheme={primaryColor}
-                isChecked={config.aiChatConfig.enabled}
+                isChecked={config.intelligence.enabled}
                 onChange={(e) => {
-                  update("aiChatConfig.enabled", e.target.checked);
+                  update("intelligence.enabled", e.target.checked);
                   if (e.target.checked) openSharedModal("ai-provider-settings");
                 }}
               />
@@ -216,7 +216,7 @@ const GeneralSettingsPage = () => {
                 size="sm"
                 variant="ghost"
                 onClick={() => openSharedModal("ai-provider-settings")}
-                disabled={!config.aiChatConfig.enabled}
+                disabled={!config.intelligence.enabled}
               >
                 <Icon as={LuSettings} />
               </IconButton>
