@@ -64,10 +64,6 @@ const DevTestPage = () => {
         Launch Game
       </Button>
 
-      <Button onClick={() => openSharedModal("ai-provider-settings")}>
-        Open AI Provider Settings Modal
-      </Button>
-
       <Button
         onClick={() => {
           logger.info("Download button clicked");

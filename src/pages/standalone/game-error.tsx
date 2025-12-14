@@ -23,12 +23,11 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuCircleAlert, LuFolderOpen, LuSettings } from "react-icons/lu";
+import { LuCircleAlert, LuFolderOpen } from "react-icons/lu";
 import { LuLightbulb } from "react-icons/lu";
 import { BeatLoader } from "react-spinners";
 import MarkdownContainer from "@/components/common/markdown-container";
 import { useLauncherConfig } from "@/contexts/config";
-import { useSharedModals } from "@/contexts/shared-modal";
 import { InstanceSummary } from "@/models/instance/misc";
 import { ChatMessage } from "@/models/intelligence";
 import { JavaInfo } from "@/models/system-info";
@@ -46,8 +45,6 @@ const GameErrorPage: React.FC = () => {
   const { t } = useTranslation();
   const { config } = useLauncherConfig();
   const primaryColor = config.appearance.theme.primaryColor;
-
-  const { openSharedModal } = useSharedModals();
 
   const [basicInfoParams, setBasicInfoParams] = useState(
     new Map<string, string>()
@@ -231,12 +228,12 @@ const GameErrorPage: React.FC = () => {
   }
 
   async function callAIAnalyze(log: string) {
-    setShowAIResult(true);
     if (!config.intelligence.enabled) {
-      openSharedModal("ai-provider-settings");
+      // TODO: toast error, route to settings
       return;
     }
 
+    setShowAIResult(true);
     setAiLoading(true);
     setAiResult("");
 
@@ -417,21 +414,16 @@ const GameErrorPage: React.FC = () => {
           {t("GameErrorPage.button.help")}
         </Button>
 
-        <Button
-          colorScheme={primaryColor}
-          variant="solid"
-          onClick={() => callAIAnalyze(gameLog)}
-          isLoading={aiLoading}
-        >
-          {t("GameErrorPage.button.aiAnalysis")}
-        </Button>
-
-        <Button
-          variant="solid"
-          onClick={() => openSharedModal("ai-provider-settings")}
-        >
-          <Icon as={LuSettings} />
-        </Button>
+        {config.intelligence.enabled && (
+          <Button
+            colorScheme={primaryColor}
+            variant="solid"
+            onClick={() => callAIAnalyze(gameLog)}
+            isLoading={aiLoading}
+          >
+            {t("GameErrorPage.button.aiAnalysis")}
+          </Button>
+        )}
 
         <Icon ml={2} as={LuCircleAlert} color="red.500" />
         <Text fontSize="xs-sm" color="red.500">

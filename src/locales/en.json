@@ -225,12 +225,6 @@
       "usePasswordLogin": "Account & Password Login"
     }
   },
-  "AiProviderSettingsModal": {
-    "title": "GenAI Service Settings",
-    "baseUrl": "Service URL",
-    "apiKey": "API Key",
-    "model": "Model Name"
-  },
   "AlertResourceDependencyModal": {
     "header": {
       "title": "Dependency Resources Exist"
@@ -1621,6 +1615,29 @@
   "IntelligenceSettingsPage": {
     "title": "SJMCL Intelligence",
     "description": "Integrate AI models into your launcher and Minecraft gameplay experience.",
+    "masterSwitch": {
+      "title": "Intelligent Services",
+      "description": "Enhance SJMCL with intelligent features powered by user-provided generative language models"
+    },
+    "model": {
+      "title": "Model",
+      "settings": {
+        "baseUrl": {
+          "title": "Base URL"
+        },
+        "apiKey": {
+          "title": "API Key"
+        },
+        "model": {
+          "title": "Model Name"
+        },
+        "checkAvailability": {
+          "title": "Model Service Availability",
+          "available": "Available",
+          "unavailable": "Unavailable"
+        }
+      }
+    },
     "mcpServer": {
       "title": "MCP Service",
       "headExtra": "Restart Required",
