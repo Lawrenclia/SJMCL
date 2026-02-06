@@ -231,6 +231,11 @@
     "turnToSettings": "转到设置",
     "startChatting": "开始聊天"
   },
+  "AgentChatPage": {
+    "description": "与缪汐开始第一句对话吧！",
+    "placeholder": "问问缪汐，回车发送~",
+    "systemPrompt": "你是缪汐，是 SJMCL (SJMC 我的世界启动器) 的智能体。"
+  },
   "AlertResourceDependencyModal": {
     "header": {
       "title": "存在前置资源"

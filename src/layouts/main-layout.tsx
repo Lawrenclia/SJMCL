@@ -25,7 +25,7 @@ import {
   LuScrollText,
 } from "react-icons/lu";
 import { BeatLoader } from "react-spinners";
-import AgentButton from "@/components/agent-button";
+import AgentHostess from "@/components/agent-hostess";
 import AdvancedCard from "@/components/common/advanced-card";
 import DevToolbar from "@/components/dev/dev-toolbar";
 import HeadNavBar from "@/components/head-navbar-v2";
@@ -272,7 +272,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           backgroundColor: standaloneBgColor,
         }}
       >
-        <AgentButton />
         {children}
         {isDev && <DevToolbar />}
       </div>
@@ -317,7 +316,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <HeadNavBar />
           {router.pathname === "/launch" ? (
             <>
-              <AgentButton />
+              <AgentHostess />
               {children}
             </>
           ) : (

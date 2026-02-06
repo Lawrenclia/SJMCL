@@ -17,14 +17,15 @@ import {
   Text,
   Tooltip,
   VStack,
+  useColorModeValue,
 } from "@chakra-ui/react";
+import { keyframes } from "@emotion/react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuCircleAlert, LuFolderOpen } from "react-icons/lu";
-import { LuLightbulb } from "react-icons/lu";
 import { BeatLoader } from "react-spinners";
 import MarkdownContainer from "@/components/common/markdown-container";
 import { useLauncherConfig } from "@/contexts/config";
@@ -262,6 +263,23 @@ const GameErrorPage: React.FC = () => {
     setAiLoading(false);
   }
 
+  const fancyBg = useColorModeValue(
+    // light mode: colorful background
+    `
+        radial-gradient(circle at top left,     #4299E1 0%, transparent 70%),   // blue.400
+        radial-gradient(circle at top right,    #ED64A6 0%, transparent 70%),   // pink.400
+        radial-gradient(circle at bottom left,  #ED8936 0%, transparent 70%),   // orange.400
+        radial-gradient(circle at bottom right, #ED64A6 0%, transparent 70%)
+        `,
+    // dark mode: neutral gray background
+    "linear-gradient(135deg, #171923, #2D3748)"
+  );
+
+  const hueAnim = keyframes`
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+  `;
+
   return (
     <Flex direction="column" h="100vh">
       <Alert status="error">
@@ -353,11 +371,15 @@ const GameErrorPage: React.FC = () => {
                     const parsed = safeParseAI(aiResult);
 
                     return (
-                      <>
+                      <VStack spacing={2} align="stretch">
                         {parsed.reasons.length > 0 ? (
                           parsed.reasons.map((item, i) => (
-                            <Alert key={i} status="info" borderRadius="md">
-                              <AlertIcon as={LuLightbulb} />
+                            <Alert
+                              key={i}
+                              variant="left-accent"
+                              status="info"
+                              borderRadius="md"
+                            >
                               <VStack spacing={0} align="start">
                                 <AlertTitle>{item.reason}</AlertTitle>
                                 <AlertDescription>
@@ -384,7 +406,7 @@ const GameErrorPage: React.FC = () => {
                             </Alert>
                           </>
                         )}
-                      </>
+                      </VStack>
                     );
                   })()
                 )}
@@ -416,8 +438,9 @@ const GameErrorPage: React.FC = () => {
 
         {config.intelligence.enabled && (
           <Button
-            colorScheme={primaryColor}
+            bg={fancyBg}
             variant="solid"
+            _hover={{ bg: fancyBg, animation: `${hueAnim} 2s linear infinite` }}
             onClick={() => callAIAnalyze(gameLog)}
             isLoading={aiLoading}
           >

@@ -231,6 +231,11 @@
     "turnToSettings": "Go to Settings",
     "startChatting": "Start Chatting"
   },
+  "AgentChatPage": {
+    "description": "Start your first conversation with Miuxi!",
+    "placeholder": "Ask Miuxi, press Enter to send~",
+    "systemPrompt": "You are Miuxi, the AI agent of the SJMCL (SJMC Minecraft Launcher)."
+  },
   "AlertResourceDependencyModal": {
     "header": {
       "title": "Dependency Resources Exist"

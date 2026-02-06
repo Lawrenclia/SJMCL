@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { ChatMessage } from "@/models/intelligence";
 import { InvokeResponse } from "@/models/response";
 import { responseHandler } from "@/utils/response";
@@ -26,12 +26,23 @@ export class IntelligenceService {
   /**
    * RETRIEVE LLM chat response for a given message.
    * @param {ChatMessage[]} messages The list of chat messages.
+   * @param {(chunk: string) => void} [onChunk] Optional callback for streaming response chunks.
    * @return {Promise<InvokeResponse<string>>}
    */
   @responseHandler("intelligence")
   public static async fetchLLMChatResponse(
-    messages: ChatMessage[]
+    messages: ChatMessage[],
+    onChunk?: (chunk: string) => void
   ): Promise<InvokeResponse<string>> {
+    if (onChunk) {
+      const channel = new Channel<string>();
+      channel.onmessage = onChunk;
+      await invoke("fetch_llm_chat_response_stream", {
+        messages,
+        onEvent: channel,
+      });
+      return { status: "success", data: "", message: "Stream completed" };
+    }
     return invoke("fetch_llm_chat_response", { messages });
   }
 }

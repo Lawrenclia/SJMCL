@@ -38,6 +38,23 @@ structstruck::strike! {
   }
 }
 
+structstruck::strike! {
+  #[strikethrough[derive(Serialize, Deserialize, Debug)]]
+  pub struct ChatCompletionChunk {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub choices: Vec<pub struct ChatCompletionChunkChoice {
+      pub index: u32,
+      pub delta: pub struct ChatMessageDelta {
+        pub role: Option<String>,
+        pub content: Option<String>,
+      },
+      pub finish_reason: Option<String>,
+    }>,
+  }
+}
+
 #[derive(Debug, Display)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum LLMServiceError {

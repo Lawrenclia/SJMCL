@@ -5,12 +5,13 @@ import { useTranslation } from "react-i18next";
 import { LuMessageCircleMore, LuSettings } from "react-icons/lu";
 import { useLauncherConfig } from "@/contexts/config";
 import { useGlobalData } from "@/contexts/global-data";
+import { createWindow } from "@/utils/window";
 import AdvancedCard from "./common/advanced-card";
 
-interface AgentButtonProps {}
+interface AgentHostessProps {}
 
-const AGENT_BUTTON_SRC = "/images/agent/agentButton.png";
-const AgentButton: FC<AgentButtonProps> = ({}) => {
+const AGENT_HOSTESS_SRC = "/images/agent/miuxi_2d.png";
+const AgentHostess: FC<AgentHostessProps> = ({}) => {
   const { t } = useTranslation();
   const router = useRouter();
   const { config } = useLauncherConfig();
@@ -20,7 +21,7 @@ const AgentButton: FC<AgentButtonProps> = ({}) => {
   const [isOnHover, setIsOnHover] = useState(false);
   const onClick = () => {
     if (agentEnabled) {
-      // TODO;
+      createWindow("agent_chat", "/standalone/agent-chat");
     } else {
       router.push("/settings/intelligence");
     }
@@ -40,7 +41,7 @@ const AgentButton: FC<AgentButtonProps> = ({}) => {
         onClick={onClick}
         width={180}
         height={280}
-        bgImage={`url('${AGENT_BUTTON_SRC}')`}
+        bgImage={`url('${AGENT_HOSTESS_SRC}')`}
         bgRepeat="no-repeat"
         bgSize="contain"
         bgPosition="center"
@@ -94,4 +95,4 @@ const AgentButton: FC<AgentButtonProps> = ({}) => {
   );
 };
 
-export default AgentButton;
+export default AgentHostess;

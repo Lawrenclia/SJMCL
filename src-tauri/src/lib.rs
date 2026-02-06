@@ -118,6 +118,7 @@ pub async fn run() {
         account::commands::import_external_account_info,
         intelligence::commands::check_llm_service_availability,
         intelligence::commands::fetch_llm_chat_response,
+        intelligence::commands::fetch_llm_chat_response_stream,
         instance::commands::retrieve_instance_list,
         instance::commands::create_instance,
         instance::commands::update_instance_config,
