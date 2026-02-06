@@ -1,45 +1,96 @@
-import { Box } from "@chakra-ui/react";
-import type { FC } from "react";
+import { Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
+import { useRouter } from "next/router";
+import { type FC, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LuMessageCircleMore, LuSettings } from "react-icons/lu";
+import { useLauncherConfig } from "@/contexts/config";
+import { useGlobalData } from "@/contexts/global-data";
+import AdvancedCard from "./common/advanced-card";
 
-interface AgentButtonProps {
-  onClick?: () => void;
-}
+interface AgentButtonProps {}
 
 const AGENT_BUTTON_SRC = "/images/agent/agentButton.png";
-const AGENT_BUTTON_HOVER_SRC = "/images/agent/agentButton_hover.png";
-
-const AgentButton: FC<AgentButtonProps> = ({ onClick }) => {
+const AgentButton: FC<AgentButtonProps> = ({}) => {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { config } = useLauncherConfig();
+  const { selectedPlayer } = useGlobalData();
+  const agentEnabled = config.intelligence.enabled;
+  const primaryColor = config.appearance.theme.primaryColor;
+  const [isOnHover, setIsOnHover] = useState(false);
+  const onClick = () => {
+    if (agentEnabled) {
+      // TODO;
+    } else {
+      router.push("/settings/intelligence");
+    }
+  };
   return (
-    <Box
-      as="button"
-      aria-label="Agent button"
-      onClick={onClick}
+    <HStack
       position="fixed"
       left={0}
       top="50%"
       transform="translateY(-50%)"
-      width={{ base: "120px", md: "150px" }}
-      height={{ base: "168px", md: "210px" }}
-      bgImage={`url('${AGENT_BUTTON_SRC}')`}
-      bgRepeat="no-repeat"
-      bgSize="contain"
-      bgPosition="center"
-      cursor="pointer"
-      border="none"
-      bgColor="transparent"
-      transition="transform 0.2s ease, background-image 0.15s ease"
-      zIndex={1200}
-      _hover={{
-        bgImage: `url('${AGENT_BUTTON_HOVER_SRC}')`,
-        transform: "translateY(-50%) scale(1.02)",
-      }}
-      _active={{
-        transform: "translateY(-50%) scale(0.98)",
-      }}
-      _focusVisible={{
-        boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.6)",
-      }}
-    />
+      onMouseOver={() => setIsOnHover(true)}
+      onMouseOut={() => setIsOnHover(false)}
+    >
+      <Box
+        as="button"
+        aria-label="Agent button"
+        onClick={onClick}
+        width={180}
+        height={280}
+        bgImage={`url('${AGENT_BUTTON_SRC}')`}
+        bgRepeat="no-repeat"
+        bgSize="contain"
+        bgPosition="center"
+        cursor="pointer"
+        border="none"
+        bgColor="transparent"
+        transition="transform 0.2s ease"
+        _hover={{
+          transform: "scale(1.02)",
+        }}
+        _active={{
+          transform: "scale(0.98)",
+        }}
+      />
+      <AdvancedCard
+        transition="all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+        opacity={isOnHover ? 1 : 0}
+        transformOrigin="left"
+        transform={
+          isOnHover ? "scale(1) translateX(0)" : "scale(0.5) translateX(-20px)"
+        }
+        pointerEvents={isOnHover ? "auto" : "none"}
+        mt="-180"
+        ml="-20"
+        p="2"
+        borderRadius="xl"
+        borderBottomLeftRadius="none"
+      >
+        <Text
+          fontSize="md"
+          fontWeight="bold"
+          bgGradient={`linear(to-r, ${primaryColor}.500, ${primaryColor}.300)`}
+          bgClip="text"
+        >
+          {t("AgentButton." + (agentEnabled ? "enabled" : "disabled"), {
+            name: selectedPlayer?.name || "",
+          })}
+        </Text>
+        <Button onClick={onClick} mt="2" colorScheme={primaryColor}>
+          <Icon
+            as={agentEnabled ? LuMessageCircleMore : LuSettings}
+            boxSize={3.5}
+            mr="2"
+          />
+          {t(
+            `AgentButton.` + (agentEnabled ? "startChatting" : "turnToSettings")
+          )}
+        </Button>
+      </AdvancedCard>
+    </HStack>
   );
 };
 

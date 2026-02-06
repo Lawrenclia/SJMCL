@@ -225,6 +225,12 @@
       "usePasswordLogin": "Account & Password Login"
     }
   },
+  "AgentButton": {
+    "enabled": "Glad to serve you, {{name}}!",
+    "disabled": "Please enable Intelligence functions.",
+    "turnToSettings": "Go to Settings",
+    "startChatting": "Start Chatting"
+  },
   "AlertResourceDependencyModal": {
     "header": {
       "title": "Dependency Resources Exist"

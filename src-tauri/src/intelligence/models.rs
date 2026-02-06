@@ -7,7 +7,6 @@ structstruck::strike! {
     pub data: Vec<pub struct ChatModel {
       pub id: String,
       pub object: String,
-      pub created: u64,
       pub owned_by: String,
     }>,
   }

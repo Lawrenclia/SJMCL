@@ -314,10 +314,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       >
         <FileDnDProvider>
           <MainLayoutFileDnD />
-          <AgentButton />
           <HeadNavBar />
           {router.pathname === "/launch" ? (
-            <>{children}</>
+            <>
+              <AgentButton />
+              {children}
+            </>
           ) : (
             <AdvancedCard
               level="back"

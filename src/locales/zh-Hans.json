@@ -225,6 +225,12 @@
       "usePasswordLogin": "账号密码登录"
     }
   },
+  "AgentButton": {
+    "enabled": "您好 {{name}}，很高兴为您服务！",
+    "disabled": "请先在设置中启用智能服务。",
+    "turnToSettings": "转到设置",
+    "startChatting": "开始聊天"
+  },
   "AlertResourceDependencyModal": {
     "header": {
       "title": "存在前置资源"
