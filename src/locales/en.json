@@ -236,7 +236,11 @@
     "placeholder": "Ask Miuxi anything, press Enter to send~",
     "functionCall": {
       "title": "Magic Call",
-      "execute": "Execute"
+      "execute": "Execute",
+      "result": "Result",
+      "launchInstance": {
+        "success": "Successfully opened game launching panel"
+      }
     }
   },
   "AlertResourceDependencyModal": {

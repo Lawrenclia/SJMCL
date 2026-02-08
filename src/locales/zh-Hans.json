@@ -236,7 +236,11 @@
     "placeholder": "问问缪汐，回车发送~",
     "functionCall": {
       "title": "调用魔法",
-      "execute": "执行"
+      "execute": "执行",
+      "result": "执行结果",
+      "launchInstance": {
+        "success": "已成功打开游戏启动界面"
+      }
     }
   },
   "AlertResourceDependencyModal": {

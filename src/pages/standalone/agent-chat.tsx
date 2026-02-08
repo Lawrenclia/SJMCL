@@ -1,10 +1,7 @@
 import {
   Box,
-  Button,
-  Code,
   Flex,
   HStack,
-  Icon,
   IconButton,
   Image,
   Spinner,
@@ -15,80 +12,18 @@ import {
 } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuTrash2, LuZap } from "react-icons/lu";
+import { LuTrash2 } from "react-icons/lu";
 import MarkdownContainer from "@/components/common/markdown-container";
 import { MiuChatLogoTitle } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
 import { useGlobalData } from "@/contexts/global-data";
+import { useSharedModals } from "@/contexts/shared-modal";
 import { Player } from "@/models/account";
 import { ChatMessage } from "@/models/intelligence";
 import { getChatSystemPrompt } from "@/prompts";
+import { InstanceService } from "@/services/instance";
 import { IntelligenceService } from "@/services/intelligence";
-import { base64ImgSrc } from "@/utils/string";
-
-// Interface for the function call parameters
-interface FunctionCallParams {
-  name: string;
-  params: Record<string, any>;
-}
-
-export const FunctionCallWidget: React.FC<{
-  data: FunctionCallParams;
-  onInvoke?: (name: string, params: Record<string, any>) => void;
-}> = ({ data, onInvoke }) => {
-  const { t } = useTranslation();
-  const bgColor = useColorModeValue("purple.50", "purple.900");
-  const borderColor = useColorModeValue("purple.200", "purple.700");
-  const textColor = useColorModeValue("purple.800", "purple.100");
-  const codeBgColor = useColorModeValue("whiteAlpha.500", "blackAlpha.400");
-
-  const handleInvoke = () => {
-    if (onInvoke) {
-      onInvoke(data.name, data.params);
-    }
-  };
-
-  return (
-    <Box
-      my={3}
-      p={3}
-      borderRadius="md"
-      borderWidth="1px"
-      bg={bgColor}
-      borderColor={borderColor}
-    >
-      <HStack justify="space-between">
-        <HStack>
-          <Icon as={LuZap} color={textColor} />
-          <Text fontWeight="bold" fontSize="sm" color={textColor}>
-            {t("AgentChatPage.functionCall.title")}: {data.name}
-          </Text>
-        </HStack>
-        <Button
-          size="xs"
-          colorScheme="purple"
-          variant="solid"
-          onClick={handleInvoke}
-        >
-          {t("AgentChatPage.functionCall.execute")}
-        </Button>
-      </HStack>
-      {Object.keys(data.params).length > 0 && (
-        <Code
-          mt={2}
-          display="block"
-          whiteSpace="pre-wrap"
-          fontSize="xs"
-          p={2}
-          borderRadius="md"
-          bg={codeBgColor}
-        >
-          {JSON.stringify(data.params, null, 2)}
-        </Code>
-      )}
-    </Box>
-  );
-};
+import { base64ImgSrc, formatPrintable } from "@/utils/string";
 
 const AGENT_AVATAR_SRC = "/images/agent/miuxi_px_avatar.png";
 const AgentChatPage: React.FC = () => {
@@ -101,6 +36,7 @@ const AgentChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player>();
   const toast = useToast();
+  const { openSharedModal } = useSharedModals();
 
   useEffect(() => {
     const playerList = getPlayerList(true);
@@ -110,6 +46,11 @@ const AgentChatPage: React.FC = () => {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.states.shared.selectedPlayerId]);
+
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -189,18 +130,94 @@ const AgentChatPage: React.FC = () => {
     }
   };
 
-  const handleFunctionCall = (name: string, params: Record<string, any>) => {
-    console.log("Function Call:", name, params);
-    // TODO: Implement actual function handlers based on name
-    toast({
-      title: `调用功能: ${name}`,
-      description: JSON.stringify(params),
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-      position: "top",
-    });
+  const executeFunctionCall = async (
+    name: string,
+    params: Record<string, any>
+  ) => {
+    switch (name) {
+      case "retrieve_instance_list":
+        return await InstanceService.retrieveInstanceList();
+      case "launch_instance":
+        openSharedModal("launch", {
+          instanceId: params.id,
+        });
+        return t("AgentChatPage.functionCall.launchInstance.success");
+      default:
+        return `Unknown function: ${name}`;
+    }
   };
+
+  const handleFunctionCall = React.useCallback(
+    async (name: string, params: Record<string, any>) => {
+      console.log("Function Call:", name, params);
+
+      let result = formatPrintable(await executeFunctionCall(name, params));
+      // Update messages with the function result as a system/context message
+      // Note: In a real agent system, this would be a "tool" role message.
+      // Here we append it to history and request a new response.
+
+      const newHistory = [
+        ...messagesRef.current,
+        { role: "system", content: result } as ChatMessage,
+      ];
+
+      // We don't display the system message in UI immediately, but we trigger the LLM to respond to it.
+      // Or we can just let the LLM know.
+
+      // The requirement says "result '你好！' ... output to model ... process reflected as loading in widget".
+
+      setIsLoading(true);
+
+      // Add a placeholder message for the assistant's response
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      try {
+        let currentResponse = "";
+        const systemMsg: ChatMessage = {
+          role: "system",
+          content: getChatSystemPrompt(i18n.language),
+        };
+
+        // We need to fetch response based on new history
+        await IntelligenceService.fetchLLMChatResponse(
+          [systemMsg, ...newHistory],
+          (chunk) => {
+            currentResponse += chunk;
+            setMessages((prev) => {
+              const updated = [...prev];
+              // Update the last message (which is the new assistant message)
+              if (updated.length > 0) {
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  content: currentResponse,
+                };
+              }
+              return updated;
+            });
+          }
+        );
+      } catch (e) {
+        console.error(e);
+        toast({ title: "Error executing function", status: "error" });
+        setMessages((prev) => {
+          const updated = [...prev];
+          if (
+            updated.length > 0 &&
+            updated[updated.length - 1].content === ""
+          ) {
+            updated[updated.length - 1].content =
+              "**Error:** Execution failed.";
+          }
+          return updated;
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return result;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [i18n.language, toast]
+  );
 
   const bg = useColorModeValue("gray.50", "gray.900");
   const msgBgUser = useColorModeValue("blue.500", "blue.600");
