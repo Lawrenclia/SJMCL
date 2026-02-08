@@ -113,7 +113,7 @@ const GameErrorPage: React.FC = () => {
         let lastLevel: LogLevel = "INFO";
         const errorLogs = response.data.filter((line) => {
           lastLevel = getLogLevel(line, lastLevel);
-          return lastLevel === "ERROR" || lastLevel === "FATAL";
+          return ["ERROR", "FATAL", "WARN"].includes(lastLevel);
         });
 
         const errorLog = errorLogs.join("\n");
