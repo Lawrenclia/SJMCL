@@ -30,7 +30,14 @@ const AgentChatPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { config } = useLauncherConfig();
   const { getPlayerList } = useGlobalData();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Initialize with system prompt
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      role: "system",
+      content: getChatSystemPrompt(i18n.language),
+    },
+  ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,27 +90,21 @@ const AgentChatPage: React.FC = () => {
     let currentResponse = "";
 
     try {
-      const systemMsg: ChatMessage = {
-        role: "system",
-        content: getChatSystemPrompt(i18n.language),
-      };
-      await IntelligenceService.fetchLLMChatResponse(
-        [systemMsg, ...newMessages],
-        (chunk) => {
-          currentResponse += chunk;
-          setMessages((prev) => {
-            const updated = [...prev];
-            // Update the last message (which is the assistant's)
-            if (updated.length > 0) {
-              updated[updated.length - 1] = {
-                ...updated[updated.length - 1],
-                content: currentResponse,
-              };
-            }
-            return updated;
-          });
-        }
-      );
+      // System prompt is already in messages[0]
+      await IntelligenceService.fetchLLMChatResponse(newMessages, (chunk) => {
+        currentResponse += chunk;
+        setMessages((prev) => {
+          const updated = [...prev];
+          // Update the last message (which is the assistant's)
+          if (updated.length > 0) {
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              content: currentResponse,
+            };
+          }
+          return updated;
+        });
+      });
     } catch (error) {
       console.error(error);
       setMessages((prev) => {
@@ -161,10 +162,9 @@ const AgentChatPage: React.FC = () => {
         { role: "system", content: result } as ChatMessage,
       ];
 
-      // We don't display the system message in UI immediately, but we trigger the LLM to respond to it.
-      // Or we can just let the LLM know.
-
-      // The requirement says "result '你好！' ... output to model ... process reflected as loading in widget".
+      // Update state with the system message (result)
+      // We don't display the system message in UI immediately (filtered out), but strictly keep it in history.
+      setMessages(newHistory);
 
       setIsLoading(true);
 
@@ -173,29 +173,22 @@ const AgentChatPage: React.FC = () => {
 
       try {
         let currentResponse = "";
-        const systemMsg: ChatMessage = {
-          role: "system",
-          content: getChatSystemPrompt(i18n.language),
-        };
 
-        // We need to fetch response based on new history
-        await IntelligenceService.fetchLLMChatResponse(
-          [systemMsg, ...newHistory],
-          (chunk) => {
-            currentResponse += chunk;
-            setMessages((prev) => {
-              const updated = [...prev];
-              // Update the last message (which is the new assistant message)
-              if (updated.length > 0) {
-                updated[updated.length - 1] = {
-                  ...updated[updated.length - 1],
-                  content: currentResponse,
-                };
-              }
-              return updated;
-            });
-          }
-        );
+        // Fetch response based on new history which includes the system result
+        await IntelligenceService.fetchLLMChatResponse(newHistory, (chunk) => {
+          currentResponse += chunk;
+          setMessages((prev) => {
+            const updated = [...prev];
+            // Update the last message (which is the new assistant message)
+            if (updated.length > 0) {
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: currentResponse,
+              };
+            }
+            return updated;
+          });
+        });
       } catch (e) {
         console.error(e);
         toast({ title: "Error executing function", status: "error" });
@@ -244,13 +237,17 @@ const AgentChatPage: React.FC = () => {
           aria-label="clear"
           size="sm"
           variant="ghost"
-          onClick={() => setMessages([])}
+          onClick={() =>
+            setMessages([
+              { role: "system", content: getChatSystemPrompt(i18n.language) },
+            ])
+          }
         />
       </Flex>
 
       {/* Messages */}
       <Flex flex={1} overflowY="auto" direction="column" p={4} gap={4}>
-        {messages.length === 0 && (
+        {messages.filter((m) => m.role !== "system").length === 0 && (
           <Flex
             direction="column"
             align="center"
@@ -268,41 +265,43 @@ const AgentChatPage: React.FC = () => {
             <Text>{t("AgentChatPage.description")}</Text>
           </Flex>
         )}
-        {messages.map((msg, i) => (
-          <Flex
-            key={i}
-            direction={msg.role === "user" ? "row-reverse" : "row"}
-            gap={3}
-            width="100%"
-          >
-            {(msg.role !== "user" ||
-              (selectedPlayer && selectedPlayer.avatar)) && (
-              <Image
-                boxSize="32px"
-                objectFit="cover"
-                src={
-                  msg.role === "user"
-                    ? base64ImgSrc(selectedPlayer?.avatar!)
-                    : AGENT_AVATAR_SRC
-                }
-                alt={msg.role}
-              />
-            )}
-            <Box
-              bg={msg.role === "user" ? msgBgUser : msgBgBot}
-              color={msg.role === "user" ? "white" : undefined}
-              p={3}
-              borderRadius="lg"
-              maxW="80%"
-              boxShadow="sm"
-              position="relative"
+        {messages
+          .filter((msg) => msg.role !== "system")
+          .map((msg, i) => (
+            <Flex
+              key={i}
+              direction={msg.role === "user" ? "row-reverse" : "row"}
+              gap={3}
+              width="100%"
             >
-              <MarkdownContainer onFunctionCall={handleFunctionCall}>
-                {msg.content}
-              </MarkdownContainer>
-            </Box>
-          </Flex>
-        ))}
+              {(msg.role !== "user" ||
+                (selectedPlayer && selectedPlayer.avatar)) && (
+                <Image
+                  boxSize="32px"
+                  objectFit="cover"
+                  src={
+                    msg.role === "user"
+                      ? base64ImgSrc(selectedPlayer?.avatar!)
+                      : AGENT_AVATAR_SRC
+                  }
+                  alt={msg.role}
+                />
+              )}
+              <Box
+                bg={msg.role === "user" ? msgBgUser : msgBgBot}
+                color={msg.role === "user" ? "white" : undefined}
+                p={3}
+                borderRadius="lg"
+                maxW="80%"
+                boxShadow="sm"
+                position="relative"
+              >
+                <MarkdownContainer onFunctionCall={handleFunctionCall}>
+                  {msg.content}
+                </MarkdownContainer>
+              </Box>
+            </Flex>
+          ))}
         {isLoading &&
           messages.length > 0 &&
           messages[messages.length - 1].content === "" && (
