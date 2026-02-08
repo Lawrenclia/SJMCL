@@ -1,6 +1,5 @@
 import {
   Alert,
-  AlertDescription,
   AlertIcon,
   AlertTitle,
   Badge,
@@ -32,6 +31,7 @@ import { useLauncherConfig } from "@/contexts/config";
 import { InstanceSummary } from "@/models/instance/misc";
 import { ChatMessage } from "@/models/intelligence";
 import { JavaInfo } from "@/models/system-info";
+import { getGameErrorSystemPrompt } from "@/prompts";
 import { IntelligenceService } from "@/services/intelligence";
 import { LaunchService } from "@/services/launch";
 import { ISOToDatetime } from "@/utils/datetime";
@@ -43,7 +43,7 @@ import { parseIdFromWindowLabel } from "@/utils/window";
 import { getLogLevel, type LogLevel } from "./game-log";
 
 const GameErrorPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { config } = useLauncherConfig();
   const primaryColor = config.appearance.theme.primaryColor;
 
@@ -184,50 +184,6 @@ const GameErrorPage: React.FC = () => {
     setIsLoading(false);
   };
 
-  function safeParseAI(content: string): {
-    reasons: Array<{ reason: string; fix: string }>;
-    raw: string;
-    isJSON: boolean;
-  } {
-    const raw = content ?? "";
-    try {
-      const obj = JSON.parse(raw);
-      if (Array.isArray(obj?.reasons)) {
-        return {
-          reasons: obj.reasons
-            .map((x: any) => ({
-              reason: String(x?.reason ?? "").trim(),
-              fix: String(x?.fix ?? "").trim(),
-            }))
-            .filter((x: { reason: any; fix: any }) => x.reason || x.fix),
-          raw,
-          isJSON: true,
-        };
-      }
-    } catch {}
-
-    const m = raw.match(/```[\w-]*\s*([\s\S]*?)\s*```/i);
-    if (m) {
-      try {
-        const obj2 = JSON.parse(m[1]);
-        if (Array.isArray(obj2?.reasons)) {
-          return {
-            reasons: obj2.reasons
-              .map((x: any) => ({
-                reason: String(x?.reason ?? "").trim(),
-                fix: String(x?.fix ?? "").trim(),
-              }))
-              .filter((x: { reason: any; fix: any }) => x.reason || x.fix),
-            raw,
-            isJSON: true,
-          };
-        }
-      } catch {}
-    }
-
-    return { reasons: [], raw, isJSON: false };
-  }
-
   async function callAIAnalyze(log: string) {
     if (!config.intelligence.enabled) {
       // TODO: toast error, route to settings
@@ -241,16 +197,12 @@ const GameErrorPage: React.FC = () => {
     let messages: ChatMessage[] = [
       {
         role: "system",
-        content: t("GameErrorPage.aiAnalysis.systemPrompt"),
-      },
-      {
-        role: "user",
-        content: t("GameErrorPage.aiAnalysis.userPrompt", {
-          os: basicInfoParams.get("os") ?? t("General.unknown"),
-          javaVersion: javaInfo?.name ?? t("General.unknown"),
-          mcVersion: instanceInfo?.name ?? t("General.unknown"),
-          log,
-        }),
+        content: getGameErrorSystemPrompt(i18n.language)(
+          basicInfoParams.get("os") ?? t("General.unknown"),
+          javaInfo?.name ?? t("General.unknown"),
+          instanceInfo?.name ?? t("General.unknown"),
+          log
+        ),
       },
     ];
 
@@ -350,7 +302,7 @@ const GameErrorPage: React.FC = () => {
               <Text fontSize="xs-sm">
                 {!showAIResult
                   ? t("GameErrorPage.crashDetails.title")
-                  : t("GameErrorPage.aiAnalysis.title")}
+                  : t("GameErrorPage.aiAnalysis")}
               </Text>
               {showAIResult && (
                 <Badge size="xs" colorScheme="purple">
@@ -367,48 +319,7 @@ const GameErrorPage: React.FC = () => {
                     <BeatLoader size={16} color="gray" />
                   </Center>
                 ) : (
-                  (() => {
-                    const parsed = safeParseAI(aiResult);
-
-                    return (
-                      <VStack spacing={2} align="stretch">
-                        {parsed.reasons.length > 0 ? (
-                          parsed.reasons.map((item, i) => (
-                            <Alert
-                              key={i}
-                              variant="left-accent"
-                              status="info"
-                              borderRadius="md"
-                            >
-                              <VStack spacing={0} align="start">
-                                <AlertTitle>{item.reason}</AlertTitle>
-                                <AlertDescription>
-                                  <MarkdownContainer>
-                                    {item.fix}
-                                  </MarkdownContainer>
-                                </AlertDescription>
-                              </VStack>
-                            </Alert>
-                          ))
-                        ) : (
-                          <>
-                            <Text fontSize="sm" color="gray.500">
-                              {t(
-                                "GameErrorPage.aiAnalysis.structureNotProcessed"
-                              )}
-                            </Text>
-                            <Alert status="info" borderRadius="md">
-                              <AlertDescription>
-                                <MarkdownContainer>
-                                  {parsed.raw}
-                                </MarkdownContainer>
-                              </AlertDescription>
-                            </Alert>
-                          </>
-                        )}
-                      </VStack>
-                    );
-                  })()
+                  <MarkdownContainer>{aiResult}</MarkdownContainer>
                 )}
               </>
             )}

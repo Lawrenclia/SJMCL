@@ -1,29 +1,98 @@
 import {
   Box,
+  Button,
+  Code,
   Flex,
   HStack,
+  Icon,
   IconButton,
   Image,
   Spinner,
   Text,
   Textarea,
   useColorModeValue,
+  useToast,
 } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuTrash2 } from "react-icons/lu";
+import { LuTrash2, LuZap } from "react-icons/lu";
 import MarkdownContainer from "@/components/common/markdown-container";
 import { MiuChatLogoTitle } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
 import { useGlobalData } from "@/contexts/global-data";
 import { Player } from "@/models/account";
 import { ChatMessage } from "@/models/intelligence";
+import { getChatSystemPrompt } from "@/prompts";
 import { IntelligenceService } from "@/services/intelligence";
 import { base64ImgSrc } from "@/utils/string";
 
+// Interface for the function call parameters
+interface FunctionCallParams {
+  name: string;
+  params: Record<string, any>;
+}
+
+export const FunctionCallWidget: React.FC<{
+  data: FunctionCallParams;
+  onInvoke?: (name: string, params: Record<string, any>) => void;
+}> = ({ data, onInvoke }) => {
+  const { t } = useTranslation();
+  const bgColor = useColorModeValue("purple.50", "purple.900");
+  const borderColor = useColorModeValue("purple.200", "purple.700");
+  const textColor = useColorModeValue("purple.800", "purple.100");
+  const codeBgColor = useColorModeValue("whiteAlpha.500", "blackAlpha.400");
+
+  const handleInvoke = () => {
+    if (onInvoke) {
+      onInvoke(data.name, data.params);
+    }
+  };
+
+  return (
+    <Box
+      my={3}
+      p={3}
+      borderRadius="md"
+      borderWidth="1px"
+      bg={bgColor}
+      borderColor={borderColor}
+    >
+      <HStack justify="space-between">
+        <HStack>
+          <Icon as={LuZap} color={textColor} />
+          <Text fontWeight="bold" fontSize="sm" color={textColor}>
+            {t("AgentChatPage.functionCall.title")}: {data.name}
+          </Text>
+        </HStack>
+        <Button
+          size="xs"
+          colorScheme="purple"
+          variant="solid"
+          onClick={handleInvoke}
+        >
+          {t("AgentChatPage.functionCall.execute")}
+        </Button>
+      </HStack>
+      {Object.keys(data.params).length > 0 && (
+        <Code
+          mt={2}
+          display="block"
+          whiteSpace="pre-wrap"
+          fontSize="xs"
+          p={2}
+          borderRadius="md"
+          bg={codeBgColor}
+        >
+          {JSON.stringify(data.params, null, 2)}
+        </Code>
+      )}
+    </Box>
+  );
+};
+
 const AGENT_AVATAR_SRC = "/images/agent/miuxi_px_avatar.png";
 const AgentChatPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { config } = useLauncherConfig();
   const { getPlayerList } = useGlobalData();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -31,6 +100,7 @@ const AgentChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player>();
+  const toast = useToast();
 
   useEffect(() => {
     const playerList = getPlayerList(true);
@@ -74,7 +144,7 @@ const AgentChatPage: React.FC = () => {
     try {
       const systemMsg: ChatMessage = {
         role: "system",
-        content: t("AgentChatPage.systemPrompt"),
+        content: getChatSystemPrompt(i18n.language),
       };
       await IntelligenceService.fetchLLMChatResponse(
         [systemMsg, ...newMessages],
@@ -117,6 +187,19 @@ const AgentChatPage: React.FC = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleFunctionCall = (name: string, params: Record<string, any>) => {
+    console.log("Function Call:", name, params);
+    // TODO: Implement actual function handlers based on name
+    toast({
+      title: `调用功能: ${name}`,
+      description: JSON.stringify(params),
+      status: "info",
+      duration: 3000,
+      isClosable: true,
+      position: "top",
+    });
   };
 
   const bg = useColorModeValue("gray.50", "gray.900");
@@ -197,7 +280,9 @@ const AgentChatPage: React.FC = () => {
               boxShadow="sm"
               position="relative"
             >
-              <MarkdownContainer>{msg.content}</MarkdownContainer>
+              <MarkdownContainer onFunctionCall={handleFunctionCall}>
+                {msg.content}
+              </MarkdownContainer>
             </Box>
           </Flex>
         ))}

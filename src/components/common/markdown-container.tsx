@@ -1,6 +1,7 @@
 import {
   Box,
   BoxProps,
+  Code,
   Divider,
   Heading,
   Image,
@@ -19,64 +20,165 @@ import {
 } from "@chakra-ui/react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import React from "react";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
+import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLauncherConfig } from "@/contexts/config";
+import { FunctionCallWidget } from "@/pages/standalone/agent-chat";
 
 type MarkdownContainerProps = BoxProps & {
   children: string;
+  onFunctionCall?: (name: string, params: Record<string, any>) => void;
 };
 
 const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   children,
+  onFunctionCall,
   ...boxProps
 }) => {
   const { config } = useLauncherConfig();
   const primaryColor = config.appearance.theme.primaryColor;
 
   // process GitHub-style mentions and issue / PR references
-  const processGitHubMarks = (children: React.ReactNode): React.ReactNode => {
+  const processGitHubMarks = (text: string): React.ReactNode => {
+    const parts = text.split(/(\#[0-9]+|\@[a-zA-Z0-9_-]+)/g);
+    return parts.map((part, idx) => {
+      if (/^#[0-9]+$/.test(part)) {
+        const issueNumber = part.substring(1);
+        return (
+          <Link
+            key={idx}
+            color={`${primaryColor}.500`}
+            onClick={() =>
+              openUrl(
+                `https://github.com/UNIkeEN/SJMCL/pull/${issueNumber}`
+              ).catch(logger.error)
+            }
+          >
+            {part}
+          </Link>
+        );
+      }
+      if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
+        const username = part.substring(1);
+        return (
+          <Link
+            key={idx}
+            color={`${primaryColor}.500`}
+            onClick={() =>
+              openUrl(`https://github.com/${username}`).catch(logger.error)
+            }
+          >
+            {part}
+          </Link>
+        );
+      }
+      return <React.Fragment key={idx}>{part}</React.Fragment>;
+    });
+  };
+
+  // Process both function calls and GitHub marks
+  const processContent = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === "string") {
-      const parts = children.split(/(\#[0-9]+|\@[a-zA-Z0-9_-]+)/g);
-      return parts.map((part, idx) => {
-        if (/^#[0-9]+$/.test(part)) {
-          const issueNumber = part.substring(1);
-          return (
-            <Link
-              key={idx}
-              color={`${primaryColor}.500`}
-              onClick={() =>
-                openUrl(
-                  `https://github.com/UNIkeEN/SJMCL/pull/${issueNumber}`
-                ).catch(logger.error)
-              }
-            >
-              {part}
-            </Link>
-          );
+      const result: React.ReactNode[] = [];
+      let remaining = children;
+
+      while (true) {
+        const marker = "::function::";
+        const idx = remaining.indexOf(marker);
+
+        if (idx === -1) {
+          result.push(processGitHubMarks(remaining));
+          break;
         }
-        if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
-          const username = part.substring(1);
-          return (
-            <Link
-              key={idx}
-              color={`${primaryColor}.500`}
-              onClick={() =>
-                openUrl(`https://github.com/${username}`).catch(logger.error)
-              }
-            >
-              {part}
-            </Link>
-          );
+
+        // Push text before marker
+        if (idx > 0) {
+          result.push(processGitHubMarks(remaining.substring(0, idx)));
         }
-        return <React.Fragment key={idx}>{part}</React.Fragment>;
-      });
+
+        // Try to parse JSON starting after marker
+        const jsonStart = remaining.indexOf("{", idx + marker.length);
+        if (jsonStart === -1) {
+          // No opening brace found, treat text up to marker end as resolved
+          result.push(
+            processGitHubMarks(remaining.substring(idx, idx + marker.length))
+          );
+          remaining = remaining.substring(idx + marker.length);
+          continue;
+        }
+
+        // Check if there's only whitespace between marker and {
+        const textBetween = remaining.substring(idx + marker.length, jsonStart);
+        if (textBetween.trim() !== "") {
+          // Invalid format, treat as normal text
+          result.push(processGitHubMarks(remaining.substring(idx, jsonStart)));
+          remaining = remaining.substring(jsonStart);
+          continue;
+        }
+
+        // Brace counting to find full JSON object with support for nesting
+        let braceCount = 0;
+        let jsonEnd = -1;
+        for (let i = jsonStart; i < remaining.length; i++) {
+          if (remaining[i] === "{") braceCount++;
+          else if (remaining[i] === "}") {
+            braceCount--;
+            if (braceCount === 0) {
+              jsonEnd = i + 1;
+              break;
+            }
+          }
+        }
+
+        if (jsonEnd !== -1) {
+          const jsonStr = remaining.substring(jsonStart, jsonEnd);
+          try {
+            const data = JSON.parse(jsonStr);
+            if (data.name) {
+              result.push(
+                <FunctionCallWidget
+                  key={`fn-${result.length}`}
+                  data={data}
+                  onInvoke={onFunctionCall}
+                />
+              );
+            } else {
+              result.push(
+                <Code
+                  key={`err-${result.length}`}
+                  colorScheme="red"
+                  fontSize="xs"
+                >
+                  Invalid Call: {jsonStr}
+                </Code>
+              );
+            }
+          } catch (e) {
+            result.push(
+              <Code
+                key={`err-${result.length}`}
+                colorScheme="red"
+                fontSize="xs"
+              >
+                Invalid JSON: {jsonStr}
+              </Code>
+            );
+          }
+          remaining = remaining.substring(jsonEnd);
+        } else {
+          // Unclosed brace, treat the marker as text and continue
+          result.push(
+            processGitHubMarks(remaining.substring(idx, jsonStart + 1))
+          );
+          remaining = remaining.substring(jsonStart + 1);
+        }
+      }
+      return result;
     }
 
     if (Array.isArray(children)) {
       return children.map((child, i) => (
-        <React.Fragment key={i}>{processGitHubMarks(child)}</React.Fragment>
+        <React.Fragment key={i}>{processContent(child)}</React.Fragment>
       ));
     }
 
@@ -84,8 +186,8 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
       const childProps = children.props?.children ?? null;
       return React.cloneElement(children, {
         ...children.props,
-        children: processGitHubMarks(childProps),
-      });
+        children: processContent(childProps),
+      } as any);
     }
 
     return children;
@@ -95,17 +197,17 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   const components: Components = {
     // paragraphs
     p: ({ node, children, ...rest }) => (
-      <Text {...rest}>{processGitHubMarks(children)}</Text>
+      <Text {...rest}>{processContent(children)}</Text>
     ),
     // headings
     h1: ({ node, children, ...rest }) => (
       <Heading as="h1" size="xl" my={4} {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </Heading>
     ),
     h2: ({ node, children, ...rest }) => (
       <Heading as="h2" size="lg" my={3} {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </Heading>
     ),
     h3: ({ node, children, ...rest }) => (
@@ -120,12 +222,12 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
     ),
     strong: ({ node, children, ...rest }) => (
       <Text as="strong" fontWeight="600" color="inherit" {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </Text>
     ),
     em: ({ node, children, ...rest }) => (
       <Text as="em" fontStyle="italic" color="inherit" {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </Text>
     ),
     // divider
@@ -134,7 +236,6 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
     a: ({ node, href, children, ...rest }) => (
       <Link
         _hover={{ textDecoration: "underline" }}
-        color={`${primaryColor}.500`}
         onClick={(e) => {
           e.preventDefault();
           if (href) openUrl(href);
@@ -147,17 +248,17 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
     // lists
     ul: ({ node, children, ...rest }) => (
       <UnorderedList pl={5} my={2} {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </UnorderedList>
     ),
     ol: ({ node, children, ...rest }) => (
       <OrderedList pl={5} my={2} {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </OrderedList>
     ),
     li: ({ node, children, ...rest }) => (
       <ListItem my={1} {...rest}>
-        {processGitHubMarks(children)}
+        {processContent(children)}
       </ListItem>
     ),
     // images
@@ -184,6 +285,27 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
     tr: ({ node, children, ...rest }) => <Tr {...rest}>{children}</Tr>,
     th: ({ node, children, ...rest }) => <Th {...rest}>{children}</Th>,
     td: ({ node, children, ...rest }) => <Td {...rest}>{children}</Td>,
+    // code
+    code: ({ node, className, children, ...rest }) => {
+      // If inline code matches function pattern
+      if (typeof children === "string") {
+        const funcMatch = children.match(/^::function::(\{.*\})$/);
+        if (funcMatch) {
+          try {
+            const data = JSON.parse(funcMatch[1]);
+            return <FunctionCallWidget data={data} onInvoke={onFunctionCall} />;
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+
+      return (
+        <Code className={className} {...rest}>
+          {children}
+        </Code>
+      );
+    },
   };
 
   return (
