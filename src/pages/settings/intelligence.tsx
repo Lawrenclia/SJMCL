@@ -5,10 +5,12 @@ import {
   Input,
   NumberInput,
   NumberInputField,
+  Select,
   Switch,
   Tag,
   TagLabel,
   Text,
+  VStack,
   useColorModeValue,
 } from "@chakra-ui/react";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -36,8 +38,9 @@ const IntelligenceSettingsPage = () => {
   const [apiKey, setApiKey] = useState<string>(
     intelligenceConfigs.model.apiKey || ""
   );
-  const [model, setModel] = useState<string>(
-    intelligenceConfigs.model.model || ""
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [model, setModel] = useState<string | null>(
+    intelligenceConfigs.model.model || null
   );
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [modelAvailability, setModelAvailability] = useState<boolean | null>(
@@ -82,30 +85,38 @@ const IntelligenceSettingsPage = () => {
   const trimmed = useMemo(() => {
     const b = baseUrl.trim();
     const k = apiKey.trim();
-    const m = model.trim();
-    return { b, k, m, ok: !!b && !!k && !!m };
-  }, [baseUrl, apiKey, model]);
+    return { b, k, ok: !!b && !!k };
+  }, [baseUrl, apiKey]);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCheckLLMAvailability = useCallback(
-    (b: string, k: string, m: string) => {
-      setIsChecking(true);
-      setModelAvailability(null);
+  const handleCheckLLMAvailability = useCallback((b: string, k: string) => {
+    setIsChecking(true);
+    setModelAvailability(null);
 
-      IntelligenceService.checkLLMServiceAvailability(b, k, m)
-        .then((resp) => {
-          setModelAvailability(resp.status === "success");
-          setIsChecking(false);
-        })
-        .catch((err) => {
-          logger.error("Check LLM service availability error:", err);
+    IntelligenceService.retrieveLLMModels(b, k)
+      .then((resp) => {
+        if (resp.status === "success") {
+          setModelAvailability(true);
+          setAvailableModels(resp.data);
+          if (resp.data.length > 0) {
+            setModel(resp.data[0]);
+          } else {
+            setModel(null);
+          }
+        } else {
           setModelAvailability(false);
-          setIsChecking(false);
-        });
-    },
-    []
-  );
+          setModel(null);
+          setAvailableModels([]);
+        }
+        setIsChecking(false);
+      })
+      .catch((err) => {
+        logger.error("Retrieve LLM models error:", err);
+        setModelAvailability(false);
+        setIsChecking(false);
+      });
+  }, []);
 
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -120,7 +131,7 @@ const IntelligenceSettingsPage = () => {
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      handleCheckLLMAvailability(trimmed.b, trimmed.k, trimmed.m);
+      handleCheckLLMAvailability(trimmed.b, trimmed.k);
     }, 500);
 
     return () => {
@@ -129,7 +140,7 @@ const IntelligenceSettingsPage = () => {
         debounceTimerRef.current = null;
       }
     };
-  }, [trimmed.b, trimmed.k, trimmed.m, trimmed.ok, handleCheckLLMAvailability]);
+  }, [trimmed.b, trimmed.k, trimmed.ok, handleCheckLLMAvailability]);
 
   const onManualRefreshAvailability = useCallback(() => {
     if (!trimmed.ok || isChecking) return;
@@ -138,12 +149,11 @@ const IntelligenceSettingsPage = () => {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
-    handleCheckLLMAvailability(trimmed.b, trimmed.k, trimmed.m);
+    handleCheckLLMAvailability(trimmed.b, trimmed.k);
   }, [
     trimmed.ok,
     trimmed.b,
     trimmed.k,
-    trimmed.m,
     isChecking,
     handleCheckLLMAvailability,
   ]);
@@ -178,18 +188,26 @@ const IntelligenceSettingsPage = () => {
                   "IntelligenceSettingsPage.model.settings.baseUrl.title"
                 ),
                 children: (
-                  <Input
-                    size="xs"
-                    w="60%"
-                    focusBorderColor={`${primaryColor}.500`}
-                    value={baseUrl}
-                    onChange={(event) => {
-                      setBaseUrl(event.target.value);
-                    }}
-                    onBlur={() => {
-                      update("intelligence.model.baseUrl", baseUrl);
-                    }}
-                  />
+                  <VStack w="60%" alignItems="start">
+                    <Input
+                      size="xs"
+                      w="full"
+                      focusBorderColor={`${primaryColor}.500`}
+                      value={baseUrl}
+                      onChange={(event) => {
+                        setBaseUrl(event.target.value);
+                      }}
+                      onBlur={() => {
+                        update("intelligence.model.baseUrl", baseUrl);
+                      }}
+                    />
+                    <Text fontSize="xs" className="secondary-text">
+                      {t(
+                        "IntelligenceSettingsPage.model.settings.baseUrl.fullUrl",
+                        { url: `${baseUrl}/v1/chat/completions` }
+                      )}
+                    </Text>
+                  </VStack>
                 ),
               },
               {
@@ -214,18 +232,23 @@ const IntelligenceSettingsPage = () => {
               {
                 title: t("IntelligenceSettingsPage.model.settings.model.title"),
                 children: (
-                  <Input
+                  <Select
                     size="xs"
                     w="60%"
                     focusBorderColor={`${primaryColor}.500`}
-                    value={model}
+                    value={model || ""}
                     onChange={(event) => {
                       setModel(event.target.value);
+                      update("intelligence.model.model", event.target.value);
                     }}
-                    onBlur={() => {
-                      update("intelligence.model.model", model);
-                    }}
-                  />
+                    isDisabled={!trimmed.ok || isChecking || !modelAvailability}
+                  >
+                    {availableModels.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </Select>
                 ),
               },
               {

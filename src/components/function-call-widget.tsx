@@ -50,7 +50,7 @@ export const FunctionCallWidget: React.FC<{
 
   return (
     <Box
-      my={3}
+      mt={3}
       p={3}
       borderRadius="md"
       borderWidth="1px"

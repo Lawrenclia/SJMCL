@@ -11,16 +11,14 @@ export class IntelligenceService {
    * CHECK the availability of the LLM service.
    * @param {string} baseUrl The base URL of the LLM service.
    * @param {string} apiKey The API key for authentication.
-   * @param {string} model The LLM model to be used.
-   * @return {Promise<InvokeResponse<void>>}
+   * @return {Promise<InvokeResponse<string[]>>}
    */
   @responseHandler("intelligence")
-  public static async checkLLMServiceAvailability(
+  public static async retrieveLLMModels(
     baseUrl: string,
-    apiKey: string,
-    model: string
-  ): Promise<InvokeResponse<void>> {
-    return invoke("check_llm_service_availability", { baseUrl, apiKey, model });
+    apiKey: string
+  ): Promise<InvokeResponse<string[]>> {
+    return invoke("retrieve_llm_models", { baseUrl, apiKey });
   }
 
   /**

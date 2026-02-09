@@ -14,12 +14,11 @@ use crate::launcher_config::models::LauncherConfig;
 // TODO: migrate log analysis logic to backend (w multi-language prompt and result parsing)
 
 #[tauri::command]
-pub async fn check_llm_service_availability(
+pub async fn retrieve_llm_models(
   app: AppHandle,
   base_url: String,
   api_key: String,
-  model: String,
-) -> SJMCLResult<()> {
+) -> SJMCLResult<Vec<String>> {
   let client = app.state::<reqwest::Client>();
   let response = client
     .get(format!("{}/v1/models", base_url))
@@ -36,11 +35,7 @@ pub async fn check_llm_service_availability(
       log::error!("Error parsing LLM service response: {}", e);
       LLMServiceError::ApiParseError
     })?;
-    if models_response.data.iter().any(|m| m.id == model) {
-      Ok(())
-    } else {
-      Err(LLMServiceError::NoSuchModel.into())
-    }
+    Ok(models_response.data.iter().map(|m| m.id.clone()).collect())
   } else {
     Err(LLMServiceError::InvalidAPIKey.into())
   }

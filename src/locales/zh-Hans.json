@@ -1635,7 +1635,8 @@
       "title": "模型",
       "settings": {
         "baseUrl": {
-          "title": "基础 URL"
+          "title": "基础 URL",
+          "fullUrl": "完整 URL: {{url}}"
         },
         "apiKey": {
           "title": "API 密钥"

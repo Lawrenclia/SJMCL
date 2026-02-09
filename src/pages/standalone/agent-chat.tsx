@@ -266,7 +266,7 @@ const AgentChatPage: React.FC = () => {
           </Flex>
         )}
         {messages
-          .filter((msg) => msg.role !== "system")
+          .filter((msg) => msg.role !== "system" && msg.content.trim())
           .map((msg, i) => (
             <Flex
               key={i}

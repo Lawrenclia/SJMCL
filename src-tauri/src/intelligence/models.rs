@@ -62,7 +62,6 @@ pub enum LLMServiceError {
   InvalidAPIKey,
   NetworkError,
   NotEnabled,
-  NoSuchModel,
   NoResponse,
 }
 
