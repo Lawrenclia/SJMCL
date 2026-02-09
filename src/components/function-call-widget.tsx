@@ -17,6 +17,7 @@ import { formatPrintable } from "@/utils/string";
 export interface FunctionCallParams {
   name: string;
   params: Record<string, any>;
+  result?: string;
 }
 
 export const FunctionCallWidget: React.FC<{
@@ -30,17 +31,20 @@ export const FunctionCallWidget: React.FC<{
   const codeBgColor = useColorModeValue("whiteAlpha.500", "blackAlpha.400");
 
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [internalResult, setInternalResult] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Use result from data (persisted) or internal state (local execution)
+  const result = data.result ? decodeURI(data.result) : internalResult;
 
   const handleInvoke = async () => {
     if (onInvoke) {
       setIsLoading(true);
-      setResult(null);
+      setInternalResult(null);
       try {
         const res = await onInvoke(data.name, data.params);
         if (res) {
-          setResult(formatPrintable(res));
+          setInternalResult(formatPrintable(res));
         }
       } finally {
         setIsLoading(false);
@@ -50,9 +54,9 @@ export const FunctionCallWidget: React.FC<{
 
   return (
     <Box
-      mt={3}
+      mt={7}
       p={3}
-      borderRadius="md"
+      borderRadius="xl"
       borderWidth="1px"
       bg={bgColor}
       borderColor={borderColor}

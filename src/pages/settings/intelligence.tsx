@@ -119,7 +119,8 @@ const IntelligenceSettingsPage = () => {
           setIsChecking(false);
         });
     },
-    [update]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   useEffect(() => {

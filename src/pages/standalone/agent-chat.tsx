@@ -152,7 +152,15 @@ const AgentChatPage: React.FC = () => {
     async (name: string, params: Record<string, any>) => {
       console.log("Function Call:", name, params);
 
-      let result = formatPrintable(await executeFunctionCall(name, params));
+      let result = "";
+      try {
+        result = formatPrintable(await executeFunctionCall(name, params));
+      } catch (e: any) {
+        console.error("Function execution error:", e);
+        toast({ title: "Error executing function", status: "error" });
+        result = `Error: ${e.message || "Unknown error"}`;
+      }
+
       // Update messages with the function result as a system/context message
       // Note: In a real agent system, this would be a "tool" role message.
       // Here we append it to history and request a new response.
@@ -191,7 +199,7 @@ const AgentChatPage: React.FC = () => {
         });
       } catch (e) {
         console.error(e);
-        toast({ title: "Error executing function", status: "error" });
+        toast({ title: "Error fetching response", status: "error" });
         setMessages((prev) => {
           const updated = [...prev];
           if (
@@ -212,10 +220,88 @@ const AgentChatPage: React.FC = () => {
     [i18n.language, toast]
   );
 
+  // Auto-execute function calls when response is finished
+  useEffect(() => {
+    if (isLoading || messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+
+    if (lastMsg.role === "assistant") {
+      const content = lastMsg.content;
+      const marker = "::function::";
+      const idx = content.lastIndexOf(marker);
+
+      if (idx !== -1) {
+        const jsonStart = content.indexOf("{", idx + marker.length);
+        if (jsonStart !== -1) {
+          let braceCount = 0;
+          let jsonEnd = -1;
+          for (let i = jsonStart; i < content.length; i++) {
+            if (content[i] === "{") braceCount++;
+            else if (content[i] === "}") {
+              braceCount--;
+              if (braceCount === 0) {
+                jsonEnd = i + 1;
+                break;
+              }
+            }
+          }
+
+          if (jsonEnd !== -1) {
+            try {
+              const jsonStr = content.substring(jsonStart, jsonEnd);
+              const data = JSON.parse(jsonStr);
+              if (data && data.name && data.params && !data.result) {
+                // If result is already present, skip execution (prevent loop)
+                handleFunctionCall(data.name, data.params).then((result) => {
+                  // Update the message content to include the result
+                  const newData = { ...data, result: encodeURI(result) };
+                  const newJsonStr = JSON.stringify(newData, null, 2);
+                  const newContent =
+                    content.substring(0, jsonStart) +
+                    newJsonStr +
+                    content.substring(jsonEnd);
+
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    // Find the message that needs update.
+                    // Since handleFunctionCall adds messages, 'lastMsg' is no longer the last one in 'prev'.
+                    // We need to find the message with the same content (before update).
+                    const targetIndex = updated.findIndex(
+                      (m) =>
+                        m.role === "assistant" &&
+                        // Strict check might be risky if multiple identical messages exist.
+                        // Ideally we'd use ID, but we don't have IDs.
+                        // We can assume it's one of the last few messages.
+                        m.content === content
+                    );
+
+                    if (targetIndex !== -1) {
+                      updated[targetIndex] = {
+                        ...updated[targetIndex],
+                        content: newContent,
+                      };
+                    }
+                    return updated;
+                  });
+                });
+              }
+            } catch (e) {
+              console.error("Failed to parse auto-function execution", e);
+            }
+          }
+        }
+      }
+    }
+  }, [isLoading, messages, handleFunctionCall]);
+
   const bg = useColorModeValue("gray.50", "gray.900");
   const msgBgUser = useColorModeValue("blue.500", "blue.600");
-  const msgBgBot = useColorModeValue("white", "gray.700");
+  const msgBgBot = "transparent";
   const borderColor = useColorModeValue("gray.200", "gray.700");
+
+  let filteredMessages = messages.filter(
+    (msg) => msg.role !== "system" && msg.content.trim()
+  );
 
   return (
     <Flex direction="column" h="100vh" bg={bg}>
@@ -247,7 +333,7 @@ const AgentChatPage: React.FC = () => {
 
       {/* Messages */}
       <Flex flex={1} overflowY="auto" direction="column" p={4} gap={4}>
-        {messages.filter((m) => m.role !== "system").length === 0 && (
+        {filteredMessages.length === 0 && (
           <Flex
             direction="column"
             align="center"
@@ -265,17 +351,18 @@ const AgentChatPage: React.FC = () => {
             <Text>{t("AgentChatPage.description")}</Text>
           </Flex>
         )}
-        {messages
-          .filter((msg) => msg.role !== "system" && msg.content.trim())
-          .map((msg, i) => (
-            <Flex
-              key={i}
-              direction={msg.role === "user" ? "row-reverse" : "row"}
-              gap={3}
-              width="100%"
-            >
-              {(msg.role !== "user" ||
-                (selectedPlayer && selectedPlayer.avatar)) && (
+        {filteredMessages.map((msg, i) => (
+          <Flex
+            key={i}
+            direction={msg.role === "user" ? "row-reverse" : "row"}
+            gap={3}
+            width="100%"
+          >
+            {(msg.role !== "user" ||
+              (selectedPlayer && selectedPlayer.avatar)) &&
+              (i > 0 && filteredMessages[i - 1].role === msg.role ? (
+                <Box boxSize="32px" />
+              ) : (
                 <Image
                   boxSize="32px"
                   objectFit="cover"
@@ -286,34 +373,44 @@ const AgentChatPage: React.FC = () => {
                   }
                   alt={msg.role}
                 />
-              )}
-              <Box
-                bg={msg.role === "user" ? msgBgUser : msgBgBot}
-                color={msg.role === "user" ? "white" : undefined}
-                p={3}
-                borderRadius="lg"
-                maxW="80%"
-                boxShadow="sm"
-                position="relative"
+              ))}
+            <Box
+              bg={msg.role === "user" ? msgBgUser : msgBgBot}
+              color={msg.role === "user" ? "white" : undefined}
+              p={2}
+              borderRadius="lg"
+              maxW={msg.role === "user" ? "80%" : undefined}
+              w={msg.role === "user" ? undefined : "80%"}
+              position="relative"
+            >
+              <MarkdownContainer
+                onFunctionCall={
+                  msg.role === "user" ? undefined : handleFunctionCall
+                }
               >
-                <MarkdownContainer onFunctionCall={handleFunctionCall}>
-                  {msg.content}
-                </MarkdownContainer>
-              </Box>
-            </Flex>
-          ))}
+                {msg.content}
+              </MarkdownContainer>
+            </Box>
+          </Flex>
+        ))}
         {isLoading &&
           messages.length > 0 &&
           messages[messages.length - 1].content === "" && (
             <Flex direction="row" gap={3}>
-              <Image
-                boxSize="32px"
-                objectFit="cover"
-                src={AGENT_AVATAR_SRC}
-                alt="agent"
-              />
-              <Box bg={msgBgBot} p={3} borderRadius="lg" boxShadow="sm">
-                <Spinner size="sm" speed="0.8s" />
+              {filteredMessages.length > 0 &&
+              filteredMessages[filteredMessages.length - 1].role ===
+                "assistant" ? (
+                <Box boxSize="32px" />
+              ) : (
+                <Image
+                  boxSize="32px"
+                  objectFit="cover"
+                  src={AGENT_AVATAR_SRC}
+                  alt="agent"
+                />
+              )}
+              <Box bg={msgBgBot} p={2} borderRadius="lg">
+                <Spinner size="sm" />
               </Box>
             </Flex>
           )}
