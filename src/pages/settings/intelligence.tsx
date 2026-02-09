@@ -90,33 +90,37 @@ const IntelligenceSettingsPage = () => {
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCheckLLMAvailability = useCallback((b: string, k: string) => {
-    setIsChecking(true);
-    setModelAvailability(null);
+  const handleCheckLLMAvailability = useCallback(
+    (b: string, k: string) => {
+      setIsChecking(true);
+      setModelAvailability(null);
 
-    IntelligenceService.retrieveLLMModels(b, k)
-      .then((resp) => {
-        if (resp.status === "success") {
-          setModelAvailability(true);
-          setAvailableModels(resp.data);
-          if (resp.data.length > 0) {
-            setModel(resp.data[0]);
+      IntelligenceService.retrieveLLMModels(b, k)
+        .then((resp) => {
+          if (resp.status === "success") {
+            setModelAvailability(true);
+            setAvailableModels(resp.data);
+            if (resp.data.length > 0) {
+              setModel(resp.data[0]);
+              update("intelligence.model.model", resp.data[0]);
+            } else {
+              setModel(null);
+            }
           } else {
+            setModelAvailability(false);
             setModel(null);
+            setAvailableModels([]);
           }
-        } else {
+          setIsChecking(false);
+        })
+        .catch((err) => {
+          logger.error("Retrieve LLM models error:", err);
           setModelAvailability(false);
-          setModel(null);
-          setAvailableModels([]);
-        }
-        setIsChecking(false);
-      })
-      .catch((err) => {
-        logger.error("Retrieve LLM models error:", err);
-        setModelAvailability(false);
-        setIsChecking(false);
-      });
-  }, []);
+          setIsChecking(false);
+        });
+    },
+    [update]
+  );
 
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -239,7 +243,9 @@ const IntelligenceSettingsPage = () => {
                     value={model || ""}
                     onChange={(event) => {
                       setModel(event.target.value);
-                      update("intelligence.model.model", event.target.value);
+                    }}
+                    onBlur={() => {
+                      update("intelligence.model.model", model);
                     }}
                     isDisabled={!trimmed.ok || isChecking || !modelAvailability}
                   >
