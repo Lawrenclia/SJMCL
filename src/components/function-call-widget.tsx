@@ -5,12 +5,13 @@ import {
   Collapse,
   HStack,
   Icon,
+  Spinner,
   Text,
   useColorModeValue,
 } from "@chakra-ui/react";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChevronDown, LuChevronUp, LuZap } from "react-icons/lu";
+import { LuCheck, LuChevronDown, LuChevronUp, LuZap } from "react-icons/lu";
 import { formatPrintable } from "@/utils/string";
 
 // Interface for the function call parameters
@@ -35,7 +36,7 @@ export const FunctionCallWidget: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
 
   // Use result from data (persisted) or internal state (local execution)
-  const result = data.result ? decodeURI(data.result) : internalResult;
+  const result = data.result ? decodeURI(atob(data.result)) : internalResult;
 
   const handleInvoke = async () => {
     if (onInvoke) {
@@ -68,16 +69,10 @@ export const FunctionCallWidget: React.FC<{
             {t("AgentChatPage.functionCall.title")}: {data.name}
           </Text>
         </HStack>
-        {!result && (
-          <Button
-            size="xs"
-            colorScheme="purple"
-            variant="solid"
-            onClick={handleInvoke}
-            isLoading={isLoading}
-          >
-            {t("AgentChatPage.functionCall.execute")}
-          </Button>
+        {!result ? (
+          <Spinner size="xs" />
+        ) : (
+          <Icon as={LuCheck} color="green.500" />
         )}
       </HStack>
       {Object.keys(data.params).length > 0 && (

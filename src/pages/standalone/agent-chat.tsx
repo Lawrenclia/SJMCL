@@ -20,7 +20,9 @@ import { useGlobalData } from "@/contexts/global-data";
 import { useSharedModals } from "@/contexts/shared-modal";
 import { Player } from "@/models/account";
 import { ChatMessage } from "@/models/intelligence";
+import { NewsPostRequest } from "@/models/news-post";
 import { getChatSystemPrompt } from "@/prompts";
+import { DiscoverService } from "@/services/discover";
 import { InstanceService } from "@/services/instance";
 import { IntelligenceService } from "@/services/intelligence";
 import { base64ImgSrc, formatPrintable } from "@/utils/string";
@@ -143,6 +145,14 @@ const AgentChatPage: React.FC = () => {
           instanceId: params.id,
         });
         return t("AgentChatPage.functionCall.launchInstance.success");
+      case "fetch_news":
+        const sources: NewsPostRequest[] = config.discoverSourceEndpoints.map(
+          (url) => ({
+            url,
+            cursor: null,
+          })
+        );
+        return await DiscoverService.fetchNewsPostSummaries(sources);
       default:
         return `Unknown function: ${name}`;
     }
@@ -254,7 +264,12 @@ const AgentChatPage: React.FC = () => {
                 // If result is already present, skip execution (prevent loop)
                 handleFunctionCall(data.name, data.params).then((result) => {
                   // Update the message content to include the result
-                  const newData = { ...data, result: encodeURI(result) };
+                  const shortResult =
+                    result.length > 100 ? result.slice(0, 100) + "..." : result;
+                  const newData = {
+                    ...data,
+                    result: btoa(encodeURI(shortResult)),
+                  };
                   const newJsonStr = JSON.stringify(newData, null, 2);
                   const newContent =
                     content.substring(0, jsonStart) +
