@@ -100,12 +100,17 @@ const IntelligenceSettingsPage = () => {
           if (resp.status === "success") {
             setModelAvailability(true);
             setAvailableModels(resp.data);
-            if (resp.data.length > 0) {
-              setModel(resp.data[0]);
-              update("intelligence.model.model", resp.data[0]);
-            } else {
-              setModel(null);
-            }
+            setModel((prevModel) => {
+              const nextModel = resp.data.includes(prevModel || "")
+                ? prevModel
+                : (resp.data[0] ?? null);
+
+              if (nextModel !== prevModel) {
+                update("intelligence.model.model", nextModel);
+              }
+
+              return nextModel;
+            });
           } else {
             setModelAvailability(false);
             setModel(null);
@@ -119,8 +124,7 @@ const IntelligenceSettingsPage = () => {
           setIsChecking(false);
         });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [update]
   );
 
   useEffect(() => {
