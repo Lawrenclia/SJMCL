@@ -7,10 +7,10 @@ export interface FunctionCallState {
 }
 
 interface FunctionCallContextType {
-  // Key: messageId-functionIndex
-  callStates: Record<string, FunctionCallState>;
+  callStates: Record<number, FunctionCallState>;
   setCallState: (id: number, state: FunctionCallState) => void;
   getCallState: (id: number) => FunctionCallState;
+  hasExecutingCall: () => boolean;
 }
 
 const FunctionCallContext = createContext<FunctionCallContextType | undefined>(
@@ -35,9 +35,12 @@ export const FunctionCallProvider: React.FC<{ children: React.ReactNode }> = ({
     return callStates[id] || { result: null, error: null, isExecuting: false };
   };
 
+  const hasExecutingCall = () =>
+    Object.values(callStates).some((state) => state.isExecuting);
+
   return (
     <FunctionCallContext.Provider
-      value={{ callStates, setCallState, getCallState }}
+      value={{ callStates, setCallState, getCallState, hasExecutingCall }}
     >
       {children}
     </FunctionCallContext.Provider>

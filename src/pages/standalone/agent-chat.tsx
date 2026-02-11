@@ -52,7 +52,7 @@ const AgentChatContent: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
   const { openSharedModal } = useSharedModals();
-  const { getCallState, setCallState } = useFunctionCall();
+  const { getCallState, setCallState, hasExecutingCall } = useFunctionCall();
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -363,6 +363,7 @@ const AgentChatContent: React.FC = () => {
     (msg) => msg.role !== "system" && msg.content.trim()
   );
   const canSend = input.trim().length > 0;
+  const isBusy = isLoading || hasExecutingCall();
 
   return (
     <Flex direction="column" h="100vh" bg={bg}>
@@ -513,15 +514,13 @@ const AgentChatContent: React.FC = () => {
                 {/* TODO add more setting icon */}
               </Text>
               <IconButton
-                aria-label={isLoading ? "stop" : "send"}
-                icon={isLoading ? <LuPause /> : <LuSend />}
-                colorScheme={
-                  isLoading ? "red" : canSend ? primaryColor : "gray"
-                }
+                aria-label={isBusy ? "stop" : "send"}
+                icon={isBusy ? <LuPause /> : <LuSend />}
+                colorScheme={isBusy ? "red" : canSend ? primaryColor : "gray"}
                 variant="solid"
                 borderRadius="full"
-                isDisabled={!isLoading && !canSend}
-                onClick={isLoading ? handleStopReply : handleSend}
+                isDisabled={!isBusy && !canSend}
+                onClick={isBusy ? handleStopReply : handleSend}
               />
             </HStack>
           </Flex>
