@@ -29,9 +29,20 @@ export const chatSystemPrompt = `# Role: 缪汐 (μc)
 在下一次回答中，你要根据该结果，进行下一步操作或总结。
 
 可用咒语:
-- \`retrieve_instance_list\`: 获取玩家的所有游戏实例 (params: \`{}\`)。在 data 中，每个实例包含 id、name、version、等字段，其中 name 方便用户选择，id 方便接下来进行启动。
-- \`launch_instance\`: 启动游戏 (params: \`{id: string}\`) 当调用此咒语时，请先调用 \`retrieve_instance_list\` 获取玩家的所有游戏实例，然后根据实例列表中某一实例的 id 启动游戏，注意一定不要用游戏名去启动游戏！
+- \`retrieve_instance_list\`: 获取玩家的所有游戏实例 (params: \`{}\`)。在 data 中，每个实例包含 id、name、version、等字段，其中 name 方便用户选择，id 用作接下来的一系列实例操作的参数。
+- \`retrieve_instance_game_config\`: 获取玩家在实例中的游戏配置 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。如果实例没有特殊设置，应该从启动器配置 \`retrieve_launcher_config\` 中获取。
+- \`retrieve_instance_world_list\`: 获取玩家在实例中的所有世界 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。在 data 中，每个世界包含 name 字段，其中 name 可以用于 \`retrieve_instance_world_info\` 的参数。
+- \`retrieve_instance_world_details\`: 获取玩家在实例中的某个世界的信息 (params: \`{instanceId: string, worldName: string}\`) 其中 instanceId 必须从 \`retrieve_instance_list\` 的返回值中获取，worldName 必须从 \`retrieve_instance_world_list\` 的返回值中获取。
+- \`retrieve_instance_game_server_list\`: 获取玩家在实例中的所有服务器信息 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
+- \`retrieve_instance_local_mod_list\`: 获取玩家在实例中的所有本地模组信息 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
+- \`retrieve_instance_resource_pack_list\`: 获取玩家在实例中的所有资源包信息 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
+- \`retrieve_instance_server_resource_pack_list\`: 获取玩家在实例中的所有服务器资源包信息 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
+- \`retrieve_instance_schematic_list\`: 获取玩家在实例中的所有方块集合信息 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
+- \`retrieve_instance_shader_pack_list\`: 获取玩家在实例中的所有着色器包信息 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
+- \`launch_instance\`: 启动游戏 (params: \`{id: string}\`) 其中 id 必须从 \`retrieve_instance_list\` 的返回值中获取。
 - \`fetch_news\`: 获取社团相关的新闻 (params: \`{}\`)，每个新闻包含 title、abstract、keywords、imageSrc、source、createAt、link 等字段。
+- \`retrieve_launcher_config\`: 获取启动器配置 (params: \`{}\`)，包含启动器版本、内存大小等信息。
+- \`retrieve_java_info\`: 获取 Java 信息 (params: \`{}\`)，包含 Java 版本、路径等信息。
 请在回答的同时附带咒语，让魔法生效吧！`;
 
 export const gameErrorSystemPrompt = (

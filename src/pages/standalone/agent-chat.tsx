@@ -8,7 +8,6 @@ import {
   Text,
   Textarea,
   useColorModeValue,
-  useToast,
 } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,9 +17,10 @@ import { MiuChatLogoTitle } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
 import { useGlobalData } from "@/contexts/global-data";
 import { useSharedModals } from "@/contexts/shared-modal";
-import { Player } from "@/models/account";
+import { useToast } from "@/contexts/toast";
 import { ChatMessage } from "@/models/intelligence";
 import { NewsPostRequest } from "@/models/news-post";
+import { JavaInfo } from "@/models/system-info";
 import { getChatSystemPrompt } from "@/prompts";
 import { DiscoverService } from "@/services/discover";
 import { InstanceService } from "@/services/instance";
@@ -30,8 +30,8 @@ import { base64ImgSrc, formatPrintable } from "@/utils/string";
 const AGENT_AVATAR_SRC = "/images/agent/miuxi_px_avatar.png";
 const AgentChatPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { config } = useLauncherConfig();
-  const { getPlayerList } = useGlobalData();
+  const { config, getJavaInfos } = useLauncherConfig();
+  const { getPlayerList, selectedPlayer } = useGlobalData();
 
   // Initialize with system prompt
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -43,18 +43,15 @@ const AgentChatPage: React.FC = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player>();
   const toast = useToast();
   const { openSharedModal } = useSharedModals();
+  const [javaInfos, setJavaInfos] = useState<JavaInfo[]>();
 
   useEffect(() => {
-    const playerList = getPlayerList(true);
-    const selectedPlayerId = config.states.shared.selectedPlayerId;
-    setSelectedPlayer(
-      playerList?.find((player) => player.id === selectedPlayerId)
-    );
+    getPlayerList(true);
+    setJavaInfos(getJavaInfos(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.states.shared.selectedPlayerId]);
+  }, []);
 
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -140,11 +137,36 @@ const AgentChatPage: React.FC = () => {
     switch (name) {
       case "retrieve_instance_list":
         return await InstanceService.retrieveInstanceList();
+      case "retrieve_instance_game_config":
+        return await InstanceService.retrieveInstanceGameConfig(params.id);
+      case "retrieve_instance_world_list":
+        return await InstanceService.retrieveWorldList(params.id);
+      case "retrieve_instance_world_details":
+        return await InstanceService.retrieveWorldDetails(
+          params.instanceId,
+          params.worldName
+        );
+      case "retrieve_instance_game_server_list":
+        return await InstanceService.retrieveGameServerList(params.id, true);
+      case "retrieve_instance_local_mod_list":
+        return await InstanceService.retrieveLocalModList(params.id);
+      case "retrieve_instance_resource_pack_list":
+        return await InstanceService.retrieveResourcePackList(params.id);
+      case "retrieve_instance_server_resource_pack_list":
+        return await InstanceService.retrieveServerResourcePackList(params.id);
+      case "retrieve_instance_schematic_list":
+        return await InstanceService.retrieveSchematicList(params.id);
+      case "retrieve_instance_shader_pack_list":
+        return await InstanceService.retrieveShaderPackList(params.id);
       case "launch_instance":
         openSharedModal("launch", {
           instanceId: params.id,
         });
         return t("AgentChatPage.functionCall.launchInstance.success");
+      case "retrieve_launcher_config":
+        return config;
+      case "retrieve_java_info":
+        return javaInfos || [];
       case "fetch_news":
         const sources: NewsPostRequest[] = config.discoverSourceEndpoints.map(
           (url) => ({
@@ -227,7 +249,7 @@ const AgentChatPage: React.FC = () => {
       return result;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [i18n.language, toast]
+    [i18n.language, toast, config, javaInfos]
   );
 
   // Auto-execute function calls when response is finished

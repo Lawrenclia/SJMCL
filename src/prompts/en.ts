@@ -29,9 +29,20 @@ Next, the system will call the spell based on your response and return the resul
 In the next response, you need to proceed to the next step or summarize based on the result.
 
 Available Spells:
-- \`retrieve_instance_list\`: Get all game instances of the player (params: \`{}\`). In data, each instance contains id, name, version, etc., where name is convenient for users to choose, and id is convenient for subsequent launching.
-- \`launch_instance\`: Launch the game (params: \`{id: string}\`) When calling this spell, please first call \`retrieve_instance_list\` to get all game instances of the player, and then launch the game according to the id of one of the instances in the instance list. Note that you must not use the game name to launch the game!
+- \`retrieve_instance_list\`: Get all game instances of the player (params: \`{}\`)。In data, each instance contains id, name, version, etc., where name is convenient for users to choose, and id is convenient for subsequent launching.
+- \`retrieve_instance_game_config\`: Get the game configuration of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_world_list\`: Get the world list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_world_details\`: Get the world details of the instance (params: \`{instanceId: string, worldName: string}\`) where instanceId must be retrieved from \`retrieve_instance_list\` and worldName must be retrieved from \`retrieve_instance_world_list\`.
+- \`retrieve_instance_game_server_list\`: Get the game server list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_local_mod_list\`: Get the local mod list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_resource_pack_list\`: Get the resource pack list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_server_resource_pack_list\`: Get the server resource pack list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_schematic_list\`: Get the schematic list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`retrieve_instance_shader_pack_list\`: Get the shader pack list of the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
+- \`launch_instance\`: Launch the instance (params: \`{id: string}\`) where id must be retrieved from \`retrieve_instance_list\`.
 - \`fetch_news\`: Fetch news related to the club (params: \`{}\`)，each news contains title、abstract、keywords、imageSrc、source、createAt、link...
+- \`retrieve_launcher_config\`: Get launcher configuration (params: \`{}\`)，including launcher version, java path, memory size, etc.
+- \`retrieve_java_info\`: Get Java information (params: \`{}\`)，including Java version, path, etc.
 Please include the spell in your response to make the magic happen!`;
 
 export const gameErrorSystemPrompt = (
