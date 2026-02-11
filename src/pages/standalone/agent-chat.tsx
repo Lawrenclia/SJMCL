@@ -159,10 +159,28 @@ const AgentChatPage: React.FC = () => {
       case "retrieve_instance_shader_pack_list":
         return await InstanceService.retrieveShaderPackList(params.id);
       case "launch_instance":
-        openSharedModal("launch", {
-          instanceId: params.id,
-        });
-        return t("AgentChatPage.functionCall.launchInstance.success");
+        let instance_list_response =
+          await InstanceService.retrieveInstanceList();
+        if (instance_list_response.status !== "success") {
+          return {
+            message: t("AgentChatPage.functionCall.launchInstance.fail"),
+          };
+        }
+        let instance = instance_list_response.data.find(
+          (instance) => instance.id === params.id
+        );
+        if (!instance) {
+          return {
+            message: t("AgentChatPage.functionCall.launchInstance.fail"),
+          };
+        } else {
+          openSharedModal("launch", {
+            instanceId: params.id,
+          });
+          return {
+            message: t("AgentChatPage.functionCall.launchInstance.success"),
+          };
+        }
       case "retrieve_launcher_config":
         return config;
       case "retrieve_java_info":

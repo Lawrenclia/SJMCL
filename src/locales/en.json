@@ -239,7 +239,8 @@
       "execute": "Execute",
       "result": "Result",
       "launchInstance": {
-        "success": "Successfully opened game launching panel"
+        "success": "Successfully opened game launching panel",
+        "fail": "Failed to find the game instance"
       }
     }
   },
