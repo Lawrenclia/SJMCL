@@ -238,6 +238,7 @@
       "title": "Magic Call",
       "execute": "Execute",
       "result": "Result",
+      "error": "Error",
       "launchInstance": {
         "success": "Successfully opened game launching panel",
         "fail": "Failed to find the game instance"

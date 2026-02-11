@@ -24,18 +24,16 @@ import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { FunctionCallWidget } from "@/components/function-call-widget";
 import { useLauncherConfig } from "@/contexts/config";
+import { splitByFunctionCalls } from "@/utils/function-call";
 
 type MarkdownContainerProps = BoxProps & {
   children: string;
-  onFunctionCall?: (
-    name: string,
-    params: Record<string, any>
-  ) => Promise<any> | void;
+  messageId?: number;
 };
 
 const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   children,
-  onFunctionCall,
+  messageId,
   ...boxProps
 }) => {
   const { config } = useLauncherConfig();
@@ -86,101 +84,30 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   const processContent = React.useCallback(
     (children: React.ReactNode): React.ReactNode => {
       if (typeof children === "string") {
+        const segments = splitByFunctionCalls(children);
         const result: React.ReactNode[] = [];
-        let remaining = children;
 
-        while (true) {
-          const marker = "::function::";
-          const idx = remaining.indexOf(marker);
-
-          if (idx === -1) {
-            result.push(processGitHubMarks(remaining));
-            break;
-          }
-
-          // Push text before marker
-          if (idx > 0) {
-            result.push(processGitHubMarks(remaining.substring(0, idx)));
-          }
-
-          // Try to parse JSON starting after marker
-          const jsonStart = remaining.indexOf("{", idx + marker.length);
-          if (jsonStart === -1) {
-            // No opening brace found, treat text up to marker end as resolved
-            result.push(
-              processGitHubMarks(remaining.substring(idx, idx + marker.length))
-            );
-            remaining = remaining.substring(idx + marker.length);
-            continue;
-          }
-
-          // Check if there's only whitespace between marker and {
-          const textBetween = remaining.substring(
-            idx + marker.length,
-            jsonStart
-          );
-          if (textBetween.trim() !== "") {
-            // Invalid format, treat as normal text
-            result.push(
-              processGitHubMarks(remaining.substring(idx, jsonStart))
-            );
-            remaining = remaining.substring(jsonStart);
-            continue;
-          }
-
-          // Brace counting to find full JSON object with support for nesting
-          let braceCount = 0;
-          let jsonEnd = -1;
-          for (let i = jsonStart; i < remaining.length; i++) {
-            if (remaining[i] === "{") braceCount++;
-            else if (remaining[i] === "}") {
-              braceCount--;
-              if (braceCount === 0) {
-                jsonEnd = i + 1;
-                break;
-              }
-            }
-          }
-
-          if (jsonEnd !== -1) {
-            const jsonStr = remaining.substring(jsonStart, jsonEnd);
-            try {
-              const data = JSON.parse(jsonStr);
-              if (data.name) {
-                result.push(
-                  <FunctionCallWidget key={`fn-${result.length}`} data={data} />
-                );
-              } else {
-                result.push(
-                  <Code
-                    key={`err-${result.length}`}
-                    colorScheme="red"
-                    fontSize="xs"
-                  >
-                    Invalid Call: {jsonStr}
-                  </Code>
-                );
-              }
-            } catch (e) {
+        segments.forEach((segment, i) => {
+          if (typeof segment === "string") {
+            result.push(processGitHubMarks(segment));
+          } else {
+            if (segment.type === "success") {
               result.push(
-                <Code
-                  key={`err-${result.length}`}
-                  colorScheme="red"
-                  fontSize="xs"
-                >
-                  Invalid JSON: {jsonStr}
+                <FunctionCallWidget
+                  key={`fn-${i}`}
+                  data={{ name: segment.name, params: segment.params }}
+                  callId={messageId}
+                />
+              );
+            } else {
+              result.push(
+                <Code key={`err-${i}`} colorScheme="red" fontSize="xs">
+                  {segment.error}
                 </Code>
               );
             }
-            remaining = remaining.substring(jsonEnd);
-          } else {
-            // Unclosed brace, treat the marker as text and continue
-            result.push(
-              processGitHubMarks(remaining.substring(idx, jsonStart + 1))
-            );
-            remaining = remaining.substring(jsonStart + 1);
           }
-        }
+        });
         return result;
       }
 
@@ -200,7 +127,7 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
 
       return children;
     },
-    [processGitHubMarks]
+    [processGitHubMarks, messageId]
   );
 
   // map HTML tags to Chakra components so styles are inherited.
@@ -308,6 +235,9 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
           if (funcMatch) {
             try {
               const data = JSON.parse(funcMatch[1]);
+              // Inline code doesn't easily support knowing the index if multiple exist,
+              // but we can assume index 0 for simplicity or improve parse logic later.
+              // For now we skip callId for inline code blocks as they are edge cases.
               return <FunctionCallWidget data={data} />;
             } catch (e) {
               // ignore

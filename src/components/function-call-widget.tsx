@@ -11,7 +11,14 @@ import {
 } from "@chakra-ui/react";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuCheck, LuChevronDown, LuChevronUp, LuZap } from "react-icons/lu";
+import {
+  LuCheck,
+  LuChevronDown,
+  LuChevronUp,
+  LuX,
+  LuZap,
+} from "react-icons/lu";
+import { useFunctionCall } from "@/contexts/function-call-context";
 
 // Interface for the function call parameters
 export interface FunctionCallParams {
@@ -22,17 +29,24 @@ export interface FunctionCallParams {
 
 export const FunctionCallWidget: React.FC<{
   data: FunctionCallParams;
-}> = ({ data }) => {
+  callId?: number;
+}> = ({ data, callId }) => {
   const { t } = useTranslation();
   const bgColor = useColorModeValue("purple.50", "purple.900");
   const borderColor = useColorModeValue("purple.200", "purple.700");
   const textColor = useColorModeValue("purple.800", "purple.100");
   const codeBgColor = useColorModeValue("whiteAlpha.500", "blackAlpha.400");
+  const { getCallState } = useFunctionCall();
 
   const [isOpen, setIsOpen] = useState(false);
 
-  // Use result from data (persisted) or internal state (local execution)
-  const result = data.result ? decodeURI(atob(data.result)) : "";
+  // Get state from context if callId is available
+  const contextState = callId ? getCallState(callId) : null;
+
+  // Fallback to data.result if no context state (e.g. historical messages)
+  const result = contextState?.result || data.result;
+  const error = contextState?.error;
+  const isLoading = contextState?.isExecuting || false;
 
   return (
     <Box
@@ -50,10 +64,13 @@ export const FunctionCallWidget: React.FC<{
             {t("AgentChatPage.functionCall.title")}: {data.name}
           </Text>
         </HStack>
-        {!result ? (
+        {isLoading ? (
           <Spinner size="xs" />
         ) : (
-          <Icon as={LuCheck} color="green.500" />
+          <Icon
+            as={error ? LuX : LuCheck}
+            color={error ? "red.500" : "green.500"}
+          />
         )}
       </HStack>
       {Object.keys(data.params).length > 0 && (
@@ -69,7 +86,7 @@ export const FunctionCallWidget: React.FC<{
           {JSON.stringify(data.params, null, 2)}
         </Code>
       )}
-      {result && (
+      {(result || error) && (
         <Box mt={2}>
           <Button
             size="xs"
@@ -81,7 +98,9 @@ export const FunctionCallWidget: React.FC<{
             color={textColor}
             fontSize="xs"
           >
-            {t("AgentChatPage.functionCall.result")}
+            {error
+              ? t("AgentChatPage.functionCall.error")
+              : t("AgentChatPage.functionCall.result")}
           </Button>
           <Collapse in={isOpen} animateOpacity>
             <Code
@@ -92,9 +111,9 @@ export const FunctionCallWidget: React.FC<{
               p={2}
               borderRadius="md"
               bg={codeBgColor}
-              colorScheme="green"
+              colorScheme={error ? "red" : "green"}
             >
-              {result}
+              {error || result}
             </Code>
           </Collapse>
         </Box>

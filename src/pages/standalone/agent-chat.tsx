@@ -8,6 +8,7 @@ import {
   Text,
   Textarea,
   useColorModeValue,
+  useToast,
 } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,22 +16,27 @@ import { LuTrash2 } from "react-icons/lu";
 import MarkdownContainer from "@/components/common/markdown-container";
 import { MiuChatLogoTitle } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
+import {
+  FunctionCallProvider,
+  useFunctionCall,
+} from "@/contexts/function-call-context";
 import { useGlobalData } from "@/contexts/global-data";
 import { useSharedModals } from "@/contexts/shared-modal";
-import { useToast } from "@/contexts/toast";
 import { ChatMessage } from "@/models/intelligence";
 import { NewsPostRequest } from "@/models/news-post";
-import { JavaInfo } from "@/models/system-info";
 import { getChatSystemPrompt } from "@/prompts";
+import { ConfigService } from "@/services/config";
 import { DiscoverService } from "@/services/discover";
 import { InstanceService } from "@/services/instance";
 import { IntelligenceService } from "@/services/intelligence";
+import { FunctionCallMatch, findFunctionCalls } from "@/utils/function-call";
 import { base64ImgSrc, formatPrintable } from "@/utils/string";
 
 const AGENT_AVATAR_SRC = "/images/agent/miuxi_px_avatar.png";
-const AgentChatPage: React.FC = () => {
+
+const AgentChatContent: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { config, getJavaInfos } = useLauncherConfig();
+  const { config } = useLauncherConfig();
   const { getPlayerList, selectedPlayer } = useGlobalData();
 
   // Initialize with system prompt
@@ -45,11 +51,10 @@ const AgentChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
   const { openSharedModal } = useSharedModals();
-  const [javaInfos, setJavaInfos] = useState<JavaInfo[]>();
+  const { getCallState, setCallState } = useFunctionCall();
 
   useEffect(() => {
     getPlayerList(true);
-    setJavaInfos(getJavaInfos(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -184,7 +189,7 @@ const AgentChatPage: React.FC = () => {
       case "retrieve_launcher_config":
         return config;
       case "retrieve_java_info":
-        return javaInfos || [];
+        return await ConfigService.retrieveJavaList();
       case "fetch_news":
         const sources: NewsPostRequest[] = config.discoverSourceEndpoints.map(
           (url) => ({
@@ -199,35 +204,57 @@ const AgentChatPage: React.FC = () => {
   };
 
   const handleFunctionCall = React.useCallback(
-    async (name: string, params: Record<string, any>) => {
-      console.log("Function Call:", name, params);
+    async (param: {
+      name: string;
+      params: Record<string, any>;
+      callId?: number;
+    }) => {
+      const { name, params, callId } = param;
+
+      // If callId is present, check if already executed/executing
+      if (callId) {
+        const state = getCallState(callId);
+        if (state.isExecuting || state.result || state.error) {
+          return;
+        }
+        setCallState(callId, {
+          isExecuting: true,
+          result: null,
+          error: null,
+        });
+      }
 
       let result = "";
       try {
         result = formatPrintable(await executeFunctionCall(name, params));
+        if (callId) {
+          setCallState(callId, {
+            isExecuting: false,
+            result: result,
+            error: null,
+          });
+        }
       } catch (e: any) {
-        console.error("Function execution error:", e);
-        toast({ title: "Error executing function", status: "error" });
         result = `Error: ${e.message || "Unknown error"}`;
+        if (callId) {
+          setCallState(callId, {
+            isExecuting: false,
+            result: null,
+            error: result,
+          });
+        }
       }
 
-      // Update messages with the function result as a system/context message
-      // Note: In a real agent system, this would be a "tool" role message.
-      // Here we append it to history and request a new response.
+      const systemMsg = { role: "system", content: result } as ChatMessage;
 
-      const newHistory = [
-        ...messagesRef.current,
-        { role: "system", content: result } as ChatMessage,
-      ];
-
-      // Update state with the system message (result)
-      // We don't display the system message in UI immediately (filtered out), but strictly keep it in history.
-      setMessages(newHistory);
-
+      // Use functional update to avoid overwriting concurrent messages
+      setMessages((prev) => [...prev, systemMsg]);
       setIsLoading(true);
 
       // Add a placeholder message for the assistant's response
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      const newHistory = [...messagesRef.current, systemMsg];
 
       try {
         let currentResponse = "";
@@ -267,87 +294,35 @@ const AgentChatPage: React.FC = () => {
       return result;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [i18n.language, toast, config, javaInfos]
+    [i18n.language, toast, getCallState, setCallState]
   );
 
   // Auto-execute function calls when response is finished
   useEffect(() => {
     if (isLoading || messages.length === 0) return;
-    const lastMsg = messages[messages.length - 1];
+    const lastMsgIndex = messages.length - 1;
+    const lastMsg = messages[lastMsgIndex];
 
     if (lastMsg.role === "assistant") {
-      const content = lastMsg.content;
-      const marker = "::function::";
-      const idx = content.lastIndexOf(marker);
+      const matches = findFunctionCalls(lastMsg.content);
+      const validMatches = matches.filter(
+        (m) => m.type === "success"
+      ) as FunctionCallMatch[];
 
-      if (idx !== -1) {
-        const jsonStart = content.indexOf("{", idx + marker.length);
-        if (jsonStart !== -1) {
-          let braceCount = 0;
-          let jsonEnd = -1;
-          for (let i = jsonStart; i < content.length; i++) {
-            if (content[i] === "{") braceCount++;
-            else if (content[i] === "}") {
-              braceCount--;
-              if (braceCount === 0) {
-                jsonEnd = i + 1;
-                break;
-              }
-            }
-          }
-
-          if (jsonEnd !== -1) {
-            try {
-              const jsonStr = content.substring(jsonStart, jsonEnd);
-              const data = JSON.parse(jsonStr);
-              if (data && data.name && data.params && !data.result) {
-                // If result is already present, skip execution (prevent loop)
-                handleFunctionCall(data.name, data.params).then((result) => {
-                  // Update the message content to include the result
-                  const shortResult =
-                    result.length > 100 ? result.slice(0, 100) + "..." : result;
-                  const newData = {
-                    ...data,
-                    result: btoa(encodeURI(shortResult)),
-                  };
-                  const newJsonStr = JSON.stringify(newData, null, 2);
-                  const newContent =
-                    content.substring(0, jsonStart) +
-                    newJsonStr +
-                    content.substring(jsonEnd);
-
-                  setMessages((prev) => {
-                    const updated = [...prev];
-                    // Find the message that needs update.
-                    // Since handleFunctionCall adds messages, 'lastMsg' is no longer the last one in 'prev'.
-                    // We need to find the message with the same content (before update).
-                    const targetIndex = updated.findIndex(
-                      (m) =>
-                        m.role === "assistant" &&
-                        // Strict check might be risky if multiple identical messages exist.
-                        // Ideally we'd use ID, but we don't have IDs.
-                        // We can assume it's one of the last few messages.
-                        m.content === content
-                    );
-
-                    if (targetIndex !== -1) {
-                      updated[targetIndex] = {
-                        ...updated[targetIndex],
-                        content: newContent,
-                      };
-                    }
-                    return updated;
-                  });
-                });
-              }
-            } catch (e) {
-              console.error("Failed to parse auto-function execution", e);
-            }
-          }
+      if (validMatches.length > 0) {
+        const lastMatch = validMatches[validMatches.length - 1];
+        // Check context if already executed
+        const state = getCallState(lastMsgIndex);
+        if (!state.result && !state.error && !state.isExecuting) {
+          handleFunctionCall({
+            name: lastMatch.name,
+            params: lastMatch.params,
+            callId: lastMsgIndex,
+          });
         }
       }
     }
-  }, [isLoading, messages, handleFunctionCall]);
+  }, [isLoading, messages, handleFunctionCall, getCallState]);
 
   const bg = useColorModeValue("gray.50", "gray.900");
   const msgBgUser = useColorModeValue("blue.500", "blue.600");
@@ -406,48 +381,48 @@ const AgentChatPage: React.FC = () => {
             <Text>{t("AgentChatPage.description")}</Text>
           </Flex>
         )}
-        {filteredMessages.map((msg, i) => (
-          <Flex
-            key={i}
-            direction={msg.role === "user" ? "row-reverse" : "row"}
-            gap={3}
-            width="100%"
-          >
-            {(msg.role !== "user" ||
-              (selectedPlayer && selectedPlayer.avatar)) &&
-              (i > 0 && filteredMessages[i - 1].role === msg.role ? (
-                <Box boxSize="32px" />
-              ) : (
-                <Image
-                  boxSize="32px"
-                  objectFit="cover"
-                  src={
-                    msg.role === "user"
-                      ? base64ImgSrc(selectedPlayer?.avatar!)
-                      : AGENT_AVATAR_SRC
-                  }
-                  alt={msg.role}
-                />
-              ))}
-            <Box
-              bg={msg.role === "user" ? msgBgUser : msgBgBot}
-              color={msg.role === "user" ? "white" : undefined}
-              p={2}
-              borderRadius="lg"
-              maxW={msg.role === "user" ? "80%" : undefined}
-              w={msg.role === "user" ? undefined : "80%"}
-              position="relative"
+        {filteredMessages.map((msg, i) => {
+          const originalIndex = messages.indexOf(msg);
+
+          return (
+            <Flex
+              key={i}
+              direction={msg.role === "user" ? "row-reverse" : "row"}
+              gap={3}
+              width="100%"
             >
-              <MarkdownContainer
-                onFunctionCall={
-                  msg.role === "user" ? undefined : handleFunctionCall
-                }
+              {(msg.role !== "user" ||
+                (selectedPlayer && selectedPlayer.avatar)) &&
+                (i > 0 && filteredMessages[i - 1].role === msg.role ? (
+                  <Box boxSize="32px" />
+                ) : (
+                  <Image
+                    boxSize="32px"
+                    objectFit="cover"
+                    src={
+                      msg.role === "user"
+                        ? base64ImgSrc(selectedPlayer?.avatar!)
+                        : AGENT_AVATAR_SRC
+                    }
+                    alt={msg.role}
+                  />
+                ))}
+              <Box
+                bg={msg.role === "user" ? msgBgUser : msgBgBot}
+                color={msg.role === "user" ? "white" : undefined}
+                p={2}
+                borderRadius="lg"
+                maxW={msg.role === "user" ? "80%" : undefined}
+                w={msg.role === "user" ? undefined : "80%"}
+                position="relative"
               >
-                {msg.content}
-              </MarkdownContainer>
-            </Box>
-          </Flex>
-        ))}
+                <MarkdownContainer messageId={originalIndex}>
+                  {msg.content}
+                </MarkdownContainer>
+              </Box>
+            </Flex>
+          );
+        })}
         {isLoading &&
           messages.length > 0 &&
           messages[messages.length - 1].content === "" && (
@@ -465,7 +440,7 @@ const AgentChatPage: React.FC = () => {
                 />
               )}
               <Box bg={msgBgBot} p={2} borderRadius="lg">
-                <Spinner size="sm" />
+                <Spinner size="sm" speed="0.8s" />
               </Box>
             </Flex>
           )}
@@ -491,6 +466,14 @@ const AgentChatPage: React.FC = () => {
         </HStack>
       </Box>
     </Flex>
+  );
+};
+
+const AgentChatPage: React.FC = () => {
+  return (
+    <FunctionCallProvider>
+      <AgentChatContent />
+    </FunctionCallProvider>
   );
 };
 
