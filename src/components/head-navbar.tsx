@@ -26,7 +26,11 @@ import { TitleShort } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
 import { useTaskContext } from "@/contexts/task";
 
-const HeadNavBar = () => {
+interface HeadNavBarProps {
+  leftOffset?: string;
+}
+
+const HeadNavBar = ({ leftOffset = "0px" }: HeadNavBarProps) => {
   const router = useRouter();
   const { t } = useTranslation();
   const { config } = useLauncherConfig();
@@ -66,7 +70,12 @@ const HeadNavBar = () => {
   };
 
   return (
-    <Flex justify="center" p={4}>
+    <Flex
+      justify="center"
+      p={4}
+      transform={`translateX(${leftOffset})`}
+      transition="transform 0.35s ease"
+    >
       <AdvancedCard
         level="back"
         pl={8}

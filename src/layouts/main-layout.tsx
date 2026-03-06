@@ -54,11 +54,24 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const { colorMode } = useColorMode();
   const isDarkenBg =
     colorMode === "dark" && config.appearance.background.autoDarken;
-  const { openGenericConfirmDialog } = useSharedModals();
+  const { openGenericConfirmDialog, openSharedModal } = useSharedModals();
 
   const [bgImgSrc, setBgImgSrc] = useState<string>("");
+  const [isAgentChatOpen, setIsAgentChatOpen] = useState(false);
+  const agentChatFrameRef = useRef<HTMLIFrameElement | null>(null);
   const isCheckedRunCount = useRef(false);
   const isCheckedLastRunStatus = useRef(false);
+  const isLaunchPage = router.pathname === "/launch";
+  const agentChatPanelRatio = 0.35;
+  const agentChatPanelWidth = `${agentChatPanelRatio * 100}vw`;
+  const agentChatPanelTransform =
+    isLaunchPage && isAgentChatOpen ? "translateX(0)" : "translateX(-100%)";
+  const launchContentOffset =
+    isLaunchPage && isAgentChatOpen ? agentChatPanelWidth : "0px";
+  const headNavOffset =
+    isLaunchPage && isAgentChatOpen
+      ? `${(agentChatPanelRatio * 100) / 2}vw`
+      : "0px";
 
   const {
     isOpen: isWelcomeAndTermsModalOpen,
@@ -222,6 +235,28 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     }
   }, [config.appearance.font.fontFamily]);
 
+  // Bridge MiuChat iframe events to top-level shared modal system.
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (data?.type !== "sjmcl:miuchat-launch-instance") {
+        return;
+      }
+
+      const instanceId = data?.payload?.instanceId;
+      if (typeof instanceId !== "string" || !instanceId) {
+        return;
+      }
+
+      openSharedModal("launch", { instanceId });
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [openSharedModal]);
+
   // update font size to body CSS by config.
   useEffect(() => {
     const root = document.documentElement;
@@ -263,6 +298,47 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     "white",
     "var(--chakra-colors-gray-900)"
   );
+
+  const notifyAgentChatTextVisibility = useCallback((visible: boolean) => {
+    agentChatFrameRef.current?.contentWindow?.postMessage(
+      {
+        type: "sjmcl:miuchat-text-visibility",
+        payload: { visible },
+      },
+      "*"
+    );
+  }, []);
+
+  const openAgentChatPanel = () => {
+    setIsAgentChatOpen(true);
+    setTimeout(() => {
+      notifyAgentChatTextVisibility(true);
+    }, 180);
+  };
+
+  const closeAgentChatPanel = useCallback(() => {
+    notifyAgentChatTextVisibility(false);
+    setIsAgentChatOpen(false);
+  }, [notifyAgentChatTextVisibility]);
+
+  // When MiuChat is open, clicking anywhere on the right window area closes it.
+  useEffect(() => {
+    if (!isLaunchPage || !isAgentChatOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const panelWidth = window.innerWidth * agentChatPanelRatio;
+      if (event.clientX > panelWidth) {
+        closeAgentChatPanel();
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isLaunchPage, isAgentChatOpen, closeAgentChatPanel]);
 
   if (isStandAlone) {
     return (
@@ -313,12 +389,53 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       >
         <FileDnDProvider>
           <MainLayoutFileDnD />
-          <HeadNavBar />
-          {router.pathname === "/launch" ? (
-            <>
-              <AgentHostess />
+          <HeadNavBar leftOffset={headNavOffset} />
+          {/* Keep iframe mounted to avoid reloading MiuChat when switching pages. */}
+          <Flex
+            position="absolute"
+            left={0}
+            top={0}
+            h="100%"
+            w={agentChatPanelWidth}
+            overflow="hidden"
+            transform={agentChatPanelTransform}
+            transition="transform 0.35s ease"
+            borderRightWidth={1}
+            borderRightColor={
+              isLaunchPage && isAgentChatOpen
+                ? "blackAlpha.300"
+                : "transparent"
+            }
+            zIndex={2}
+            willChange="transform"
+          >
+            <Box
+              as="iframe"
+              ref={agentChatFrameRef}
+              src="/standalone/agent-chat"
+              border="none"
+              w="100%"
+              h="100%"
+              onLoad={() => {
+                notifyAgentChatTextVisibility(isAgentChatOpen);
+              }}
+            />
+          </Flex>
+
+          {isLaunchPage ? (
+            <Flex
+              flex={1}
+              minW={0}
+              minH={0}
+              position="relative"
+              ml={launchContentOffset}
+              transition="margin-left 0.35s ease"
+            >
+              {!isAgentChatOpen && (
+                <AgentHostess onToggleAgentChat={openAgentChatPanel} />
+              )}
               {children}
-            </>
+            </Flex>
           ) : (
             <AdvancedCard
               level="back"
