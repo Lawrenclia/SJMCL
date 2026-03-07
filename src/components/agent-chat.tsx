@@ -7,19 +7,17 @@ import {
   Spinner,
   Text,
   Textarea,
+  VStack,
   useColorModeValue,
   useToast,
 } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPause, LuSend, LuTrash2 } from "react-icons/lu";
+import { LuPause, LuSend, LuX } from "react-icons/lu";
 import MarkdownContainer from "@/components/common/markdown-container";
 import { MiuChatLogoTitle } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
-import {
-  FunctionCallProvider,
-  useFunctionCall,
-} from "@/contexts/function-call-context";
+import { useFunctionCall } from "@/contexts/function-call-context";
 import { useGlobalData } from "@/contexts/global-data";
 import { useSharedModals } from "@/contexts/shared-modal";
 import { ChatMessage } from "@/models/intelligence";
@@ -31,13 +29,18 @@ import { InstanceService } from "@/services/instance";
 import { IntelligenceService } from "@/services/intelligence";
 import { FunctionCallMatch, findFunctionCalls } from "@/utils/function-call";
 import { base64ImgSrc, formatPrintable } from "@/utils/string";
+import AdvancedCard from "./common/advanced-card";
 
 const AGENT_AVATAR_SRC = "/images/agent/miuxi_px_avatar.png";
 
-const AgentChatContent: React.FC = () => {
+interface AgentChatProps {
+  onAgentChatPanelClose: () => void;
+}
+
+const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   const { t, i18n } = useTranslation();
   const { config } = useLauncherConfig();
-  const { getPlayerList, selectedPlayer } = useGlobalData();
+  const { selectedPlayer } = useGlobalData();
   const primaryColor = config.appearance.theme.primaryColor;
 
   // Initialize with system prompt
@@ -49,17 +52,11 @@ const AgentChatContent: React.FC = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isTextVisible, setIsTextVisible] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const requestIdRef = useRef(0);
   const toast = useToast();
   const { openSharedModal } = useSharedModals();
   const { getCallState, setCallState, hasExecutingCall } = useFunctionCall();
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    getPlayerList(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -67,31 +64,20 @@ const AgentChatContent: React.FC = () => {
   }, [messages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    const handleTextVisibility = (event: MessageEvent) => {
-      if (event.data?.type !== "sjmcl:miuchat-text-visibility") {
-        return;
-      }
-      setIsTextVisible(Boolean(event.data?.payload?.visible));
-    };
-
-    window.addEventListener("message", handleTextVisibility);
-    return () => {
-      window.removeEventListener("message", handleTextVisibility);
-    };
-  }, []);
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
-
-    const requestId = ++requestIdRef.current;
 
     if (!config.intelligence.enabled) {
       // TODO: toast error or show modal
@@ -106,21 +92,20 @@ const AgentChatContent: React.FC = () => {
     setInput("");
     setIsLoading(true);
 
+    const currentRequestId = ++requestIdRef.current;
+
     // Initial empty assistant message placeholder
     const assistantMsg: ChatMessage = { role: "assistant", content: "" };
-    setMessages((prev) => {
-      if (requestId !== requestIdRef.current) return prev;
-      return [...prev, assistantMsg];
-    });
+    setMessages((prev) => [...prev, assistantMsg]);
 
     let currentResponse = "";
 
     try {
       // System prompt is already in messages[0]
       await IntelligenceService.fetchLLMChatResponse(newMessages, (chunk) => {
+        if (requestIdRef.current !== currentRequestId) return;
         currentResponse += chunk;
         setMessages((prev) => {
-          if (requestId !== requestIdRef.current) return prev;
           const updated = [...prev];
           // Update the last message (which is the assistant's)
           if (updated.length > 0) {
@@ -138,7 +123,7 @@ const AgentChatContent: React.FC = () => {
         const fallbackResp =
           await IntelligenceService.fetchLLMChatResponse(newMessages);
         if (
-          requestIdRef.current === requestId &&
+          requestIdRef.current === currentRequestId &&
           fallbackResp.status === "success"
         ) {
           currentResponse = fallbackResp.data || "";
@@ -155,9 +140,9 @@ const AgentChatContent: React.FC = () => {
         }
       }
     } catch (error) {
+      if (requestIdRef.current !== currentRequestId) return;
       console.error(error);
       setMessages((prev) => {
-        if (requestId !== requestIdRef.current) return prev;
         const updated = [...prev];
         if (updated.length > 0) {
           updated[updated.length - 1] = {
@@ -170,15 +155,15 @@ const AgentChatContent: React.FC = () => {
         return updated;
       });
     } finally {
-      if (requestId === requestIdRef.current) {
+      if (requestIdRef.current === currentRequestId) {
         setIsLoading(false);
       }
     }
   };
 
   const handleStopReply = () => {
-    // Cancel current streaming updates
-    requestIdRef.current += 1;
+    // Cancel current streaming updates by invalidating the request ID
+    requestIdRef.current++;
     setIsLoading(false);
   };
 
@@ -208,11 +193,32 @@ const AgentChatContent: React.FC = () => {
       case "retrieve_instance_game_server_list":
         return await InstanceService.retrieveGameServerList(params.id, true);
       case "retrieve_instance_local_mod_list":
-        return await InstanceService.retrieveLocalModList(params.id);
+        let local_mod_list_response =
+          await InstanceService.retrieveLocalModList(params.id);
+        if (local_mod_list_response.status === "success") {
+          return local_mod_list_response.data.map((mod) => {
+            return { ...mod, iconSrc: undefined }; // iconSrc is too large and useless
+          });
+        }
+        return local_mod_list_response;
       case "retrieve_instance_resource_pack_list":
-        return await InstanceService.retrieveResourcePackList(params.id);
+        let resource_pack_list_response =
+          await InstanceService.retrieveResourcePackList(params.id);
+        if (resource_pack_list_response.status === "success") {
+          return resource_pack_list_response.data.map((pack) => {
+            return { ...pack, iconSrc: undefined };
+          });
+        }
+        return resource_pack_list_response;
       case "retrieve_instance_server_resource_pack_list":
-        return await InstanceService.retrieveServerResourcePackList(params.id);
+        let server_resource_pack_list_response =
+          await InstanceService.retrieveServerResourcePackList(params.id);
+        if (server_resource_pack_list_response.status === "success") {
+          return server_resource_pack_list_response.data.map((pack) => {
+            return { ...pack, iconSrc: undefined };
+          });
+        }
+        return server_resource_pack_list_response;
       case "retrieve_instance_schematic_list":
         return await InstanceService.retrieveSchematicList(params.id);
       case "retrieve_instance_shader_pack_list":
@@ -233,19 +239,9 @@ const AgentChatContent: React.FC = () => {
             message: t("AgentChatPage.functionCall.launchInstance.fail"),
           };
         } else {
-          if (window.parent && window.parent !== window) {
-            window.parent.postMessage(
-              {
-                type: "sjmcl:miuchat-launch-instance",
-                payload: { instanceId: params.id },
-              },
-              "*"
-            );
-          } else {
-            openSharedModal("launch", {
-              instanceId: params.id,
-            });
-          }
+          openSharedModal("launch", {
+            instanceId: params.id,
+          });
           return {
             message: t("AgentChatPage.functionCall.launchInstance.success"),
           };
@@ -276,7 +272,7 @@ const AgentChatContent: React.FC = () => {
       const { name, params, callId } = param;
 
       // If callId is present, check if already executed/executing
-      if (callId !== undefined) {
+      if (callId) {
         const state = getCallState(callId);
         if (state.isExecuting || state.result || state.error) {
           return;
@@ -287,12 +283,11 @@ const AgentChatContent: React.FC = () => {
           error: null,
         });
       }
-      const requestId = ++requestIdRef.current;
 
       let result = "";
       try {
         result = formatPrintable(await executeFunctionCall(name, params));
-        if (callId !== undefined) {
+        if (callId) {
           setCallState(callId, {
             isExecuting: false,
             result: result,
@@ -301,7 +296,7 @@ const AgentChatContent: React.FC = () => {
         }
       } catch (e: any) {
         result = `Error: ${e.message || "Unknown error"}`;
-        if (callId !== undefined) {
+        if (callId) {
           setCallState(callId, {
             isExecuting: false,
             result: null,
@@ -311,30 +306,24 @@ const AgentChatContent: React.FC = () => {
       }
 
       const systemMsg = { role: "system", content: result } as ChatMessage;
-      const newHistory = [
-        ...messagesRef.current,
-        systemMsg,
-      ];
+      const assistantMsg = { role: "assistant", content: "" } as ChatMessage;
 
-      setMessages(newHistory);
-      if (requestId === requestIdRef.current) {
-        setIsLoading(true);
-      }
+      const currentRequestId = ++requestIdRef.current;
 
-      // Add a placeholder message for the assistant's response
-      setMessages((prev) => {
-        if (requestId !== requestIdRef.current) return prev;
-        return [...prev, { role: "assistant", content: "" }];
-      });
+      // ATOMIC UPDATE: Add system message and placeholder together to prevent race conditions
+      setMessages((prev) => [...prev, systemMsg, assistantMsg]);
+      setIsLoading(true);
+
+      const newHistory = [...messagesRef.current, systemMsg];
 
       try {
         let currentResponse = "";
 
         // Fetch response based on new history which includes the system result
         await IntelligenceService.fetchLLMChatResponse(newHistory, (chunk) => {
+          if (requestIdRef.current !== currentRequestId) return;
           currentResponse += chunk;
           setMessages((prev) => {
-            if (requestId !== requestIdRef.current) return prev;
             const updated = [...prev];
             // Update the last message (which is the new assistant message)
             if (updated.length > 0) {
@@ -352,7 +341,7 @@ const AgentChatContent: React.FC = () => {
           const fallbackResp =
             await IntelligenceService.fetchLLMChatResponse(newHistory);
           if (
-            requestIdRef.current === requestId &&
+            requestIdRef.current === currentRequestId &&
             fallbackResp.status === "success"
           ) {
             currentResponse = fallbackResp.data || "";
@@ -369,10 +358,10 @@ const AgentChatContent: React.FC = () => {
           }
         }
       } catch (e) {
+        if (requestIdRef.current !== currentRequestId) return;
         console.error(e);
         toast({ title: "Error fetching response", status: "error" });
         setMessages((prev) => {
-          if (requestId !== requestIdRef.current) return prev;
           const updated = [...prev];
           if (
             updated.length > 0 &&
@@ -384,7 +373,7 @@ const AgentChatContent: React.FC = () => {
           return updated;
         });
       } finally {
-        if (requestId === requestIdRef.current) {
+        if (requestIdRef.current === currentRequestId) {
           setIsLoading(false);
         }
       }
@@ -421,14 +410,11 @@ const AgentChatContent: React.FC = () => {
     }
   }, [isLoading, messages, handleFunctionCall, getCallState]);
 
-  const bg = useColorModeValue("gray.50", "gray.900");
   const msgBgUser = useColorModeValue("blue.500", "blue.600");
   const msgBgBot = "transparent";
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const inputShellBg = useColorModeValue("gray.50", "gray.800");
   const inputShellBorder = useColorModeValue("gray.200", "gray.700");
-  const placeholderColor = useColorModeValue("gray.400", "gray.500");
-  const headerBg = useColorModeValue("white", "gray.800");
   const inputBg = useColorModeValue("white", "gray.800");
 
   let filteredMessages = messages.filter(
@@ -436,138 +422,130 @@ const AgentChatContent: React.FC = () => {
   );
   const canSend = input.trim().length > 0;
   const isBusy = isLoading || hasExecutingCall();
-  const textOpacity = isTextVisible ? 1 : 0;
 
   return (
-    <Flex
-      direction="column"
-      h="100vh"
-      bg={bg}
+    <AdvancedCard
+      borderRadius="2xl"
+      h="100%"
+      w="100%"
+      p={2}
       sx={{
         "p, span, li, code, h1, h2, h3, h4, h5, h6": {
-          opacity: textOpacity,
           transition: "opacity 0.2s ease",
         },
       }}
     >
-      {/* Header */}
-      <Flex
-        px={4}
-        py={3}
-        borderBottomWidth={1}
-        borderColor={borderColor}
-        align="center"
-        justify="space-between"
-        bg={headerBg}
-      >
-        <HStack>
+      <VStack h="100%" w="100%">
+        <Flex w="100%" align="center" justify="space-between">
           <MiuChatLogoTitle />
-        </HStack>
-        <IconButton
-          icon={<LuTrash2 />}
-          aria-label="clear"
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            requestIdRef.current += 1; // cancel当前流式请求
-            setIsLoading(false);
-            setInput("");
-            setMessages([
-              { role: "system", content: getChatSystemPrompt(i18n.language) },
-            ]);
-          }}
-        />
-      </Flex>
+          <IconButton
+            icon={<LuX />}
+            aria-label="agent-chat-close"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setIsLoading(false);
+              setInput("");
+              onAgentChatPanelClose();
+            }}
+          />
+        </Flex>
 
-      {/* Messages */}
-      <Flex flex={1} overflowY="auto" direction="column" p={4} gap={4}>
-        {filteredMessages.length === 0 && (
-          <Flex
-            direction="column"
-            align="center"
-            justify="center"
-            h="100%"
-            color="gray.500"
-          >
-            <Image
-              boxSize="48px"
-              objectFit="cover"
-              src={AGENT_AVATAR_SRC}
-              alt="agent"
-              mb={4}
-            />
-            <Text>{t("AgentChatPage.description")}</Text>
-          </Flex>
-        )}
-        {filteredMessages.map((msg, i) => {
-          const originalIndex = messages.indexOf(msg);
-
-          return (
+        <Flex
+          ref={messagesContainerRef}
+          w="100%"
+          flex={1}
+          overflowY="auto"
+          direction="column"
+          gap={2}
+          fontSize="sm"
+        >
+          {filteredMessages.length === 0 && (
             <Flex
-              key={i}
-              direction={msg.role === "user" ? "row-reverse" : "row"}
-              gap={3}
-              width="100%"
+              direction="column"
+              align="center"
+              justify="center"
+              h="100%"
+              color="gray.500"
             >
-              {(msg.role !== "user" ||
-                (selectedPlayer && selectedPlayer.avatar)) &&
-                (i > 0 && filteredMessages[i - 1].role === msg.role ? (
+              <Image
+                boxSize="48px"
+                objectFit="cover"
+                src={AGENT_AVATAR_SRC}
+                alt="agent"
+                mb={4}
+              />
+              <Text>{t("AgentChatPage.description")}</Text>
+            </Flex>
+          )}
+          {filteredMessages.map((msg, i) => {
+            const originalIndex = messages.indexOf(msg);
+
+            return (
+              <Flex
+                key={i}
+                direction={msg.role === "user" ? "row-reverse" : "row"}
+                gap={3}
+                width="100%"
+              >
+                {(msg.role !== "user" ||
+                  (selectedPlayer && selectedPlayer.avatar)) &&
+                  (i > 0 && filteredMessages[i - 1].role === msg.role ? (
+                    <Box boxSize="32px" />
+                  ) : (
+                    <Image
+                      boxSize="32px"
+                      objectFit="cover"
+                      src={
+                        msg.role === "user"
+                          ? base64ImgSrc(selectedPlayer?.avatar!)
+                          : AGENT_AVATAR_SRC
+                      }
+                      alt={msg.role}
+                    />
+                  ))}
+                <Box
+                  bg={msg.role === "user" ? msgBgUser : msgBgBot}
+                  color={msg.role === "user" ? "white" : undefined}
+                  p={msg.role === "user" ? 2 : 0}
+                  borderRadius="lg"
+                  maxW={msg.role === "user" ? "80%" : undefined}
+                  w={msg.role === "user" ? undefined : "80%"}
+                  position="relative"
+                >
+                  <MarkdownContainer messageId={originalIndex}>
+                    {msg.content}
+                  </MarkdownContainer>
+                </Box>
+              </Flex>
+            );
+          })}
+          {isLoading &&
+            messages.length > 0 &&
+            messages[messages.length - 1].content === "" && (
+              <Flex direction="row" gap={3}>
+                {filteredMessages.length > 0 &&
+                filteredMessages[filteredMessages.length - 1].role ===
+                  "assistant" ? (
                   <Box boxSize="32px" />
                 ) : (
                   <Image
                     boxSize="32px"
                     objectFit="cover"
-                    src={
-                      msg.role === "user"
-                        ? base64ImgSrc(selectedPlayer?.avatar!)
-                        : AGENT_AVATAR_SRC
-                    }
-                    alt={msg.role}
+                    src={AGENT_AVATAR_SRC}
+                    alt="agent"
                   />
-                ))}
-              <Box
-                bg={msg.role === "user" ? msgBgUser : msgBgBot}
-                color={msg.role === "user" ? "white" : undefined}
-                p={2}
-                borderRadius="lg"
-                maxW={msg.role === "user" ? "80%" : undefined}
-                w={msg.role === "user" ? undefined : "80%"}
-                position="relative"
-              >
-                <MarkdownContainer messageId={originalIndex}>
-                  {msg.content}
-                </MarkdownContainer>
-              </Box>
-            </Flex>
-          );
-        })}
-        {isLoading &&
-          messages.length > 0 &&
-          messages[messages.length - 1].content === "" && (
-            <Flex direction="row" gap={3}>
-              {filteredMessages.length > 0 &&
-              filteredMessages[filteredMessages.length - 1].role ===
-                "assistant" ? (
-                <Box boxSize="32px" />
-              ) : (
-                <Image
-                  boxSize="32px"
-                  objectFit="cover"
-                  src={AGENT_AVATAR_SRC}
-                  alt="agent"
-                />
-              )}
-              <Box bg={msgBgBot} p={2} borderRadius="lg">
-                <Spinner size="sm" speed="0.8s" />
-              </Box>
-            </Flex>
-          )}
-        <div ref={messagesEndRef} />
-      </Flex>
+                )}
+                <Box bg={msgBgBot} p={2} borderRadius="lg">
+                  <Spinner size="sm" speed="0.8s" />
+                </Box>
+              </Flex>
+            )}
+        </Flex>
 
-      {/* Input */}
-      <Box p={4} bg={inputBg} borderTopWidth={1} borderColor={borderColor}>
+        {/* Input */}
         <Box
+          w="100%"
           bg={inputShellBg}
           borderWidth={1}
           borderColor={inputShellBorder}
@@ -583,14 +561,11 @@ const AgentChatContent: React.FC = () => {
               variant="unstyled"
               resize="none"
               minH="60px"
-              color={isTextVisible ? undefined : "transparent"}
-              _placeholder={{
-                color: isTextVisible ? placeholderColor : "transparent",
-              }}
+              size="sm"
             />
-            <HStack justify="space-between" align="center">
-              <Text color="gray.400" fontSize="xs">
-                {/* TODO add more setting icon */}
+            <HStack justify="space-between" align="end">
+              <Text className="secondary-text" fontSize="2xs">
+                {t("AgentChatPage.bottomWarning")}
               </Text>
               <IconButton
                 aria-label={isBusy ? "stop" : "send"}
@@ -604,17 +579,8 @@ const AgentChatContent: React.FC = () => {
             </HStack>
           </Flex>
         </Box>
-      </Box>
-    </Flex>
+      </VStack>
+    </AdvancedCard>
   );
 };
-
-const AgentChatPage: React.FC = () => {
-  return (
-    <FunctionCallProvider>
-      <AgentChatContent />
-    </FunctionCallProvider>
-  );
-};
-
-export default AgentChatPage;
+export default AgentChat;
