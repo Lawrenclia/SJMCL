@@ -18,6 +18,7 @@ use account::models::AccountInfo;
 use instance::helpers::misc::refresh_and_update_instances;
 use instance::helpers::mods::translation::LocalModTranslationsCache;
 use instance::models::misc::Instance;
+use intelligence::models::ChatHistory;
 use launch::models::LaunchingState;
 use launcher_config::helpers::java::refresh_and_update_javas;
 use launcher_config::models::{JavaInfo, LauncherConfig};
@@ -119,6 +120,10 @@ pub async fn run() {
         intelligence::commands::retrieve_llm_models,
         intelligence::commands::fetch_llm_chat_response,
         intelligence::commands::fetch_llm_chat_response_stream,
+        intelligence::commands::retrieve_chat_sessions,
+        intelligence::commands::retrieve_chat_session,
+        intelligence::commands::save_chat_session,
+        intelligence::commands::delete_chat_session,
         instance::commands::retrieve_instance_list,
         instance::commands::create_instance,
         instance::commands::update_instance_config,
@@ -227,6 +232,9 @@ pub async fn run() {
 
         let instances: HashMap<String, Instance> = HashMap::new();
         app.manage(Mutex::new(instances));
+
+        let chat_history = ChatHistory::load().unwrap_or_default();
+        app.manage(Mutex::new(chat_history));
 
         let javas: Vec<JavaInfo> = vec![];
         app.manage(Mutex::new(javas));
