@@ -10,7 +10,7 @@ import { GuidedTourProvider } from "@/components/special/guided-tour-provider";
 import SharedModalsProvider from "@/components/special/shared-modals-provider";
 import { LauncherConfigContextProvider } from "@/contexts/config";
 import { ExtensionHostContextProvider } from "@/contexts/extension/host";
-import { FunctionCallProvider } from "@/contexts/function-call-context";
+import { FunctionCallProvider } from "@/contexts/function-call";
 import { GlobalDataContextProvider } from "@/contexts/global-data";
 import { RoutingHistoryContextProvider } from "@/contexts/routing-history";
 import { TaskContextProvider } from "@/contexts/task";
