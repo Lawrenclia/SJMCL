@@ -63,6 +63,28 @@ export interface GameDirectory {
   dir: string;
 }
 
+export type LLMProviderType = "openAiCompatible" | "anthropic" | "gemini";
+
+export interface LLMParametersConfig {
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+}
+
+export interface ProviderConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  providerType: LLMProviderType;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  parameters: LLMParametersConfig;
+}
+
 export interface LauncherConfig {
   basicInfo: {
     launcherVersion: string;
@@ -139,11 +161,8 @@ export interface LauncherConfig {
   };
   intelligence: {
     enabled: boolean;
-    model: {
-      baseUrl: string;
-      apiKey: string;
-      model: string;
-    };
+    activeProviderId: string;
+    providers: ProviderConfig[];
     mcpServer: {
       launcher: {
         enabled: boolean;
@@ -324,11 +343,8 @@ export const defaultConfig: LauncherConfig = {
   },
   intelligence: {
     enabled: false,
-    model: {
-      baseUrl: "",
-      apiKey: "",
-      model: "gpt-3.5-turbo",
-    },
+    activeProviderId: "",
+    providers: [],
     mcpServer: {
       launcher: {
         enabled: true,
