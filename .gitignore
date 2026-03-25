@@ -67,3 +67,6 @@ next-env.d.ts
 .claude/
 .gemini/
 .cursor/
+
+memory/
+test/

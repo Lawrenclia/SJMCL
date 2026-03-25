@@ -87,6 +87,7 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
         const segments = splitByFunctionCalls(children);
         const result: React.ReactNode[] = [];
 
+        let toolIndex = 0;
         segments.forEach((segment, i) => {
           if (typeof segment === "string") {
             result.push(processGitHubMarks(segment));
@@ -96,9 +97,10 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
                 <FunctionCallWidget
                   key={`fn-${i}`}
                   data={{ name: segment.name, params: segment.params }}
-                  callId={messageId}
+                  callId={messageId ? `${messageId}-${toolIndex}` : undefined}
                 />
               );
+              toolIndex++;
             } else {
               result.push(
                 <Code key={`err-${i}`} colorScheme="red" fontSize="xs">

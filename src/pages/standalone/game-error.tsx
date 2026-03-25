@@ -5,7 +5,6 @@ import {
   Badge,
   Box,
   Button,
-  Center,
   Flex,
   HStack,
   Icon,
@@ -25,14 +24,9 @@ import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuCircleAlert, LuFolderOpen } from "react-icons/lu";
-import { BeatLoader } from "react-spinners";
-import MarkdownContainer from "@/components/common/markdown-container";
 import { useLauncherConfig } from "@/contexts/config";
 import { InstanceSummary } from "@/models/instance/misc";
-import { ChatMessage } from "@/models/intelligence";
 import { JavaInfo } from "@/models/system-info";
-import { getGameErrorSystemPrompt } from "@/prompts";
-import { IntelligenceService } from "@/services/intelligence";
 import { LaunchService } from "@/services/launch";
 import { ISOToDatetime } from "@/utils/datetime";
 import { parseModernWindowsVersion } from "@/utils/env";
@@ -56,9 +50,6 @@ const GameErrorPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [gameLog, setGameLog] = useState<string>("");
-  const [aiResult, setAiResult] = useState<string>("");
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
-  const [showAIResult, setShowAIResult] = useState<boolean>(false);
 
   const platformName = useCallback(() => {
     let name = config.basicInfo.platform
@@ -184,37 +175,6 @@ const GameErrorPage: React.FC = () => {
     setIsLoading(false);
   };
 
-  async function callAIAnalyze(log: string) {
-    if (!config.intelligence.enabled) {
-      // TODO: toast error, route to settings
-      return;
-    }
-
-    setShowAIResult(true);
-    setAiLoading(true);
-    setAiResult("");
-
-    let messages: ChatMessage[] = [
-      {
-        role: "system",
-        content: getGameErrorSystemPrompt(i18n.language)(
-          basicInfoParams.get("os") ?? t("General.unknown"),
-          javaInfo?.name ?? t("General.unknown"),
-          instanceInfo?.name ?? t("General.unknown"),
-          log
-        ),
-      },
-    ];
-
-    const resp = await IntelligenceService.fetchLLMChatResponse(messages);
-    if (resp.status === "success") {
-      setAiResult(resp.data);
-    } else {
-      setAiResult(resp.message + ": " + resp.details);
-    }
-    setAiLoading(false);
-  }
-
   const fancyBg = useColorModeValue(
     // light mode: colorful background
     `
@@ -298,31 +258,10 @@ const GameErrorPage: React.FC = () => {
             })}
 
           <VStack spacing={1} align="stretch">
-            <HStack align="center">
-              <Text fontSize="xs-sm">
-                {!showAIResult
-                  ? t("GameErrorPage.crashDetails.title")
-                  : t("GameErrorPage.aiAnalysis")}
-              </Text>
-              {showAIResult && (
-                <Badge size="xs" colorScheme="purple">
-                  BETA
-                </Badge>
-              )}
-            </HStack>
-            {!showAIResult ? (
-              <Text fontSize="md">{reason}</Text>
-            ) : (
-              <>
-                {aiLoading ? (
-                  <Center>
-                    <BeatLoader size={16} color="gray" />
-                  </Center>
-                ) : (
-                  <MarkdownContainer>{aiResult}</MarkdownContainer>
-                )}
-              </>
-            )}
+            <Text fontSize="xs-sm">
+              {t("GameErrorPage.crashDetails.title")}
+            </Text>
+            <Text fontSize="md">{reason}</Text>
           </VStack>
         </VStack>
       </Box>
@@ -352,10 +291,23 @@ const GameErrorPage: React.FC = () => {
             bg={fancyBg}
             variant="solid"
             _hover={{ bg: fancyBg, animation: `${hueAnim} 2s linear infinite` }}
-            onClick={() => callAIAnalyze(gameLog)}
-            isLoading={aiLoading}
+            onClick={() => {
+              const crashContext = {
+                instanceId: instanceInfo?.id,
+                instanceName: instanceInfo?.name,
+                instanceVersion: instanceInfo?.version,
+                javaName: javaInfo?.name,
+                javaPath: javaInfo?.execPath,
+                crashLog: gameLog.substring(0, 2000),
+                os: basicInfoParams.get("os"),
+              };
+              localStorage.setItem(
+                "pending-crash-context",
+                JSON.stringify(crashContext)
+              );
+            }}
           >
-            {t("GameErrorPage.button.aiAnalysis")}
+            {t("GameErrorPage.button.sendToMiuChat", "发送到 MiuChat")}
           </Button>
         )}
 
