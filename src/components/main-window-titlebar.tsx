@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuMaximize2, LuMinimize2, LuMinus, LuX } from "react-icons/lu";
 import { CommonIconButton } from "@/components/common/common-icon-button";
+import HeadNavBar from "@/components/head-navbar-v2";
 import { useLauncherConfig } from "@/contexts/config";
 import { useExtensionHost } from "@/contexts/extension/host";
 
@@ -34,7 +35,6 @@ const MainWindowTitlebar = () => {
     "whiteAlpha.700"
   );
 
-  // if the current page is provided by an extension, show the extension name in titlebar center
   const extensionIdentifier = (() => {
     if (!router.isReady) return undefined;
     const path = router.asPath.split("?")[0];
@@ -150,32 +150,6 @@ const MainWindowTitlebar = () => {
     });
   }, [isWindows]);
 
-  // Listen macOS native fullscreen mode, make titlebar hidden.
-  useEffect(() => {
-    if (typeof window === "undefined" || !isMac) return;
-    const currentWindow = getCurrentWindow();
-    let unlistenResized: (() => void) | undefined;
-    const syncFullscreen = async () => {
-      setIsMacFullscreen(await currentWindow.isFullscreen());
-    };
-    void syncFullscreen();
-    currentWindow
-      .onResized(() => {
-        void syncFullscreen();
-      })
-      .then((unlisten) => {
-        unlistenResized = unlisten;
-      });
-
-    return () => {
-      if (unlistenResized) {
-        unlistenResized();
-      }
-    };
-  }, [isMac]);
-
-  if (isMac && isMacFullscreen) return null;
-
   return (
     <Flex
       h={`${titlebarHeight}px`}
@@ -187,7 +161,7 @@ const MainWindowTitlebar = () => {
       zIndex={9999}
       pl={2}
     >
-      {extensionName && (
+      {extensionName ? (
         <Flex
           position="absolute"
           inset={0}
@@ -201,6 +175,14 @@ const MainWindowTitlebar = () => {
             })}
           </Text>
         </Flex>
+      ) : (
+        <HeadNavBar
+          h={`${titlebarHeight}px`}
+          minH={`${titlebarHeight}px`}
+          pos="absolute"
+          left="50%"
+          transform="translateX(-50%)"
+        />
       )}
       <Flex
         id="sjmcl-main-drag-region"

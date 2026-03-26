@@ -31,7 +31,6 @@ import AgentChat from "@/components/agent-chat";
 import AgentHostess from "@/components/agent-hostess";
 import AdvancedCard from "@/components/common/advanced-card";
 import DevToolbar from "@/components/dev/dev-toolbar";
-import HeadNavBar from "@/components/head-navbar-v2";
 import LanguageMenu from "@/components/language-menu";
 import MainWindowTitlebar from "@/components/main-window-titlebar";
 import StarUsModal from "@/components/modals/star-us-modal";
@@ -409,20 +408,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               )}
             </Flex>
 
-            <Flex
-              flex={1}
-              flexDir="column"
-              justify="space-between"
-              minW={0}
-            >
-              <HeadNavBar />
-              <Flex
-                flex={1}
-                minH={0}
-                pl={isAgentChatOpen ? 0 : 2}
-                pr={2}
-                pb={2}
-              >
+            <Flex flex={1} minW={0} minH={0} p={2} pl={0}>
                 {isLaunchPage ? (
                   children
                 ) : (
@@ -436,7 +422,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     {children}
                   </AdvancedCard>
                 )}
-              </Flex>
             </Flex>
           </Flex>
           {isLaunchPage && !isAgentChatOpen && (
