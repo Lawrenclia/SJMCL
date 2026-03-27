@@ -160,6 +160,12 @@ const MainWindowTitlebar = () => {
       borderColor={titlebarBorderColor}
       zIndex={9999}
       pl={2}
+      sx={{
+        "& .decorum-tb-btn": {
+          height: "calc(100% - 10px)",
+          marginBlock: "5px",
+        },
+      }}
     >
       {extensionName ? (
         <Flex
@@ -217,7 +223,8 @@ const MainWindowTitlebar = () => {
               label={button.label}
               withTooltip={false}
               borderRadius="full"
-              h={18}
+              h="30px"
+              my="5px"
               colorScheme={button.colorScheme}
               onClick={button.onClick}
             />
