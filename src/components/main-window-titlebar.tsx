@@ -15,6 +15,7 @@ const MainWindowTitlebar = () => {
   const isWindows = osType === "windows";
 
   const titlebarHeight = 40;
+  const decorumButtonSize = titlebarHeight - 10;
 
   const [isMacFullscreen, setIsMacFullscreen] = useState(false);
   const [isLinuxMaximized, setIsLinuxMaximized] = useState(false);
@@ -134,8 +135,24 @@ const MainWindowTitlebar = () => {
       pl={2}
       sx={{
         "& .decorum-tb-btn": {
-          height: "calc(100% - 10px)",
+          height: `${decorumButtonSize}px`,
+          width: `${decorumButtonSize}px`,
+          minWidth: `${decorumButtonSize}px`,
+          aspectRatio: "1 / 1",
           marginBlock: "5px",
+          borderRadius: "8px",
+          transition: "transform 0.12s ease",
+        },
+        "& .decorum-tb-btn:active": {
+          transform: "translateY(1px)",
+        },
+        "& [data-tauri-decorum-tb] .decorum-tb-btn:last-of-type": {
+          "&:is(:hover, :focus-visible, :active)": {
+            color: "white",
+          },
+          "&:is(:hover, :focus-visible, :active) svg": {
+            stroke: "currentColor",
+          },
         },
       }}
     >
@@ -165,8 +182,9 @@ const MainWindowTitlebar = () => {
         <HStack
           id="sjmcl-main-decorum-host"
           data-tauri-decorum-tb
-          spacing={0}
+          spacing="8px"
           h="100%"
+          pr="8px"
         />
       )}
       {isLinux && (
