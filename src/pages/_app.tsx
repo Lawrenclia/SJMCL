@@ -10,11 +10,11 @@ import { GuidedTourProvider } from "@/components/special/guided-tour-provider";
 import SharedModalsProvider from "@/components/special/shared-modals-provider";
 import { LauncherConfigContextProvider } from "@/contexts/config";
 import { ExtensionHostContextProvider } from "@/contexts/extension/host";
-import { FunctionCallProvider } from "@/contexts/function-call";
 import { GlobalDataContextProvider } from "@/contexts/global-data";
 import { RoutingHistoryContextProvider } from "@/contexts/routing-history";
 import { TaskContextProvider } from "@/contexts/task";
 import { ToastContextProvider } from "@/contexts/toast";
+import { ToolCallProvider } from "@/contexts/tool-call";
 import DiscoverLayout from "@/layouts/discover-layout";
 import InstanceDetailsLayout from "@/layouts/instance-details-layout";
 import InstancesLayout from "@/layouts/instances-layout";
@@ -124,22 +124,25 @@ export default function App({ Component, pageProps }: AppProps) {
           <LauncherConfigContextProvider>
             <GlobalDataContextProvider>
               <GuidedTourProvider>
-                <SharedModalsProvider>
-                  <TaskContextProvider>
-                    <ExtensionHostContextProvider>
-                      <GlobalEventHandler>
-                        <FunctionCallProvider>
-                          <MainLayout>
-                            <Fade key={router.pathname.split("/")[1] || ""} in>
-                              <SpecLayout>
-                                <Component {...pageProps} />
-                              </SpecLayout>
-                            </Fade>
-                          </MainLayout>
-                        </FunctionCallProvider>
-                      </GlobalEventHandler>
-                    </ExtensionHostContextProvider>
-                  </TaskContextProvider>
+                  <SharedModalsProvider>
+                    <TaskContextProvider>
+                      <ExtensionHostContextProvider>
+                        <GlobalEventHandler>
+                          <ToolCallProvider>
+                            <MainLayout>
+                              <Fade
+                                key={router.pathname.split("/")[1] || ""}
+                                in
+                              >
+                                <SpecLayout>
+                                  <Component {...pageProps} />
+                                </SpecLayout>
+                              </Fade>
+                            </MainLayout>
+                          </ToolCallProvider>
+                        </GlobalEventHandler>
+                      </ExtensionHostContextProvider>
+                    </TaskContextProvider>
                 </SharedModalsProvider>
               </GuidedTourProvider>
             </GlobalDataContextProvider>

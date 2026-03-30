@@ -31,14 +31,14 @@ import { LuLightbulb } from "react-icons/lu";
 import ReactMarkdown, { Components } from "react-markdown";
 import { BeatLoader } from "react-spinners";
 import remarkGfm from "remark-gfm";
-import { FunctionCallWidget } from "@/components/function-call-widget";
+import { ToolCallWidget } from "@/components/tool-call-widget";
 import { useLauncherConfig } from "@/contexts/config";
-import { splitByFunctionCalls } from "@/utils/function-call";
+import { splitByToolCalls } from "@/utils/tool-call/parser";
 
 type MarkdownContainerProps = BoxProps & {
   children: string;
   messageId?: string;
-  onFunctionCallAction?: (action: "confirm" | "cancel") => void;
+  onToolCallAction?: (action: "confirm" | "cancel") => void;
 };
 
 type ThinkSegment = {
@@ -88,7 +88,7 @@ function splitThinkSegments(text: string): ThinkSegment[] {
 const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   children,
   messageId,
-  onFunctionCallAction,
+  onToolCallAction,
   ...boxProps
 }) => {
   const { t } = useTranslation();
@@ -136,11 +136,11 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
     [primaryColor]
   );
 
-  // Process both function calls and GitHub marks
+  // Process both tool calls and GitHub marks
   const processContent = React.useCallback(
     (children: React.ReactNode): React.ReactNode => {
       if (typeof children === "string") {
-        const segments = splitByFunctionCalls(children);
+        const segments = splitByToolCalls(children);
         const result: React.ReactNode[] = [];
 
         let toolIndex = 0;
@@ -150,11 +150,11 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
           } else {
             if (segment.type === "success") {
               result.push(
-                <FunctionCallWidget
+                <ToolCallWidget
                   key={`fn-${i}`}
                   data={{ name: segment.name, params: segment.params }}
                   callId={messageId ? `${messageId}-${toolIndex}` : undefined}
-                  onConfirmationAction={onFunctionCallAction}
+                  onConfirmationAction={onToolCallAction}
                 />
               );
               toolIndex++;
@@ -186,7 +186,7 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
 
       return children;
     },
-    [processGitHubMarks, messageId, onFunctionCallAction]
+    [processGitHubMarks, messageId, onToolCallAction]
   );
 
   // map HTML tags to Chakra components so styles are inherited.
@@ -288,16 +288,16 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
       td: ({ node, children, ...rest }) => <Td {...rest}>{children}</Td>,
       // code
       code: ({ node, className, children, ...rest }) => {
-        // If inline code matches function pattern
+        // If inline code matches tool marker pattern
         if (typeof children === "string") {
-          const funcMatch = children.match(/^::function::(\{.*\})$/);
+          const funcMatch = children.match(/^::(?:tool|function)::(\{.*\})$/);
           if (funcMatch) {
             try {
               const data = JSON.parse(funcMatch[1]);
               // Inline code doesn't easily support knowing the index if multiple exist,
               // but we can assume index 0 for simplicity or improve parse logic later.
               // For now we skip callId for inline code blocks as they are edge cases.
-              return <FunctionCallWidget data={data} />;
+              return <ToolCallWidget data={data} />;
             } catch (e) {
               // ignore
             }
