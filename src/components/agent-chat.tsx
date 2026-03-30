@@ -705,7 +705,6 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
                       onMouseDown={handleSuggestionDragStart}
                       onScroll={updateSuggestionMask}
                       sx={{
-                        scrollSnapType: "x proximity",
                         touchAction: "pan-x",
                       }}
                     >
@@ -720,7 +719,6 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
                           borderRadius="full"
                           flexShrink={0}
                           fontWeight="medium"
-                          scrollSnapAlign="start"
                           isDisabled={isBusy}
                           onClick={() => handleSuggestionClick(suggestion)}
                         >
