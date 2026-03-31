@@ -42,4 +42,8 @@ export interface ToolDefinition {
   };
   preconditions?: string[];
   requiresConfirmation?: boolean;
+  maxResultSizeChars?: number;
+  isReadOnly?: boolean;
+  isDestructive?: boolean;
+  shouldDefer?: boolean;
 }
