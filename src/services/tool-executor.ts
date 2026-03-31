@@ -8,6 +8,10 @@ import { ConfigService } from "@/services/config";
 import { DiscoverService } from "@/services/discover";
 import { InstanceService } from "@/services/instance";
 import { ResourceService } from "@/services/resource";
+import {
+  TOOL_DEFINITIONS,
+  renderParamsSignature,
+} from "@/services/tool-definitions";
 import { UtilsService } from "@/services/utils";
 
 export interface ToolExecutionContext {
@@ -198,6 +202,43 @@ export async function executeToolCall(
         })
       );
       return await DiscoverService.fetchNewsPostSummaries(sources);
+
+    // ── Meta tool: deferred tool search ────────────────────────────────
+
+    case "search_tools": {
+      const query = (params.query || "").toLowerCase();
+      const deferred = TOOL_DEFINITIONS.filter((d) => d.shouldDefer);
+      // Split by whitespace for English, by individual characters for CJK
+      const keywords = query
+        .split(/\s+/)
+        .flatMap((word: string) =>
+          /[\u4e00-\u9fff]/.test(word) ? word.split("") : [word]
+        )
+        .filter((kw: string) => kw.length > 0);
+      const matched = deferred.filter((d) => {
+        const haystack = [
+          d.name.replace(/_/g, " "),
+          d.description["zh-Hans"],
+          d.description.en,
+          ...(d.usageNotes?.["zh-Hans"] || []),
+          ...(d.usageNotes?.en || []),
+        ]
+          .join(" ")
+          .toLowerCase();
+        // Match if at least half of keywords hit
+        const hits = keywords.filter((kw: string) => haystack.includes(kw));
+        return hits.length >= Math.ceil(keywords.length / 2);
+      });
+      if (matched.length === 0) {
+        return { status: "success", message: "No matching tools found", query };
+      }
+      return matched.map((d) => ({
+        name: d.name,
+        description: d.description.en,
+        params: renderParamsSignature(d),
+        notes: d.usageNotes?.en,
+      }));
+    }
 
     // ── Write tools (prepare phase — validate + preview) ──────────────
 

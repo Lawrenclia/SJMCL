@@ -36,14 +36,21 @@ function preprocessMessagesForLLM(messages: ChatMessage[]): ChatMessage[] {
 }
 
 /**
- * Truncate overly large tool results to avoid overwhelming LLM context.
+ * Smart truncation: preserve head (70%) + tail (20%) with omission marker.
+ * Inspired by Claude Code's context management — keeps JSON structure
+ * at the beginning and important values at the end, instead of hard cut.
  */
-function truncateResult(result: string): string {
-  if (result.length <= MAX_TOOL_RESULT_LENGTH) return result;
-  return (
-    result.substring(0, MAX_TOOL_RESULT_LENGTH) +
-    `\n...(truncated, ${result.length} chars total)`
-  );
+function smartTruncate(result: string, maxChars: number): string {
+  if (result.length <= maxChars) return result;
+
+  const headSize = Math.floor(maxChars * 0.7);
+  const tailSize = Math.floor(maxChars * 0.2);
+  const omitted = result.length - headSize - tailSize;
+
+  const head = result.substring(0, headSize);
+  const tail = result.substring(result.length - tailSize);
+
+  return `${head}\n\n... [omitted ${omitted} characters] ...\n\n${tail}`;
 }
 
 interface PendingConfirmation {
@@ -124,7 +131,13 @@ export function useAgentLoop(deps: AgentLoopDeps) {
               pending.params,
               toolContext
             );
-            resultStr = truncateResult(formatPrintable(result));
+            const pendingDef = TOOL_DEFINITIONS.find(
+              (d) => d.name === pending.toolName
+            );
+            resultStr = smartTruncate(
+              formatPrintable(result),
+              pendingDef?.maxResultSizeChars ?? MAX_TOOL_RESULT_LENGTH
+            );
           } catch (e: any) {
             resultStr = `Error: ${e.message || "Unknown error"}`;
           }
@@ -261,7 +274,10 @@ export function useAgentLoop(deps: AgentLoopDeps) {
                 toolCall.params,
                 toolContext
               );
-              resultStr = truncateResult(formatPrintable(result));
+              resultStr = smartTruncate(
+                formatPrintable(result),
+                toolDef?.maxResultSizeChars ?? MAX_TOOL_RESULT_LENGTH
+              );
               setCallState(callId, {
                 isExecuting: false,
                 result: resultStr,

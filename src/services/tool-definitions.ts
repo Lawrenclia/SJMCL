@@ -23,6 +23,17 @@ export interface ToolDefinition {
   };
   preconditions?: string[];
   requiresConfirmation?: boolean;
+
+  // ── Capability declarations (inspired by Claude Code Tool system) ──
+  /** Per-tool result size budget in characters. Default: 4000 */
+  maxResultSizeChars?: number;
+  /** True for query-only tools that never modify state */
+  isReadOnly?: boolean;
+  /** True for irreversible operations (e.g. delete instance) */
+  isDestructive?: boolean;
+  /** If true, tool description is excluded from the default prompt and
+   *  loaded on-demand via search_tools (deferred loading). */
+  shouldDefer?: boolean;
 }
 
 function renderParamType(prop: ParamProperty): string {
@@ -53,6 +64,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_game_version_list",
     category: "query",
+    maxResultSizeChars: 8000,
+    isReadOnly: true,
     description: {
       "zh-Hans": "获取所有的游戏版本信息",
       en: "Get all game versions",
@@ -77,6 +90,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_mod_loader_list_by_game_version",
     category: "query",
+    maxResultSizeChars: 8000,
+    isReadOnly: true,
     description: {
       "zh-Hans": "获取指定游戏版本的模组加载器版本列表",
       en: "Get the mod loader version list for a specific game version",
@@ -105,6 +120,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "create_instance",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
     requiresConfirmation: true,
     description: {
       "zh-Hans": "创建一个新的游戏实例",
@@ -157,6 +174,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_list",
     category: "query",
+    maxResultSizeChars: 2000,
+    isReadOnly: true,
     description: {
       "zh-Hans": "获取玩家的所有游戏实例",
       en: "Get all game instances of the player",
@@ -178,6 +197,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_game_config",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的游戏配置",
       en: "Get the game configuration of the instance",
@@ -200,6 +221,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_world_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有世界",
       en: "Get the world list of the instance",
@@ -224,6 +247,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_world_details",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的某个世界的信息",
       en: "Get the world details of the instance",
@@ -248,6 +273,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_game_server_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有服务器信息",
       en: "Get the game server list of the instance",
@@ -267,6 +294,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_local_mod_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有本地模组信息",
       en: "Get the local mod list of the instance",
@@ -286,6 +315,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_resource_pack_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有资源包信息",
       en: "Get the resource pack list of the instance",
@@ -305,6 +336,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_server_resource_pack_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有服务器资源包信息",
       en: "Get the server resource pack list of the instance",
@@ -324,6 +357,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_schematic_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有方块集合信息",
       en: "Get the schematic list of the instance",
@@ -343,6 +378,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_instance_shader_pack_list",
     category: "query",
+    isReadOnly: true,
+    shouldDefer: true,
     description: {
       "zh-Hans": "获取玩家在实例中的所有着色器包信息",
       en: "Get the shader pack list of the instance",
@@ -362,6 +399,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "launch_instance",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
     requiresConfirmation: true,
     description: {
       "zh-Hans": "启动游戏",
@@ -382,6 +421,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "fetch_news",
     category: "query",
+    isReadOnly: true,
     description: {
       "zh-Hans": "获取社团相关的新闻",
       en: "Fetch news related to the club",
@@ -403,6 +443,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_launcher_config",
     category: "query",
+    isReadOnly: true,
     description: {
       "zh-Hans": "获取启动器配置",
       en: "Get launcher configuration",
@@ -420,6 +461,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "retrieve_java_info",
     category: "query",
+    maxResultSizeChars: 2000,
+    isReadOnly: true,
     description: {
       "zh-Hans": "获取 Java 信息",
       en: "Get Java information",
@@ -440,6 +483,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "download_java",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "下载 Mojang 官方 Java 运行时",
       en: "Download Mojang official Java runtime",
@@ -465,6 +511,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "set_global_memory_size",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
     description: {
       "zh-Hans": "设置全局最大内存分配",
       en: "Set global maximum memory allocation",
@@ -487,6 +535,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "set_global_java_path",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
     description: {
       "zh-Hans": "设置全局 Java 路径",
       en: "Set global Java executable path",
@@ -507,6 +557,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "set_game_window_resolution",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "设置全局游戏窗口分辨率",
       en: "Set global game window resolution",
@@ -528,6 +581,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "set_instance_memory_size",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "设置实例专属最大内存分配",
       en: "Set instance-specific maximum memory allocation",
@@ -555,6 +611,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "set_instance_java_path",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "设置实例专属 Java 路径",
       en: "Set instance-specific Java executable path",
@@ -582,6 +641,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "set_instance_version_isolation",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "设置实例版本隔离",
       en: "Set instance version isolation",
@@ -603,6 +665,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "disable_instance_specific_config",
     category: "write",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "让实例重新跟随全局配置",
       en: "Disable instance-specific config, follow global settings",
@@ -626,6 +691,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "toggle_mod",
     category: "repair",
+    maxResultSizeChars: 2000,
+    isReadOnly: false,
+    shouldDefer: true,
     description: {
       "zh-Hans": "启用或禁用指定模组",
       en: "Enable or disable a specific mod",
@@ -652,5 +720,35 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       ],
     },
     requiresConfirmation: true,
+  },
+
+  // ── Meta tool (deferred loading support) ───────────────────────────
+
+  {
+    name: "search_tools",
+    category: "query",
+    isReadOnly: true,
+    maxResultSizeChars: 8000,
+    description: {
+      "zh-Hans": "搜索可用的额外工具（实例详情查询、实例配置修改、模组管理等）",
+      en: "Search for additional tools (instance details, config changes, mod management, etc.)",
+    },
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+      },
+      required: ["query"],
+    },
+    usageNotes: {
+      "zh-Hans": [
+        "当需要的功能不在已列出的工具中时调用此工具搜索",
+        "返回匹配工具的完整说明和参数格式",
+      ],
+      en: [
+        "Call this when the needed functionality is not in the listed tools",
+        "Returns full descriptions and parameter formats of matching tools",
+      ],
+    },
   },
 ];
