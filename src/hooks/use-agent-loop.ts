@@ -1,19 +1,18 @@
 import React from "react";
-import { FunctionCallState } from "@/contexts/function-call";
+import { ToolCallState, useToolExecutionContext } from "@/contexts/tool-call";
 import { ToolCallStatus } from "@/enums/tool-call";
-import { ChatMessage } from "@/models/intelligence";
+import { ChatMessage } from "@/models/intelligence/chat";
+import { ToolCallMatch } from "@/models/intelligence/tool-call";
+import { TOOL_DEFINITIONS } from "@/prompts/tool";
 import { IntelligenceService } from "@/services/intelligence";
-import { TOOL_DEFINITIONS } from "@/services/tool-definitions";
+import { formatPrintable } from "@/utils/string";
 import {
-  ToolExecutionContext,
   commitToolCall,
   executeToolCall,
   isCancellationMessage,
   isConfirmationMessage,
-} from "@/services/tool-executor";
-import { FunctionCallMatch, findFunctionCalls } from "@/utils/function-call";
-import { formatPrintable } from "@/utils/string";
-import { parseToolCallStatus } from "@/utils/tool-call";
+} from "@/utils/tool-call/executor";
+import { findToolCalls, parseToolCallStatus } from "@/utils/tool-call/parser";
 
 const MAX_ITERATIONS = 10;
 const MAX_TOOL_RESULT_LENGTH = 4000;
@@ -82,8 +81,7 @@ export interface AgentLoopDeps {
   currentSessionIdRef: React.MutableRefObject<string>;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   setIsLoading: (loading: boolean) => void;
-  setCallState: (id: string, state: FunctionCallState) => void;
-  toolContext: ToolExecutionContext;
+  setToolCallState: (id: string, state: ToolCallState) => void;
   toast: (options: {
     title: string;
     status: "error" | "info" | "warning" | "success";
@@ -91,6 +89,10 @@ export interface AgentLoopDeps {
 }
 
 export function useAgentLoop(deps: AgentLoopDeps) {
+  const toolExecutionContext = useToolExecutionContext();
+  const toolExecutionContextRef = React.useRef(toolExecutionContext);
+  toolExecutionContextRef.current = toolExecutionContext;
+
   const depsRef = React.useRef(deps);
   depsRef.current = deps;
 
@@ -107,10 +109,19 @@ export function useAgentLoop(deps: AgentLoopDeps) {
         currentSessionIdRef,
         setMessages,
         setIsLoading,
-        setCallState,
-        toolContext,
+        setToolCallState,
         toast,
       } = depsRef.current;
+
+      const toolContext = toolExecutionContextRef.current;
+      if (!toolContext) {
+        toast({
+          title: "Tool execution context is not ready",
+          status: "error",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       const currentRequestId = ++requestIdRef.current;
       setIsLoading(true);
@@ -241,10 +252,10 @@ export function useAgentLoop(deps: AgentLoopDeps) {
           };
           setMessages([...messages]);
 
-          // Parse function calls
-          const toolCalls = findFunctionCalls(finalResponse).filter(
+          // Parse tool calls
+          const toolCalls = findToolCalls(finalResponse).filter(
             (m) => m.type === "success"
-          ) as FunctionCallMatch[];
+          ) as ToolCallMatch[];
 
           if (toolCalls.length === 0) break;
 
@@ -261,7 +272,7 @@ export function useAgentLoop(deps: AgentLoopDeps) {
               (d) => d.name === toolCall.name
             );
 
-            setCallState(callId, {
+            setToolCallState(callId, {
               isExecuting: true,
               result: null,
               error: null,
@@ -278,14 +289,14 @@ export function useAgentLoop(deps: AgentLoopDeps) {
                 formatPrintable(result),
                 toolDef?.maxResultSizeChars ?? MAX_TOOL_RESULT_LENGTH
               );
-              setCallState(callId, {
+              setToolCallState(callId, {
                 isExecuting: false,
                 result: resultStr,
                 error: null,
               });
             } catch (e: any) {
               resultStr = `Error: ${e.message || "Unknown error"}`;
-              setCallState(callId, {
+              setToolCallState(callId, {
                 isExecuting: false,
                 result: null,
                 error: resultStr,
