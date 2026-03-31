@@ -228,6 +228,9 @@
   "AgentChatPage": {
     "description": "与缪汐开始第一句对话吧！",
     "placeholder": "问问缪汐，回车发送~",
+    "suggestions": {
+      "items": ["帮我下载最新版本MC", "启动游戏", "看看SJMC新闻"]
+    },
     "thinking": "正在思考",
     "thinkingFinished": "思考完成",
     "skipThinking": "跳过思考",

@@ -77,17 +77,36 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const suggestionsContainerRef = useRef<HTMLDivElement>(null);
+  const suggestionDragStateRef = useRef({
+    isDragging: false,
+    moved: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
   const requestIdRef = useRef(0);
   const currentSessionIdRef = useRef<string>(crypto.randomUUID());
   const sessionCreatedAtRef = useRef<number>(Math.floor(Date.now() / 1000));
   const wasLoadingRef = useRef(false);
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
+  const [isDraggingSuggestions, setIsDraggingSuggestions] = useState(false);
+  const [hasSuggestionOverflow, setHasSuggestionOverflow] = useState(false);
+  const [showSuggestionEndMask, setShowSuggestionEndMask] = useState(false);
   const toast = useToast();
   const { openSharedModal } = useSharedModals();
   const { setToolExecutionContext, clearToolExecutionContext } =
     useToolExecutionContextActions();
   const { setToolCallState, hasExecutingToolCall } = useToolCallActions();
+  const topicSuggestionsValue = t("AgentChatPage.suggestions.items", {
+    returnObjects: true,
+  });
+  const topicSuggestions = Array.isArray(topicSuggestionsValue)
+    ? topicSuggestionsValue
+    : [];
+  const shouldShowTopicSuggestions =
+    topicSuggestions.length > 0 && input.trim().length === 0;
 
   const { runAgentLoop, clearPendingConfirmation } = useAgentLoop({
     requestIdRef,
@@ -261,6 +280,114 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
     wasLoadingRef.current = isLoading;
   }, [isLoading]);
 
+  const updateSuggestionMask = useCallback(() => {
+    const container = suggestionsContainerRef.current;
+    if (!container) return;
+
+    const hasOverflow = container.scrollWidth > container.clientWidth + 4;
+    const canScrollRight =
+      container.scrollLeft < container.scrollWidth - container.clientWidth - 4;
+
+    setHasSuggestionOverflow(hasOverflow);
+    setShowSuggestionEndMask(hasOverflow && canScrollRight);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldShowTopicSuggestions) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      updateSuggestionMask();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [i18n.language, shouldShowTopicSuggestions, updateSuggestionMask]);
+
+  useEffect(() => {
+    const container = suggestionsContainerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      updateSuggestionMask();
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [shouldShowTopicSuggestions, updateSuggestionMask]);
+
+  useEffect(() => {
+    if (!isDraggingSuggestions) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const container = suggestionsContainerRef.current;
+      const dragState = suggestionDragStateRef.current;
+      if (!container || !dragState.isDragging) return;
+
+      const deltaX = event.clientX - dragState.startX;
+      if (Math.abs(deltaX) > 4) {
+        dragState.moved = true;
+      }
+
+      container.scrollLeft = dragState.scrollLeft - deltaX;
+      updateSuggestionMask();
+    };
+
+    const handleMouseUp = () => {
+      suggestionDragStateRef.current.isDragging = false;
+      setIsDraggingSuggestions(false);
+      updateSuggestionMask();
+
+      window.setTimeout(() => {
+        suggestionDragStateRef.current.moved = false;
+      }, 0);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDraggingSuggestions, updateSuggestionMask]);
+
+  const handleSuggestionDragStart = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    const container = suggestionsContainerRef.current;
+    if (
+      event.button !== 0 ||
+      !container ||
+      container.scrollWidth <= container.clientWidth + 4
+    ) {
+      return;
+    }
+
+    suggestionDragStateRef.current = {
+      isDragging: true,
+      moved: false,
+      startX: event.clientX,
+      scrollLeft: container.scrollLeft,
+    };
+    setIsDraggingSuggestions(true);
+    event.preventDefault();
+  };
+
+  const handleSuggestionClick = async (suggestion: string) => {
+    if (suggestionDragStateRef.current.moved || isBusy) return;
+
+    if (!config.intelligence.enabled) {
+      return;
+    }
+
+    const userMsg: ChatMessage = { role: "user", content: suggestion };
+    const newMessages = [...messages, userMsg];
+
+    setMessages(newMessages);
+    setInput("");
+
+    await runAgentLoop(newMessages);
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -334,6 +461,14 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   const msgBgBot = "transparent";
   const inputShellBg = useColorModeValue("gray.50", "gray.800");
   const inputShellBorder = useColorModeValue("gray.200", "gray.700");
+  const suggestionMaskTransparent = useColorModeValue(
+    "rgba(247, 250, 252, 0)",
+    "rgba(26, 32, 44, 0)"
+  );
+  const suggestionMaskSolid = useColorModeValue(
+    "rgba(247, 250, 252, 1)",
+    "rgba(26, 32, 44, 1)"
+  );
 
   let filteredMessages = messages.filter(
     (msg) => msg.role !== "system" && msg.content.trim()
@@ -547,10 +682,64 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
               borderTopRadius="2xl"
               borderBottomRadius="md"
               p={3}
-              pt={0}
             >
               <Flex direction="column" gap={3}>
+                {shouldShowTopicSuggestions && (
+                  <Box position="relative">
+                    <Flex
+                      ref={suggestionsContainerRef}
+                      align="center"
+                      gap={2}
+                      overflowX="auto"
+                      className="no-scrollbar"
+                      pb={1}
+                      pr={hasSuggestionOverflow ? 12 : 0}
+                      cursor={
+                        hasSuggestionOverflow
+                          ? isDraggingSuggestions
+                            ? "grabbing"
+                            : "grab"
+                          : "default"
+                      }
+                      onMouseDown={handleSuggestionDragStart}
+                      onScroll={updateSuggestionMask}
+                      sx={{
+                        touchAction: "pan-x",
+                      }}
+                    >
+                      {topicSuggestions.map((suggestion) => (
+                        <Button
+                          key={suggestion}
+                          size="xs"
+                          h="30px"
+                          px={3}
+                          variant="subtle"
+                          colorScheme={primaryColor}
+                          borderRadius="full"
+                          flexShrink={0}
+                          fontWeight="medium"
+                          isDisabled={isBusy}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                        >
+                          {suggestion}
+                        </Button>
+                      ))}
+                    </Flex>
+                    <Box
+                      position="absolute"
+                      top={0}
+                      right={0}
+                      bottom={1}
+                      w="56px"
+                      pointerEvents="none"
+                      opacity={showSuggestionEndMask ? 1 : 0}
+                      transition="opacity 0.2s ease"
+                      bgGradient={`linear(to-l, ${suggestionMaskSolid}, ${suggestionMaskTransparent})`}
+                    />
+                  </Box>
+                )}
                 <Textarea
+                  ref={textareaRef}
                   placeholder={t("AgentChatPage.placeholder")}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
