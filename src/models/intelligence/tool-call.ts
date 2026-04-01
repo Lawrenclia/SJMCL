@@ -42,4 +42,15 @@ export interface ToolDefinition {
   };
   preconditions?: string[];
   requiresConfirmation?: boolean;
+
+  // ── Capability declarations (inspired by Claude Code Tool system) ──
+  /** Per-tool result size budget in characters. Default: 4000 */
+  maxResultSizeChars?: number;
+  /** True for query-only tools that never modify state */
+  isReadOnly?: boolean;
+  /** True for irreversible operations (e.g. delete instance) */
+  isDestructive?: boolean;
+  /** If true, tool description is excluded from the default prompt and
+   *  loaded on-demand via search_tools (deferred loading). */
+  shouldDefer?: boolean;
 }

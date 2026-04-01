@@ -56,9 +56,19 @@ function generateToolSection(locale: string): string {
       ? "\n请在回答的同时附带咒语，让魔法生效吧！"
       : "\nPlease include the spell in your response to make the magic happen!";
 
-  const lines = TOOL_DEFINITIONS.map((def) => generateToolLine(def, loc));
+  // Only include non-deferred tools in the default prompt (deferred loading)
+  const activeTools = TOOL_DEFINITIONS.filter((def) => !def.shouldDefer);
+  const lines = activeTools.map((def) => generateToolLine(def, loc));
 
-  return header + "\n" + lines.join("\n") + footer;
+  const deferredCount = TOOL_DEFINITIONS.filter(
+    (def) => def.shouldDefer
+  ).length;
+  const deferHint =
+    loc === "zh-Hans"
+      ? `\n（另有 ${deferredCount} 个专用工具可通过 \`search_tools\` 按需查找）`
+      : `\n(${deferredCount} more specialized tools available via \`search_tools\`)`;
+
+  return header + "\n" + lines.join("\n") + deferHint + footer;
 }
 
 export const getChatSystemPrompt = (locale: string) => {
