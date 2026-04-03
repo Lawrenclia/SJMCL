@@ -8,6 +8,7 @@ import { Fade } from "@/components/common/transition";
 import GlobalEventHandler from "@/components/special/global-event-handler";
 import { GuidedTourProvider } from "@/components/special/guided-tour-provider";
 import SharedModalsProvider from "@/components/special/shared-modals-provider";
+import { AgentChatContextProvider } from "@/contexts/agent-chat";
 import { LauncherConfigContextProvider } from "@/contexts/config";
 import { GlobalDataContextProvider } from "@/contexts/global-data";
 import { RoutingHistoryContextProvider } from "@/contexts/routing-history";
@@ -125,17 +126,19 @@ export default function App({ Component, pageProps }: AppProps) {
               <GuidedTourProvider>
                 <SharedModalsProvider>
                   <TaskContextProvider>
-                    <GlobalEventHandler>
-                      <ToolCallProvider>
-                        <MainLayout>
-                          <Fade key={router.pathname.split("/")[1] || ""} in>
-                            <SpecLayout>
-                              <Component {...pageProps} />
-                            </SpecLayout>
-                          </Fade>
-                        </MainLayout>
-                      </ToolCallProvider>
-                    </GlobalEventHandler>
+                    <AgentChatContextProvider>
+                      <GlobalEventHandler>
+                        <ToolCallProvider>
+                          <MainLayout>
+                            <Fade key={router.pathname.split("/")[1] || ""} in>
+                              <SpecLayout>
+                                <Component {...pageProps} />
+                              </SpecLayout>
+                            </Fade>
+                          </MainLayout>
+                        </ToolCallProvider>
+                      </GlobalEventHandler>
+                    </AgentChatContextProvider>
                   </TaskContextProvider>
                 </SharedModalsProvider>
               </GuidedTourProvider>

@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useCallback, useMemo } from "react";
+import { useAgentChat } from "@/contexts/agent-chat";
 import { useSharedModals } from "@/contexts/shared-modal";
 import useDeepLink from "@/hooks/deep-link";
 import { useDragAndDrop } from "@/hooks/drag-and-drop";
@@ -10,6 +11,7 @@ const GlobalEventHandler: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { openSharedModal } = useSharedModals();
+  const { toggle: toggleAgentChat } = useAgentChat();
   const router = useRouter();
   const isStandAlone = router.pathname.startsWith("/standalone");
 
@@ -28,6 +30,22 @@ const GlobalEventHandler: React.FC<{ children: React.ReactNode }> = ({
   }, [isStandAlone, openSharedModal]);
 
   useKeyboardShortcut(spotlightShortcuts, openSpotlightSearch);
+
+  // Agent Chat shortcut: Cmd/Ctrl+Shift+O
+  const agentChatShortcuts = useMemo(
+    () => ({
+      macos: { metaKey: true, shiftKey: true, key: "O" },
+      windows: { ctrlKey: true, shiftKey: true, key: "O" },
+      linux: { ctrlKey: true, shiftKey: true, key: "O" },
+    }),
+    []
+  );
+
+  const openAgentChat = useCallback(() => {
+    if (!isStandAlone) toggleAgentChat();
+  }, [isStandAlone, toggleAgentChat]);
+
+  useKeyboardShortcut(agentChatShortcuts, openAgentChat);
 
   // ------------------- Drag and Drops -------------------
 

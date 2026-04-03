@@ -19,6 +19,7 @@ import DevToolbar from "@/components/dev/dev-toolbar";
 import MainWindowTitlebar from "@/components/main-window-titlebar";
 import StarUsModal from "@/components/modals/star-us-modal";
 import WelcomeAndTermsModal from "@/components/modals/welcome-and-terms-modal";
+import { useAgentChat } from "@/contexts/agent-chat";
 import { useLauncherConfig } from "@/contexts/config";
 import { isDev } from "@/utils/env";
 
@@ -34,7 +35,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     colorMode === "dark" && config.appearance.background.autoDarken;
 
   const [bgImgSrc, setBgImgSrc] = useState<string>("");
-  const [isAgentChatOpen, setIsAgentChatOpen] = useState(false);
+  const {
+    isOpen: isAgentChatOpen,
+    close: closeAgentChat,
+    toggle: toggleAgentChat,
+  } = useAgentChat();
   const [panelWidth, setPanelWidth] = useState(300);
   const [isDragging, setIsDragging] = useState(false);
   const isCheckedRunCount = useRef(false);
@@ -245,9 +250,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         >
           {isAgentChatOpen && (
             <>
-              <AgentChatPage
-                onAgentChatPanelClose={() => setIsAgentChatOpen(false)}
-              />
+              <AgentChatPage onAgentChatPanelClose={closeAgentChat} />
               <Flex
                 role="group"
                 position="absolute"
@@ -294,7 +297,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </Flex>
       </Flex>
       {isLaunchPage && !isAgentChatOpen && (
-        <AgentHostess onToggleAgentChat={() => setIsAgentChatOpen(true)} />
+        <AgentHostess onToggleAgentChat={toggleAgentChat} />
       )}
       <WelcomeAndTermsModal
         isOpen={isWelcomeAndTermsModalOpen}
