@@ -231,10 +231,7 @@
     "description": "Start your first conversation with Miuxi!",
     "placeholder": "Ask Miuxi anything, press Enter to send~",
     "suggestions": {
-      "items": [
-        "Help me check which versions are available",
-        "Recommend popular modpacks"
-      ]
+      "items": ["Download the latest Minecraft", "Launch the game", "Check SJMC news"]
     },
     "thinking": "Thinking",
     "thinkingFinished": "Thinking Finished",
