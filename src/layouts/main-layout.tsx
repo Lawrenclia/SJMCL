@@ -39,6 +39,7 @@ import {
   FileDnDProvider,
   useFileDnD,
 } from "@/components/special/file-dnd-overlay";
+import { useAgentChat } from "@/contexts/agent-chat";
 import { useLauncherConfig } from "@/contexts/config";
 import { useExtensionHost } from "@/contexts/extension/host";
 import { useSharedModals } from "@/contexts/shared-modal";
@@ -59,7 +60,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const { openGenericConfirmDialog } = useSharedModals();
 
   const [bgImgSrc, setBgImgSrc] = useState<string>("");
-  const [isAgentChatOpen, setIsAgentChatOpen] = useState(false);
+  const {
+    isOpen: isAgentChatOpen,
+    open: openAgentChat,
+    close: closeAgentChat,
+  } = useAgentChat();
   const [panelWidth, setPanelWidth] = useState(300);
   const [isDragging, setIsDragging] = useState(false);
   const originalHeadNavStyle = useRef(config.appearance.theme.headNavStyle);
@@ -71,6 +76,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     ? "translateX(0)"
     : "translateX(-100%)";
   const agentChatPanelOffset = isAgentChatOpen ? agentChatPanelWidth : "0px";
+
+  useEffect(() => {
+    update(
+      "appearance.theme.headNavStyle",
+      isAgentChatOpen ? "simplified" : originalHeadNavStyle.current
+    );
+  }, [isAgentChatOpen, update]);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -330,11 +342,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     );
 
   const handleAgentChatOpen = (state: boolean) => {
-    update(
-      "appearance.theme.headNavStyle",
-      state ? "simplified" : originalHeadNavStyle.current
-    );
-    setIsAgentChatOpen(state);
+    if (state) {
+      openAgentChat();
+    } else {
+      closeAgentChat();
+    }
   };
 
   return (

@@ -8,6 +8,7 @@ import { Fade } from "@/components/common/transition";
 import GlobalEventHandler from "@/components/special/global-event-handler";
 import { GuidedTourProvider } from "@/components/special/guided-tour-provider";
 import SharedModalsProvider from "@/components/special/shared-modals-provider";
+import { AgentChatContextProvider } from "@/contexts/agent-chat";
 import { LauncherConfigContextProvider } from "@/contexts/config";
 import { ExtensionHostContextProvider } from "@/contexts/extension/host";
 import { GlobalDataContextProvider } from "@/contexts/global-data";
@@ -127,20 +128,22 @@ export default function App({ Component, pageProps }: AppProps) {
                   <SharedModalsProvider>
                     <TaskContextProvider>
                       <ExtensionHostContextProvider>
-                        <GlobalEventHandler>
-                          <ToolCallProvider>
-                            <MainLayout>
-                              <Fade
-                                key={router.pathname.split("/")[1] || ""}
-                                in
-                              >
-                                <SpecLayout>
-                                  <Component {...pageProps} />
-                                </SpecLayout>
-                              </Fade>
-                            </MainLayout>
-                          </ToolCallProvider>
-                        </GlobalEventHandler>
+                        <AgentChatContextProvider>
+                          <GlobalEventHandler>
+                            <ToolCallProvider>
+                              <MainLayout>
+                                <Fade
+                                  key={router.pathname.split("/")[1] || ""}
+                                  in
+                                >
+                                  <SpecLayout>
+                                    <Component {...pageProps} />
+                                  </SpecLayout>
+                                </Fade>
+                              </MainLayout>
+                            </ToolCallProvider>
+                          </GlobalEventHandler>
+                        </AgentChatContextProvider>
                       </ExtensionHostContextProvider>
                     </TaskContextProvider>
                 </SharedModalsProvider>
