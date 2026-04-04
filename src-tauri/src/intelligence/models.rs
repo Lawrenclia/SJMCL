@@ -16,16 +16,10 @@ structstruck::strike! {
   }
 }
 
-structstruck::strike! {
-  #[strikethrough[derive(Debug, Clone, Serialize, Deserialize)]]
-  pub struct ChatCompletionRequest {
-    pub model: String,
-    pub messages: Vec<pub struct ChatMessage {
-      pub role: String,
-      pub content: String,
-    }>,
-    pub stream: bool,
-  }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ChatMessage {
+  pub role: String,
+  pub content: String,
 }
 
 structstruck::strike! {
@@ -167,15 +161,16 @@ structstruck::strike! {
 
 #[derive(Debug, Display)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
-pub enum LLMServiceError {
+pub enum IntelligenceError {
   ApiParseError,
   InvalidAPIKey,
   NetworkError,
   NotEnabled,
   NoResponse,
+  BotCannotConnect,
 }
 
-impl std::error::Error for LLMServiceError {}
+impl std::error::Error for IntelligenceError {}
 
 const CHAT_HISTORY_FILE_NAME: &str = "chat_history.json";
 

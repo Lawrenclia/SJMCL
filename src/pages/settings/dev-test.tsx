@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import SkinPreview from "@/components/skin-preview";
 import { useSharedModals } from "@/contexts/shared-modal";
 import { DownloadTaskParam, TaskParam, TaskTypeEnums } from "@/models/task";
+import { IntelligenceService } from "@/services/intelligence";
 import { TaskService } from "@/services/task";
 import { isProd } from "@/utils/env";
 import { createWindow } from "@/utils/window";
@@ -76,6 +77,12 @@ const DevTestPage = () => {
         Start Downloading Task
       </Button>
       <Button>Transient task</Button>
+
+      <Button
+        onClick={() => IntelligenceService.joinLocalServer("localhost:49161")}
+      >
+        Test Bot
+      </Button>
 
       {/* Add test components here */}
       <SkinPreview />

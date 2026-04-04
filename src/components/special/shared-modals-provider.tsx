@@ -1,7 +1,10 @@
 import DownloadSpecificResourceModal from "@/components//modals/download-specific-resource-modal";
 import AddAuthServerModal from "@/components/modals/add-auth-server-modal";
+import AddPlayerModal from "@/components/modals/add-player-modal";
+import AgentJoinGameModal from "@/components/modals/agent-join-game-modal";
 import AlertResourceDependencyModal from "@/components/modals/alert-resource-dependency-modal";
 import CopyOrMoveModal from "@/components/modals/copy-or-move-modal";
+import { CreateInstanceModal } from "@/components/modals/create-instance-modal";
 import DeleteInstanceDialog from "@/components/modals/delete-instance-alert-dialog";
 import DownloadModpackModal from "@/components/modals/download-modpack-modal";
 import DownloadResourceModal from "@/components/modals/download-resource-modal";
@@ -31,8 +34,11 @@ const SharedModals: React.FC<{ children: React.ReactNode }> = ({
 
   const modals: Record<string, React.FC<any>> = {
     "add-auth-server": AddAuthServerModal,
+    "add-player": AddPlayerModal,
+    "agent-join-game": AgentJoinGameModal,
     "alert-resource-dependency": AlertResourceDependencyModal,
     "copy-or-move": CopyOrMoveModal,
+    "create-instance": CreateInstanceModal,
     "delete-instance-alert": DeleteInstanceDialog,
     "download-modpack": DownloadModpackModal,
     "download-resource": DownloadResourceModal,

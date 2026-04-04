@@ -1,10 +1,11 @@
-import { Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Text, VStack } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { type FC, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuMessageCircleMore, LuSettings } from "react-icons/lu";
+import { LuGamepad2, LuMessageCircleMore, LuSettings } from "react-icons/lu";
 import { useLauncherConfig } from "@/contexts/config";
 import { useGlobalData } from "@/contexts/global-data";
+import { useSharedModals } from "@/contexts/shared-modal";
 import AdvancedCard from "./common/advanced-card";
 
 interface AgentHostessProps {
@@ -17,10 +18,11 @@ const AgentHostess: FC<AgentHostessProps> = ({ onToggleAgentChat }) => {
   const router = useRouter();
   const { config } = useLauncherConfig();
   const { selectedPlayer } = useGlobalData();
+  const { openSharedModal } = useSharedModals();
   const agentEnabled = config.intelligence.enabled;
   const primaryColor = config.appearance.theme.primaryColor;
   const [isOnHover, setIsOnHover] = useState(false);
-  const onClick = () => {
+  const toggleAgentChatOrRedirect = () => {
     if (agentEnabled) {
       onToggleAgentChat();
     } else {
@@ -39,7 +41,6 @@ const AgentHostess: FC<AgentHostessProps> = ({ onToggleAgentChat }) => {
       <Box
         as="button"
         aria-label="Agent button"
-        onClick={onClick}
         width={180}
         height={280}
         bgImage={`url('${AGENT_HOSTESS_SRC}')`}
@@ -53,11 +54,8 @@ const AgentHostess: FC<AgentHostessProps> = ({ onToggleAgentChat }) => {
         _hover={{
           transform: "scale(1.02)",
         }}
-        _active={{
-          transform: "scale(0.98)",
-        }}
       />
-      <AdvancedCard
+      <VStack
         transition="all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
         opacity={isOnHover ? 1 : 0}
         transformOrigin="left"
@@ -65,33 +63,59 @@ const AgentHostess: FC<AgentHostessProps> = ({ onToggleAgentChat }) => {
           isOnHover ? "scale(1) translateX(0)" : "scale(0.5) translateX(-20px)"
         }
         pointerEvents={isOnHover ? "auto" : "none"}
-        mt="-180"
-        ml="-20"
-        p="2"
-        borderRadius="xl"
-        borderBottomLeftRadius="none"
+        mt="-100"
+        ml="-10"
+        alignItems="flex-start"
       >
-        <Text
-          fontSize="md"
-          fontWeight="bold"
-          bgGradient={`linear(to-r, ${primaryColor}.500, ${primaryColor}.300)`}
-          bgClip="text"
-        >
-          {t("AgentButton." + (agentEnabled ? "enabled" : "disabled"), {
-            name: selectedPlayer?.name || "",
-          })}
-        </Text>
-        <Button onClick={onClick} mt="2" colorScheme={primaryColor}>
-          <Icon
-            as={agentEnabled ? LuMessageCircleMore : LuSettings}
-            boxSize={3.5}
-            mr="2"
-          />
-          {t(
-            `AgentButton.` + (agentEnabled ? "startChatting" : "turnToSettings")
-          )}
-        </Button>
-      </AdvancedCard>
+        <AdvancedCard p="2" borderRadius="xl" borderBottomLeftRadius="none">
+          <Text
+            fontSize="md"
+            fontWeight="bold"
+            bgGradient={`linear(to-r, ${primaryColor}.500, ${primaryColor}.300)`}
+            bgClip="text"
+          >
+            {t("AgentButton." + (agentEnabled ? "enabled" : "disabled"), {
+              name: selectedPlayer?.name || "",
+            })}
+          </Text>
+          <Button
+            onClick={toggleAgentChatOrRedirect}
+            mt="2"
+            colorScheme={primaryColor}
+          >
+            <Icon
+              as={agentEnabled ? LuMessageCircleMore : LuSettings}
+              boxSize={3.5}
+              mr="2"
+            />
+            {t(
+              `AgentButton.` +
+                (agentEnabled ? "startChatting" : "turnToSettings")
+            )}
+          </Button>
+        </AdvancedCard>
+
+        {agentEnabled && (
+          <AdvancedCard p="2" borderRadius="xl" borderBottomLeftRadius="none">
+            <Text
+              fontSize="md"
+              fontWeight="bold"
+              bgGradient={`linear(to-r, ${primaryColor}.500, ${primaryColor}.300)`}
+              bgClip="text"
+            >
+              {t("AgentButton.joinGame")}
+            </Text>
+            <Button
+              onClick={() => openSharedModal("agent-join-game")}
+              mt="2"
+              colorScheme={primaryColor}
+            >
+              <Icon as={LuGamepad2} boxSize={3.5} mr="2" />
+              {t("AgentButton.joinGameConfirm")}
+            </Button>
+          </AdvancedCard>
+        )}
+      </VStack>
     </HStack>
   );
 };
