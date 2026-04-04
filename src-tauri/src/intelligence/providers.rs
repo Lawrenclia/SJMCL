@@ -4,7 +4,7 @@ use crate::intelligence::models::{
   AnthropicModelsResponse, AnthropicRequest, AnthropicResponse, AnthropicStreamEvent,
   ChatCompletionChunk, ChatCompletionResponse, ChatMessage, ChatModelsResponse, GeminiContent,
   GeminiGenerationConfig, GeminiModelsResponse, GeminiPart, GeminiRequest, GeminiResponse,
-  LLMServiceError,
+  IntelligenceError,
 };
 use crate::launcher_config::models::{LLMModelConfig, LLMParametersConfig, LLMProviderType};
 
@@ -16,7 +16,7 @@ pub enum StreamParseResult {
   Content(String),
   Done,
   Skip,
-  Error(LLMServiceError),
+  Error(IntelligenceError),
 }
 
 // ── Build requests ──
@@ -157,26 +157,26 @@ pub fn build_chat_request(
 pub fn parse_models_response(
   provider_type: &LLMProviderType,
   body: &str,
-) -> Result<Vec<String>, LLMServiceError> {
+) -> Result<Vec<String>, IntelligenceError> {
   match provider_type {
     LLMProviderType::OpenAiCompatible => {
       let resp: ChatModelsResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing OpenAI models response: {}", e);
-        LLMServiceError::ApiParseError
+        IntelligenceError::ApiParseError
       })?;
       Ok(resp.data.iter().map(|m| m.id.clone()).collect())
     }
     LLMProviderType::Anthropic => {
       let resp: AnthropicModelsResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing Anthropic models response: {}", e);
-        LLMServiceError::ApiParseError
+        IntelligenceError::ApiParseError
       })?;
       Ok(resp.data.iter().map(|m| m.id.clone()).collect())
     }
     LLMProviderType::Gemini => {
       let resp: GeminiModelsResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing Gemini models response: {}", e);
-        LLMServiceError::ApiParseError
+        IntelligenceError::ApiParseError
       })?;
       // Gemini model names are like "models/gemini-pro", strip the prefix
       Ok(
@@ -198,23 +198,23 @@ pub fn parse_models_response(
 pub fn parse_chat_response(
   provider_type: &LLMProviderType,
   body: &str,
-) -> Result<String, LLMServiceError> {
+) -> Result<String, IntelligenceError> {
   match provider_type {
     LLMProviderType::OpenAiCompatible => {
       let resp: ChatCompletionResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing OpenAI chat response: {}", e);
-        LLMServiceError::ApiParseError
+        IntelligenceError::ApiParseError
       })?;
       resp
         .choices
         .first()
         .map(|c| c.message.content.clone())
-        .ok_or(LLMServiceError::NoResponse)
+        .ok_or(IntelligenceError::NoResponse)
     }
     LLMProviderType::Anthropic => {
       let resp: AnthropicResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing Anthropic chat response: {}", e);
-        LLMServiceError::ApiParseError
+        IntelligenceError::ApiParseError
       })?;
       let text: String = resp
         .content
@@ -224,7 +224,7 @@ pub fn parse_chat_response(
         .collect::<Vec<_>>()
         .join("");
       if text.is_empty() {
-        Err(LLMServiceError::NoResponse)
+        Err(IntelligenceError::NoResponse)
       } else {
         Ok(text)
       }
@@ -232,14 +232,14 @@ pub fn parse_chat_response(
     LLMProviderType::Gemini => {
       let resp: GeminiResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing Gemini chat response: {}", e);
-        LLMServiceError::ApiParseError
+        IntelligenceError::ApiParseError
       })?;
       resp
         .candidates
         .first()
         .and_then(|c| c.content.parts.first())
         .map(|p| p.text.clone())
-        .ok_or(LLMServiceError::NoResponse)
+        .ok_or(IntelligenceError::NoResponse)
     }
   }
 }

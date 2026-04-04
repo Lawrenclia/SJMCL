@@ -4,8 +4,9 @@ use tauri::{ipc::Channel, AppHandle, Manager};
 use tauri_plugin_http::reqwest;
 
 use crate::error::SJMCLResult;
+use crate::intelligence::azalea_bot;
 use crate::intelligence::models::{
-  ChatHistory, ChatMessage, ChatSession, ChatSessionSummary, LLMServiceError,
+  ChatHistory, ChatMessage, ChatSession, ChatSessionSummary, IntelligenceError,
 };
 use crate::intelligence::providers::{self, StreamParseResult};
 use crate::launcher_config::models::{
@@ -107,17 +108,17 @@ pub async fn retrieve_llm_models(
     .await
     .map_err(|e| {
       log::error!("Error connecting to LLM service: {}", e);
-      LLMServiceError::NetworkError
+      IntelligenceError::NetworkError
     })?;
 
   if response.status().is_success() {
     let body = response.text().await.map_err(|e| {
       log::error!("Error reading LLM service response: {}", e);
-      LLMServiceError::ApiParseError
+      IntelligenceError::ApiParseError
     })?;
     providers::parse_models_response(&provider, &body).map_err(|e| e.into())
   } else {
-    Err(LLMServiceError::InvalidAPIKey.into())
+    Err(IntelligenceError::InvalidAPIKey.into())
   }
 }
 
@@ -132,16 +133,16 @@ pub async fn fetch_llm_chat_response(
     let config_binding = app.state::<Mutex<LauncherConfig>>();
     let config_state = config_binding.lock()?;
     if !config_state.intelligence.enabled {
-      return Err(LLMServiceError::NotEnabled.into());
+      return Err(IntelligenceError::NotEnabled.into());
     }
     get_ordered_providers(&config_state.intelligence)
   };
 
   if ordered_providers.is_empty() {
-    return Err(LLMServiceError::NoResponse.into());
+    return Err(IntelligenceError::NoResponse.into());
   }
 
-  let mut last_error = LLMServiceError::NoResponse;
+  let mut last_error = IntelligenceError::NoResponse;
 
   for provider in &ordered_providers {
     let model_config = LLMModelConfig::from(provider);
@@ -164,7 +165,7 @@ pub async fn fetch_llm_chat_response(
           provider.name,
           e
         );
-        last_error = LLMServiceError::NetworkError;
+        last_error = IntelligenceError::NetworkError;
         continue;
       }
     };
@@ -175,7 +176,7 @@ pub async fn fetch_llm_chat_response(
         provider.name,
         response.status()
       );
-      last_error = LLMServiceError::NetworkError;
+      last_error = IntelligenceError::NetworkError;
       continue;
     }
 
@@ -187,7 +188,7 @@ pub async fn fetch_llm_chat_response(
           provider.name,
           e
         );
-        last_error = LLMServiceError::ApiParseError;
+        last_error = IntelligenceError::ApiParseError;
         continue;
       }
     };
@@ -210,16 +211,16 @@ pub async fn fetch_llm_chat_response_stream(
     let config_binding = app.state::<Mutex<LauncherConfig>>();
     let config_state = config_binding.lock()?;
     if !config_state.intelligence.enabled {
-      return Err(LLMServiceError::NotEnabled.into());
+      return Err(IntelligenceError::NotEnabled.into());
     }
     get_ordered_providers(&config_state.intelligence)
   };
 
   if ordered_providers.is_empty() {
-    return Err(LLMServiceError::NoResponse.into());
+    return Err(IntelligenceError::NoResponse.into());
   }
 
-  let mut last_error = LLMServiceError::NoResponse;
+  let mut last_error = IntelligenceError::NoResponse;
 
   for provider in &ordered_providers {
     let model_config = LLMModelConfig::from(provider);
@@ -242,7 +243,7 @@ pub async fn fetch_llm_chat_response_stream(
           provider.name,
           e
         );
-        last_error = LLMServiceError::NetworkError;
+        last_error = IntelligenceError::NetworkError;
         continue;
       }
     };
@@ -253,7 +254,7 @@ pub async fn fetch_llm_chat_response_stream(
         provider.name,
         response.status()
       );
-      last_error = LLMServiceError::NetworkError;
+      last_error = IntelligenceError::NetworkError;
       continue;
     }
 
@@ -299,7 +300,7 @@ pub fn retrieve_chat_sessions(app: AppHandle) -> SJMCLResult<Vec<ChatSessionSumm
     .iter()
     .map(ChatSessionSummary::from)
     .collect();
-  summaries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+  summaries.sort_by_key(|b| std::cmp::Reverse(b.updated_at));
   Ok(summaries)
 }
 
@@ -334,5 +335,11 @@ pub fn delete_chat_session(app: AppHandle, session_id: String) -> SJMCLResult<()
   let mut history = binding.lock()?;
   history.sessions.retain(|s| s.id != session_id);
   history.save()?;
+  Ok(())
+}
+
+#[tauri::command]
+pub async fn join_local_server(app: AppHandle, port: u16, name: String) -> SJMCLResult<()> {
+  azalea_bot::bot::join_server(&app, port, name).await?;
   Ok(())
 }

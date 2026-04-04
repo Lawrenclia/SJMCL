@@ -223,7 +223,9 @@
     "enabled": "Glad to serve you, {{name}}!",
     "disabled": "Please enable Intelligence functions.",
     "turnToSettings": "Go to Settings",
-    "startChatting": "Start Chatting"
+    "startChatting": "Start Chatting",
+    "joinGame": "Want to play Minecraft with me?",
+    "joinGameConfirm": "Join Miuxi"
   },
   "AgentChatPage": {
     "description": "Start your first conversation with Miuxi!",
@@ -239,7 +241,7 @@
     "skipThinking": "Skip thinking",
     "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
     "toolCall": {
-      "title": "Magic Call",
+      "title": "Call Magic",
       "confirm": "Confirm",
       "cancel": "Cancel",
       "execute": "Execute",
@@ -253,6 +255,43 @@
     "bottomWarning": "By AI assistant, for reference only.",
     "noHistory": "No chat history yet.",
     "untitledSession": "Untitled Session"
+  },
+  "AgentJoinGameModal": {
+    "header": {
+      "title": "Invite Miuxi to Join the Game"
+    },
+    "steps": {
+      "player": {
+        "title": "Select Offline Account",
+        "noOfflineAccounts": "No offline accounts available",
+        "addOfflineAccount": "Add Offline Account"
+      },
+      "instance": {
+        "title": "Select Instance",
+        "noSupportedInstances": "No supported instances available (only supports Minecraft {{version}})",
+        "goCreateInstance": "Go to Download",
+        "launchAndNext": "Launch and Next"
+      },
+      "server": {
+        "title": "Connect to Local Network Server",
+        "description1": "Please press",
+        "description2": "in the game to open the settings panel, and select \"Open to LAN\".",
+        "port": "Port Number",
+        "portDescription": "Local game server port (auto-detected)",
+        "botName": "Bot Name",
+        "botNameDescription": "Only English letters, underscores, and numbers allowed, and cannot conflict with existing players in the game",
+        "botNameInvalid": "Invalid name",
+        "botInGame": "Running",
+        "joinServer": "Join Server",
+        "error": {
+          "not_in_game": "Not in game",
+          "connection_failed": "Bot connection to server failed",
+          "disconnect": "Bot disconnected from server",
+          "death": "Bot has died in the game",
+          "unknown": "Unknown reason"
+        }
+      }
+    }
   },
   "AlertResourceDependencyModal": {
     "header": {
