@@ -223,7 +223,9 @@
     "enabled": "您好 {{name}}，很高兴为您服务！",
     "disabled": "请先在设置中启用智能服务。",
     "turnToSettings": "转到设置",
-    "startChatting": "开始聊天"
+    "startChatting": "开始聊天",
+    "joinGame": "想要和缪汐一起玩 Minecraft 吗？",
+    "joinGameConfirm": "加入游戏"
   },
   "AgentChatPage": {
     "description": "与缪汐开始第一句对话吧！",
@@ -250,6 +252,43 @@
     "bottomWarning": "由 AI 助手生成的内容，仅供参考。",
     "noHistory": "暂无聊天记录",
     "untitledSession": "未命名会话"
+  },
+  "AgentJoinGameModal": {
+    "header": {
+      "title": "邀请缪汐加入游戏"
+    },
+    "steps": {
+      "player": {
+        "title": "选择离线账号",
+        "noOfflineAccounts": "当前没有离线账号",
+        "addOfflineAccount": "添加离线账号"
+      },
+      "instance": {
+        "title": "选择实例",
+        "noSupportedInstances": "暂无可用实例（仅支持 Minecraft {{version}}）",
+        "goCreateInstance": "去下载",
+        "launchAndNext": "启动并下一步"
+      },
+      "server": {
+        "title": "连接局域网服务器",
+        "description1": "请在游戏中摁下",
+        "description2": "打开设置面板，并选择“向局域网开放”。",
+        "port": "端口号",
+        "portDescription": "本地游戏服务器端口（自动检测）",
+        "botName": "Bot 名称",
+        "botNameDescription": "仅允许英文、下划线和数字，且不能与游戏中玩家重名",
+        "botNameInvalid": "名称不合法",
+        "botInGame": "正在运行",
+        "joinServer": "加入服务器",
+        "error": {
+          "not_in_game": "尚未启动",
+          "connection_failed": "Bot 连接服务器失败",
+          "disconnect": "Bot 被踢出服务器",
+          "death": "Bot 已在游戏中死亡",
+          "unknown": "未知原因"
+        }
+      }
+    }
   },
   "AlertResourceDependencyModal": {
     "header": {

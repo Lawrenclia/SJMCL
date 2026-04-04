@@ -52,7 +52,7 @@ pub fn get_public_key() -> String {
 }
 
 fn sign_data(data: &str) -> String {
-  let signing_key = SigningKey::<Sha1>::new_unprefixed(KEY_PAIR.0.clone());
+  let signing_key = SigningKey::<Sha1>::new(KEY_PAIR.0.clone());
   let signature = signing_key.sign(data.as_bytes());
   general_purpose::STANDARD.encode(signature.to_bytes())
 }

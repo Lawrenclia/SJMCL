@@ -60,7 +60,14 @@ export const loaderTypesToIcon: Record<string, string> = {
   Quilt: "/images/icons/Quilt.png",
 };
 
-export const CreateInstanceModal: React.FC<Omit<ModalProps, "children">> = ({
+interface CreateInstanceModalProps extends Omit<ModalProps, "children"> {
+  initialGameType?: string;
+  initialGameId?: string;
+}
+
+export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
+  initialGameType,
+  initialGameId,
   ...modalProps
 }) => {
   const { t } = useTranslation();
@@ -98,6 +105,7 @@ export const CreateInstanceModal: React.FC<Omit<ModalProps, "children">> = ({
     );
     setIsInstallFabricApi(true);
     setIsInstallQfApi(true);
+    console.log(selectedGameVersion);
   }, [selectedGameVersion]);
 
   const handleCreateInstance = useCallback(() => {
@@ -150,6 +158,8 @@ export const CreateInstanceModal: React.FC<Omit<ModalProps, "children">> = ({
       <>
         <ModalBody>
           <GameVersionSelector
+            initialGameType={initialGameType}
+            initialGameId={initialGameId}
             selectedVersion={selectedGameVersion}
             onVersionSelect={setSelectedGameVersion}
           />
@@ -170,7 +180,15 @@ export const CreateInstanceModal: React.FC<Omit<ModalProps, "children">> = ({
         </ModalFooter>
       </>
     );
-  }, [modalProps.onClose, primaryColor, selectedGameVersion, setActiveStep, t]);
+  }, [
+    initialGameId,
+    initialGameType,
+    modalProps.onClose,
+    primaryColor,
+    selectedGameVersion,
+    setActiveStep,
+    t,
+  ]);
 
   const step2Content = useMemo(() => {
     return (
