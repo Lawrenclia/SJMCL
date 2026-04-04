@@ -32,7 +32,6 @@ import NavMenu from "@/components/common/nav-menu";
 import { Section } from "@/components/common/section";
 import SegmentedControl from "@/components/common/segmented";
 import SelectableButton from "@/components/common/selectable-button";
-import AddPlayerModal from "@/components/modals/add-player-modal";
 import ImportAccountInfoModal from "@/components/modals/import-account-info-modal";
 import PlayersView from "@/components/players-view";
 import { useLauncherConfig } from "@/contexts/config";
@@ -306,7 +305,24 @@ const AccountsPage = () => {
                   leftIcon={<LuPlus />}
                   size="xs"
                   colorScheme={primaryColor}
-                  onClick={onAddPlayerModalOpen}
+                  onClick={() => {
+                    openSharedModal("add-player", {
+                      initialPlayerType:
+                        selectedPlayerType === "all" ||
+                        selectedPlayerType === "offline"
+                          ? PlayerType.Offline
+                          : selectedPlayerType === "microsoft"
+                            ? PlayerType.Microsoft
+                            : PlayerType.ThirdParty,
+                      initialAuthServerUrl: [
+                        "all",
+                        "offline",
+                        "microsoft",
+                      ].includes(selectedPlayerType)
+                        ? ""
+                        : selectedPlayerType,
+                    });
+                  }}
                 >
                   {t("AccountsPage.button.addPlayer")}
                 </Button>
@@ -323,22 +339,6 @@ const AccountsPage = () => {
           </Section>
         </GridItem>
       </Grid>
-      <AddPlayerModal
-        isOpen={isAddPlayerModalOpen}
-        onClose={onAddPlayerModalClose}
-        initialPlayerType={
-          selectedPlayerType === "all" || selectedPlayerType === "offline"
-            ? PlayerType.Offline
-            : selectedPlayerType === "microsoft"
-              ? PlayerType.Microsoft
-              : PlayerType.ThirdParty
-        }
-        initialAuthServerUrl={
-          ["all", "offline", "microsoft"].includes(selectedPlayerType)
-            ? ""
-            : selectedPlayerType
-        }
-      />
       <ImportAccountInfoModal
         isOpen={isImportAccountInfoModalOpen}
         onClose={onImportAccountInfoModalClose}

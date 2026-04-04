@@ -44,11 +44,15 @@ export const gameTypesToIcon: Record<string, string> = {
 };
 
 interface GameVersionSelectorProps extends BoxProps {
+  initialGameType?: string;
+  initialGameId?: string;
   selectedVersion: GameClientResourceInfo | undefined;
   onVersionSelect: (version: GameClientResourceInfo) => void;
 }
 
 export const GameVersionSelector: React.FC<GameVersionSelectorProps> = ({
+  initialGameType,
+  initialGameId,
   selectedVersion,
   onVersionSelect,
   ...props
@@ -65,7 +69,9 @@ export const GameVersionSelector: React.FC<GameVersionSelectorProps> = ({
   >([]);
   const [counts, setCounts] = useState<Map<string, number>>();
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(
-    new Set(config.states.gameVersionSelector.gameTypes)
+    initialGameType
+      ? new Set([initialGameType])
+      : new Set(config.states.gameVersionSelector.gameTypes)
   );
   const [searchText, setSearchText] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -74,10 +80,14 @@ export const GameVersionSelector: React.FC<GameVersionSelectorProps> = ({
     getGameVersionList(true)
       .then((data) => {
         if (data === GetStateFlag.Cancelled) return;
+        let initialVersion = data?.find((v) => v.id === initialGameId);
+        if (initialVersion) {
+          onVersionSelect(initialVersion);
+        }
         setVersions(data || []);
       })
       .catch((e) => setVersions([] as GameClientResourceInfo[]));
-  }, [getGameVersionList]);
+  }, [getGameVersionList, initialGameId, onVersionSelect]);
 
   useEffect(() => {
     if (!mounted) {

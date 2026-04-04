@@ -18,6 +18,7 @@ use account::models::AccountInfo;
 use instance::helpers::misc::refresh_and_update_instances;
 use instance::helpers::mods::translation::LocalModTranslationsCache;
 use instance::models::misc::Instance;
+use intelligence::azalea_bot::models::BotState;
 use intelligence::models::ChatHistory;
 use launch::models::LaunchingState;
 use launcher_config::helpers::java::refresh_and_update_javas;
@@ -127,6 +128,7 @@ pub async fn run() {
         intelligence::commands::retrieve_chat_session,
         intelligence::commands::save_chat_session,
         intelligence::commands::delete_chat_session,
+        intelligence::commands::join_local_server,
         instance::commands::retrieve_instance_list,
         instance::commands::create_instance,
         instance::commands::update_instance_config,
@@ -255,6 +257,8 @@ pub async fn run() {
 
         let launching_queue = Vec::<LaunchingState>::new();
         app.manage(Mutex::new(launching_queue));
+
+        app.manage(Mutex::new(BotState::default()));
 
         // start local yggdrasil server for offline accounts
         let local_ygg_server = YggdrasilServer::new();

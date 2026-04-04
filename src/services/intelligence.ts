@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { LLMProviderConfig } from "@/models/config";
 import {
   ChatMessage,
@@ -119,5 +120,46 @@ export class IntelligenceService {
     sessionId: string
   ): Promise<InvokeResponse<void>> {
     return invoke("delete_chat_session", { sessionId });
+  }
+
+  /**
+   * JOIN a local Minecraft server using the bot.
+   * @param {number} port The server port to join.
+   * @param {string} name The bot's name.
+
+   * @return {Promise<InvokeResponse<void>>}
+   */
+  @responseHandler("intelligence")
+  public static async joinLocalServer(
+    port: number,
+    name: string
+  ): Promise<InvokeResponse<void>> {
+    return invoke("join_local_server", { port, name });
+  }
+
+  static onBotExit(callback: (payload: BotExitPayload) => void): () => void {
+    const unlisten = getCurrentWebview().listen<BotExitPayload>(
+      "intelligence:bot-exit",
+      (event) => {
+        callback(event.payload);
+      }
+    );
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }
+
+  static onServerPort(
+    callback: (payload: ServerPortPayload) => void
+  ): () => void {
+    const unlisten = getCurrentWebview().listen<ServerPortPayload>(
+      "intelligence:server_port",
+      (event) => {
+        callback(event.payload);
+      }
+    );
+    return () => {
+      unlisten.then((f) => f());
+    };
   }
 }
