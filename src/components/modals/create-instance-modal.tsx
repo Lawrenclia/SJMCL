@@ -106,7 +106,6 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
     );
     setIsInstallFabricApi(true);
     setIsInstallQfApi(true);
-    console.log(selectedGameVersion);
   }, [selectedGameVersion]);
 
   const handleCreateInstance = useCallback(() => {
