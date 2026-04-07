@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 
+use serde_json::Value;
 use tauri::{ipc::Channel, AppHandle, Manager};
 use tauri_plugin_http::reqwest;
 
@@ -126,6 +127,7 @@ pub async fn retrieve_llm_models(
 pub async fn fetch_llm_chat_response(
   app: AppHandle,
   messages: Vec<ChatMessage>,
+  response_format: Option<Value>,
 ) -> SJMCLResult<String> {
   let client = reqwest::Client::new();
 
@@ -154,6 +156,7 @@ pub async fn fetch_llm_chat_response(
       &provider.parameters,
       messages.clone(),
       false,
+      &response_format,
     )
     .send()
     .await
@@ -204,6 +207,7 @@ pub async fn fetch_llm_chat_response_stream(
   app: AppHandle,
   messages: Vec<ChatMessage>,
   on_event: Channel<String>,
+  response_format: Option<Value>,
 ) -> SJMCLResult<()> {
   let client = reqwest::Client::new();
 
@@ -232,6 +236,7 @@ pub async fn fetch_llm_chat_response_stream(
       &provider.parameters,
       messages.clone(),
       true,
+      &response_format,
     )
     .send()
     .await

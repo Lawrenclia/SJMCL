@@ -1,3 +1,4 @@
+use serde_json::Value;
 use tauri_plugin_http::reqwest;
 
 use crate::intelligence::models::{
@@ -47,6 +48,7 @@ pub fn build_chat_request(
   params: &LLMParametersConfig,
   messages: Vec<ChatMessage>,
   stream: bool,
+  response_format: &Option<Value>,
 ) -> reqwest::RequestBuilder {
   match provider_type {
     LLMProviderType::OpenAiCompatible => {
@@ -63,6 +65,9 @@ pub fn build_chat_request(
       }
       if params.presence_penalty != 0.0 {
         body["presence_penalty"] = serde_json::json!(params.presence_penalty);
+      }
+      if let Some(response_format) = response_format {
+        body["response_format"] = response_format.clone();
       }
       client
         .post(format!("{}/v1/chat/completions", config.base_url))
