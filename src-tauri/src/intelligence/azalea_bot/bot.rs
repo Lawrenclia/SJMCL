@@ -5,16 +5,21 @@ use crate::account::models::{
 use crate::error::SJMCLResult;
 use crate::intelligence::azalea_bot::constants::BOT_EXIT_EVENT;
 use crate::intelligence::azalea_bot::models::{
-  ActionType, AgentDecision, BotExitPayload, BotState,
+  ActionType, AgentDecision, AgentState, BotExitPayload,
 };
 use crate::intelligence::models::ChatMessage;
 use crate::utils::fs::get_app_resource_filepath;
 use crate::utils::image::load_image_from_dir;
+use azalea::inventory::ItemStack;
 use azalea::pathfinder::goals::BlockPosGoal;
+use azalea::player::GameProfileComponent;
 use azalea::{prelude::*, BlockPos, Event};
+use azalea_entity::metadata::Player;
+use bevy_ecs::query::With;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
+use strum::IntoEnumIterator;
 use tauri::{AppHandle, Emitter, Manager};
 
 fn emit_bot_exit(app_handle: &AppHandle, notified: &AtomicBool, reason: &str) {
@@ -33,7 +38,7 @@ fn emit_bot_exit(app_handle: &AppHandle, notified: &AtomicBool, reason: &str) {
 
 pub async fn join_server(app_handle: &AppHandle, port: u16, name: String) -> SJMCLResult<()> {
   let client_ptr = {
-    let binding = app_handle.state::<Mutex<BotState>>();
+    let binding = app_handle.state::<Mutex<AgentState>>();
     let bot = binding.lock()?;
     bot.client.clone()
   };
@@ -44,10 +49,10 @@ pub async fn join_server(app_handle: &AppHandle, port: u16, name: String) -> SJM
   if let Some(bot) = old_bot {
     bot.exit();
   }
-  let bot_state = BotState {
+  let bot_state = AgentState {
     client: client_ptr.clone(),
     app_handle: Some(app_handle.clone()),
-    ..BotState::default()
+    ..AgentState::default()
   };
   let address = format!("localhost:{}", port);
   let account = Account::offline(name.as_str());
@@ -110,7 +115,56 @@ pub async fn join_server(app_handle: &AppHandle, port: u16, name: String) -> SJM
   Ok(())
 }
 
-async fn handle_events(bot: Client, event: Event, state: BotState) -> SJMCLResult<()> {
+fn schedule_decision(bot: &Client, state: &AgentState) -> SJMCLResult<()> {
+  if state
+    .decision_in_progress
+    .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+    .is_err()
+  {
+    return Ok(());
+  }
+
+  let mut observation = perceive_world_state(bot);
+
+  let mut chats = state.recent_chats.lock()?;
+  if !chats.is_empty() {
+    observation.push_str("\n【最近的对话交流】:\n");
+    for chat in chats.iter() {
+      observation.push_str(&format!("- {}\n", chat));
+    }
+    chats.clear();
+  }
+  drop(chats);
+
+  let state_clone = state.clone();
+  let bot_clone = bot.clone();
+
+  tokio::task::spawn_local(async move {
+    if let Ok(decision) = query_llm_decision(&state_clone, &observation).await {
+      execute_action(&bot_clone, decision).await;
+    }
+
+    if let Ok(mut last_act) = state_clone.last_action_time.lock() {
+      *last_act = Instant::now();
+    }
+
+    let has_pending_chats = state_clone
+      .recent_chats
+      .lock()
+      .map(|chats| !chats.is_empty())
+      .unwrap_or(false);
+    state_clone
+      .pending_chat_priority
+      .store(has_pending_chats, Ordering::SeqCst);
+    state_clone
+      .decision_in_progress
+      .store(false, Ordering::SeqCst);
+  });
+
+  Ok(())
+}
+
+async fn handle_events(bot: Client, event: Event, state: AgentState) -> SJMCLResult<()> {
   let mut lock = state.client.lock().await;
   if lock.is_none() {
     *lock = Some(bot.clone());
@@ -120,24 +174,27 @@ async fn handle_events(bot: Client, event: Event, state: BotState) -> SJMCLResul
 
   match event {
     Event::Tick => {
-      let mut last_act = state.last_action_time.lock()?;
-      if last_act.elapsed() > state.cooldown {
-        let observation = perceive_world_state(&bot);
+      let cooldown_ready = state.last_action_time.lock()?.elapsed() > state.cooldown;
+      let chat_priority = state.pending_chat_priority.load(Ordering::SeqCst);
 
-        let state_clone = state.clone();
-        let bot_clone = bot.clone();
-
-        tokio::task::spawn_local(async move {
-          if let Ok(decision) = query_llm_decision(&state_clone, &observation).await {
-            execute_action(&bot_clone, decision).await;
-          }
-        });
-
-        *last_act = Instant::now();
+      if cooldown_ready || chat_priority {
+        schedule_decision(&bot, &state)?;
       }
     }
     Event::Chat(m) => {
-      log::info!("Received chat message: {}", m.message());
+      if let (Some(sender), content) = m.split_sender_and_content() {
+        if sender != bot.profile().name
+          && content
+            .to_ascii_lowercase()
+            .contains(bot.profile().name.to_ascii_lowercase().as_str())
+        {
+          let mut chats = state.recent_chats.lock()?;
+          chats.push(format!("玩家 {} 刚刚对你说: {}", sender, content));
+          drop(chats);
+          state.pending_chat_priority.store(true, Ordering::SeqCst);
+          schedule_decision(&bot, &state)?;
+        }
+      }
     }
     Event::ConnectionFailed(_) => {
       log::info!("Bot failed to connect to server");
@@ -147,6 +204,12 @@ async fn handle_events(bot: Client, event: Event, state: BotState) -> SJMCLResul
           state.exit_notified.as_ref(),
           "connection_failed",
         );
+      }
+    }
+    Event::Disconnect(_) => {
+      log::info!("Bot was disconnected from server");
+      if let Some(app_handle) = &state.app_handle {
+        emit_bot_exit(app_handle, state.exit_notified.as_ref(), "disconnected");
       }
     }
     _ => {}
@@ -164,9 +227,25 @@ fn perceive_world_state(bot: &Client) -> String {
     block_pos.x, block_pos.y, block_pos.z
   );
 
-  // 1. 感知周边实体
-  observation.push_str("附近的实体 (距离 < 10格):\n");
-  // 利用谓词过滤所有的底层实体，提取具有坐标和合法类型的实体
+  // 1. 感知背包物品
+  observation.push_str("【当前物品栏与装备】:\n");
+  let inventory = bot.get_inventory();
+  if let Some(contents) = inventory.contents() {
+    for (index, slot) in contents.iter().enumerate() {
+      // 如果槽位中有物品，提取其类型和数量
+      if let ItemStack::Present(item) = slot {
+        observation.push_str(&format!(
+          "- 槽位 {}: {:?} (数量: {})\n",
+          index, item.kind, item.count
+        ));
+      }
+    }
+  } else {
+    observation.push_str("- 物品栏为空或未加载\n");
+  }
+
+  // 2. 感知周边实体 (距离 < 10格)
+  observation.push_str("\n【附近的实体】:\n");
   let nearby_entities =
     bot.nearest_entities_by::<&azalea_entity::Position, ()>(|_: &azalea_entity::Position| true);
   for entity in nearby_entities.iter().take(5) {
@@ -181,26 +260,25 @@ fn perceive_world_state(bot: &Client) -> String {
     }
   }
 
-  // 2. 感知具有战略价值的方块（以机器人为中心进行 5x5x5 扫描）
-  observation.push_str("附近的方块:\n");
+  // 3. 感知周边方块 (5x5x5)
+  observation.push_str("\n【附近的方块】:\n");
   let world_lock = bot.world();
   let instance = world_lock.read();
-
   let search_radius = 5;
   for x in -search_radius..=search_radius {
     for y in -search_radius..=search_radius {
       for z in -search_radius..=search_radius {
-        let current_check_pos = block_pos.up(y).east(x).south(z);
-        if let Some(state) = instance.get_block_state(current_check_pos) {
+        let check_pos = block_pos.up(y).east(x).south(z);
+        if let Some(state) = instance.get_block_state(check_pos) {
           let block_desc = format!("{:?}", state);
-          // 启发式过滤：移除大量的无价值背景方块，节约 Token
+          // 剔除无价值背景方块
           if !block_desc.contains("Air")
             && !block_desc.contains("Stone")
             && !block_desc.contains("Dirt")
           {
             observation.push_str(&format!(
-              "- {}: ({},{},{})\n",
-              block_desc, current_check_pos.x, current_check_pos.y, current_check_pos.z
+              "- {}: [{}, {}, {}]\n",
+              block_desc, check_pos.x, check_pos.y, check_pos.z
             ));
           }
         }
@@ -213,6 +291,13 @@ fn perceive_world_state(bot: &Client) -> String {
 
 async fn execute_action(bot: &Client, decision: AgentDecision) {
   println!(">>> AI 思考: {}", decision.thought);
+
+  if let Some(spoken_text) = decision.dialogue {
+    if !spoken_text.is_empty() {
+      // 调用底层 API，将生成的自然语言发送到游戏公屏
+      bot.chat(&spoken_text);
+    }
+  }
 
   match decision.action {
     ActionType::Move => {
@@ -256,18 +341,52 @@ async fn execute_action(bot: &Client, decision: AgentDecision) {
         }
       }
     }
+    ActionType::Equip => {
+      if let (Some(src), Some(dst)) = (decision.slot_source, decision.slot_destination) {
+        println!(">>> 执行: 整理物品，将槽位 {} 移动至槽位 {}", src, dst);
+        let inv = bot.get_inventory();
+        inv.left_click(src);
+        inv.left_click(dst);
+      }
+    }
+    ActionType::GotoPlayer => {
+      if let Some(player_name) = decision.target_name {
+        println!(">>> 执行: 寻路前往玩家 {}", player_name);
+
+        let target = bot.any_entity_by::<&GameProfileComponent, With<Player>>(
+          |profile: &GameProfileComponent| profile.name == player_name,
+        );
+
+        if let Some(player) = target {
+          bot.start_goto(BlockPosGoal(BlockPos::from(player.position())));
+        } else {
+          bot.chat("系统提示：目标玩家不在渲染距离内。");
+        }
+      }
+    }
     ActionType::Wait => {
       println!(">>> 执行: 保持待机");
     }
   }
 }
 
-async fn query_llm_decision(state: &BotState, observation: &str) -> SJMCLResult<AgentDecision> {
+async fn query_llm_decision(state: &AgentState, observation: &str) -> SJMCLResult<AgentDecision> {
   // 1. 构建系统提示词和用户输入，兼容不同 provider 的消息格式要求
-  let system_prompt = "你是一个 Minecraft 游戏中的智能代理。输出必须是 JSON。";
+  let system_prompt = "你是一个 Minecraft 游戏中的智能体缪汐(Miuxi)，在探索这个世界你需要做出合理的行动决策，通过输出符合格式的 JSON 与世界和玩家交互。";
   let user_prompt = format!(
-    "当前环境观察如下：\n{}\n\n请基于以上观察，做出一个合理的行动决策。返回 JSON 字段：thought, action(move/mine/attack/wait), target_coords(可选), target_entity_id(可选)。不要输出 JSON 之外的内容。其中 move 指令能够让代理通过自动寻路到达指定的远处坐标，无需考虑路径规划细节；mine 指令能够让代理自动匹配工具并挖掘指定坐标的方块；attack 指令能够让代理攻击指定 ID 的实体；wait 指令能够让代理保持当前状态不动。作为探索者，你应该优先选择 move 来广泛探索远处环境，如寻找木头资源；当你发现有价值的方块时，使用 mine 来挖掘；当你感知到附近有敌对实体时，使用 attack 来攻击它；当你没有更好的选择时，尽量不要使用 wait。请基于当前的环境观察，做出一个合理的决策。",
-    observation
+    "当前环境观察如下：\n{}\n\n请基于以上观察，做出一个合理的行动决策。返回 JSON 字段：thought, dialogue, action({}), target_coords(可选), target_entity_id(可选，为实体 ID), target_name(可选，为玩家名字)。\
+    不要输出 JSON 之外的内容。\
+    如果其他玩家对你说话，或者你需要通报你的发现，请在 `dialogue` 字段中生成一句自然、口语化的中文回复。如果没有必要说话，该字段可以为空。 \
+    `action` 字段包含的指令中 move 指令能够到达任何指定的远处坐标，内置的自动寻路算法会处理路径规划；当玩家发出跟随请求时，直接使用 goto_player，并指定 target_name，系统会自动尝试寻路到目标玩家。",
+    observation,
+    ActionType::iter()
+      .filter_map(|a| {
+        serde_json::to_value(a)
+          .ok()
+          .and_then(|value| value.as_str().map(|s| s.to_string()))
+      })
+      .collect::<Vec<_>>()
+      .join("/")
   );
 
   let messages = vec![

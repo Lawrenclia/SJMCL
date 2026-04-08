@@ -18,8 +18,8 @@ use account::models::AccountInfo;
 use instance::helpers::misc::refresh_and_update_instances;
 use instance::helpers::mods::translation::LocalModTranslationsCache;
 use instance::models::misc::Instance;
-use intelligence::azalea_bot::models::BotState;
 use intelligence::models::ChatHistory;
+use intelligence::azalea_bot::models::AgentState;
 use launch::models::LaunchingState;
 use launcher_config::helpers::java::refresh_and_update_javas;
 use launcher_config::models::{JavaInfo, LauncherConfig};
@@ -258,7 +258,7 @@ pub async fn run() {
         let launching_queue = Vec::<LaunchingState>::new();
         app.manage(Mutex::new(launching_queue));
 
-        app.manage(Mutex::new(BotState::default()));
+        app.manage(Mutex::new(AgentState::default()));
 
         // start local yggdrasil server for offline accounts
         let local_ygg_server = YggdrasilServer::new();
