@@ -1486,6 +1486,7 @@
     "deleteConfirm": "Are you sure you want to delete this provider?",
     "failoverHint": "When the active provider fails, enabled providers will be tried in priority order.",
     "providerType": {
+      "ollama": "Ollama",
       "openAiCompatible": "OpenAI Compatible",
       "anthropic": "Anthropic (Claude)",
       "gemini": "Google Gemini"
@@ -1579,6 +1580,7 @@
           "provider": {
             "title": "Service Provider",
             "options": {
+              "ollama": "Ollama",
               "openAiCompatible": "OpenAI Compatible",
               "anthropic": "Anthropic (Claude)",
               "gemini": "Google Gemini"

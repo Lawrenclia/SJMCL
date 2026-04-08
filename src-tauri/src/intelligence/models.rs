@@ -7,11 +7,22 @@ use strum_macros::Display;
 
 structstruck::strike! {
   #[strikethrough[derive(Serialize, Deserialize)]]
-  pub struct ChatModelsResponse {
-    pub data: Vec<pub struct ChatModel {
+  pub struct OpenAiCompatibleChatModelsResponse {
+    pub data: Vec<pub struct OpenAiCompatibleChatModel {
       pub id: String,
       pub object: String,
       pub owned_by: String,
+    }>,
+  }
+}
+
+structstruck::strike! {
+  #[strikethrough[derive(Serialize, Deserialize)]]
+  pub struct OllamaChatModelsResponse {
+    pub models: Vec<pub struct OllamaChatModel {
+      pub name: String,
+      pub model: String,
+      pub modified_at: String,
     }>,
   }
 }
@@ -24,11 +35,11 @@ pub struct ChatMessage {
 
 structstruck::strike! {
   #[strikethrough[derive(Serialize, Deserialize)]]
-  pub struct ChatCompletionResponse {
+  pub struct OpenAiCompatibleChatCompletionResponse {
     pub id: String,
     pub object: String,
     pub created: u64,
-    pub choices: Vec<pub struct ChatCompletionChoice {
+    pub choices: Vec<pub struct OpenAiCompatibleChatCompletionChoice {
       pub index: u32,
       pub message: ChatMessage,
       pub finish_reason: String,
@@ -38,11 +49,11 @@ structstruck::strike! {
 
 structstruck::strike! {
   #[strikethrough[derive(Serialize, Deserialize, Debug)]]
-  pub struct ChatCompletionChunk {
+  pub struct OpenAiCompatibleChatCompletionChunk {
     pub id: String,
     pub object: String,
     pub created: u64,
-    pub choices: Vec<pub struct ChatCompletionChunkChoice {
+    pub choices: Vec<pub struct OpenAiCompatibleChatCompletionChunkChoice {
       pub index: u32,
       pub delta: pub struct ChatMessageDelta {
         pub role: Option<String>,
