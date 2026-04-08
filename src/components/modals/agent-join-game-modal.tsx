@@ -455,6 +455,8 @@ const AgentJoinGameModal: React.FC<Omit<ModalProps, "children">> = ({
     <Modal
       scrollBehavior="inside"
       size={{ base: "2xl", lg: "3xl", xl: "4xl" }}
+      closeOnEsc={false}
+      closeOnOverlayClick={false}
       {...modalProps}
     >
       <ModalOverlay />
