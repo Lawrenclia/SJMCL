@@ -272,10 +272,7 @@ fn perceive_world_state(bot: &Client) -> String {
         if let Some(state) = instance.get_block_state(check_pos) {
           let block_desc = format!("{:?}", state);
           // 剔除无价值背景方块
-          if !block_desc.contains("Air")
-            && !block_desc.contains("Stone")
-            && !block_desc.contains("Dirt")
-          {
+          if !block_desc.contains("Air") {
             observation.push_str(&format!(
               "- {}: [{}, {}, {}]\n",
               block_desc, check_pos.x, check_pos.y, check_pos.z
