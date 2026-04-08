@@ -283,7 +283,7 @@
         "error": {
           "not_in_game": "尚未启动",
           "connection_failed": "Bot 连接服务器失败",
-          "disconnect": "Bot 被踢出服务器",
+          "disconnected": "Bot 被踢出服务器",
           "death": "Bot 已在游戏中死亡",
           "unknown": "未知原因"
         }

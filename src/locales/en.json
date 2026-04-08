@@ -283,7 +283,7 @@
         "error": {
           "not_in_game": "Not in game",
           "connection_failed": "Bot connection to server failed",
-          "disconnect": "Bot disconnected from server",
+          "disconnected": "Bot disconnected from server",
           "death": "Bot has died in the game",
           "unknown": "Unknown reason"
         }
