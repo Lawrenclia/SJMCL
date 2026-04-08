@@ -25984,11 +25984,19 @@
 25983,,endermannospawniron,末地铁块不生成末影人,EndermanNoSpawnIron,ENSI
 25984,star-technology-core,,Star Technology Core,,
 25985,siegeweapons,siegeweapons,Siege Weapons,,
+<<<<<<< HEAD
 25986,jerotes-villages-pillage,jerotes-villages-pillage,Jerotes村庄的掠夺,Jerotes Village's Pillage,
 25987,,minegenshin,像素原神,Minegenshin,MG
 25988,leveling-rank,epic-rpg-leveling-rank,Epic RPG: Leveling Rank,,
 25989,,endless_backrooms,无尽的后室,Endless Backrooms,
 25990,sbw-electronic-countermeasure-force,,Electronic Countermeasure Force,,ECF
+=======
+25986,jerotes-villages-pillage,,Jerotes Village's Pillage,,
+25987,,minegenshin,像素原神,Minegenshin,MG
+25988,leveling-rank,epic-rpg-leveling-rank,Epic RPG: Leveling Rank,,
+25989,,endless_backrooms,无尽的后室,Endless Backrooms,
+25990,sbw-electronic-countermeasure-force,,Electronic Countermeasure Force,,
+>>>>>>> bc6353a0 (Merge pull request #16 from ProjectMiu/auto/update-mcmod-data)
 25991,functional-storage-unofficial-extended-life,,功能性存储非官方延续版,Functional Storage Unofficial Extended Life,
 25992,spell-wheel-pages,,Spell Wheel Pages,,
 25993,create-utilities-unofficial-port,,Create Utilities (Unofficial Port),,
@@ -25998,12 +26006,21 @@
 25997,transformacoes-sun-wukong,,Transformações Sun Wukong,,
 25998,atmosfera-neo,,Atmosfera Neo,,
 25999,,,Jython Mod,,
+<<<<<<< HEAD
 26000,litewers-ai-girlfriend-gf,litewers-ai-girlfriend-(gf),Litewer's AI Girlfriend (GF),,AIGF
 26001,trackwork-refabricated,trackwork-refabricated,Trackwork Refabricated,,
 26002,,victus-unofficial-neoforge-port,Victus非官方1.21.1Neoforge版本,,
 26003,the-last-sword-you-will-ever-need-remastered,the-last-sword-you-will-ever-need-remastered,最终之剑：重制版,The Last Sword You Will Ever Need: Remastered,
 26004,advanced-combat-re,advanced-combat-re,高级战斗：重制,Advanced Combat: Re,ACR
 26005,realisticdining,realisticdining,更真实的用餐,Realistic Dining,RTD
+=======
+26000,litewers-ai-girlfriend-gf,litewers-ai-girlfriend-(gf),Litewer's AI girlfriend (GF),,
+26001,trackwork-refabricated,trackwork-refabricated,Trackwork Refabricated,,
+26002,,victus-unofficial-neoforge-port,Victus非官方1.21.1Neoforge版本,,
+26003,the-last-sword-you-will-ever-need-remastered,the-last-sword-you-will-ever-need-remastered,最终之剑：重制版,The Last Sword You Will Ever Need: Remastered,
+26004,advanced-combat-re,,高级战斗:重制,Advanced Combat: Re,ACR
+26005,realisticdining,realisticdining,更真实的用餐,,RTD
+>>>>>>> bc6353a0 (Merge pull request #16 from ProjectMiu/auto/update-mcmod-data)
 26006,a-better-foods,a-better-foods,更好的食物,A Better Foods,ABF
 26007,ban-hunger-value,ban-hunger-value,禁用饥饿值,Ban Hunger Value,BHV
 26008,,,三角洲乐事,Delta Delight,
@@ -26018,14 +26035,23 @@
 26017,,customnpcs-crafting-view,CustomNpcs-Crafting-View,,
 26018,survival-monitor,survival-monitor,Survival Monitor,,
 26019,,,我去！不早说！！,"OMG, WHY DO YOU NOT SAY!!!!!!!",OWDYNS
+<<<<<<< HEAD
 26020,wmd,,Weapons of Mass Destruction,,WMD
 26021,,more-xp-more-hp,More XP More HP,,XP~HP
+=======
+26020,wmd,,WMD - Weapons of Mass Destruction,,
+26021,,more-xp-more-hp,More XP More HP,more-hp-more-xp,XP~HP
+>>>>>>> bc6353a0 (Merge pull request #16 from ProjectMiu/auto/update-mcmod-data)
 26022,the-age-of-engender,,Age of Engender,,
 26023,yumemigusa,yumemigusa,Yumemigusa,,
 26024,mineberkcraft,,MineBerkCraft,,
 26025,armor-poser,armor-poser,Armor Poser,,
 26026,treeliable,treeliable,Treeliable,,
+<<<<<<< HEAD
 26027,,,塞尔达驿站,Zelda Stable,BoTWS
+=======
+26027,,,塞尔达驿站,,BoTWS
+>>>>>>> bc6353a0 (Merge pull request #16 from ProjectMiu/auto/update-mcmod-data)
 26028,item-glint,item-glint,手持物品描边,Item Glint,
 26029,better-caravans,better-caravans,Better Caravans,,
 26030,dragonminez,dragonminez,DragonMine Z: «Aurora»,,
@@ -26034,12 +26060,21 @@
 26033,no-lapis-lazuli,no-lapis-lazuli,无青金石,No Lapis Lazuli,NLL
 26034,stronger-structures,,Stronger Structures,,
 26035,warning,warning,Warning (Horror TBS),,
+<<<<<<< HEAD
 26036,create-bbq-belt,,机械动力：传送带烧烤,Create: BBQ Belt,
 26037,shogi,,Shogi,,
 26038,mna-arcane-adornment,,奥术饰品,MnA: Arcane Adornment,ArcAdo
 26039,,in-game-log-display,游戏内日志显示,In-game Log Display,LNG
 26040,kindred-legacy,,PokémonMD: Undaunted Heroes / Kindred Legacy,,
 26041,,elytra-jump,鞘翅跳,ElytraJump,EJ
+=======
+26036,create-bbq-belt,,机械动力：传送带烧烤,Create:BBQ_belt,
+26037,shogi,,Shogi,,
+26038,mna-arcane-adornment,,奥术饰品,MnA: Arcane Adornment,ArcAdo
+26039,,in-game-log-display,游戏内日志显示,In-game log display,LNG
+26040,pokemonmd-disciples-of-corruption,,PokémonMD: Undaunted Heroes,,
+26041,,elytra-jump,鞘翅跳,elytrajump,EJ
+>>>>>>> bc6353a0 (Merge pull request #16 from ProjectMiu/auto/update-mcmod-data)
 26042,dynamic-trees-universal-compat,,Dynamic Trees: Universal Compat,,
 26043,,tellus,Tellus,,
 26044,malice-and-mischief,,Malice and Mischief,,
@@ -26049,6 +26084,7 @@
 26048,apothic-extensions,,Apothic Extensions,,
 26049,simply-tents,simply-tents,Simply Tents,,
 26050,floral-tonics-tinctures,floral-tonics-and-tinctures,Floral Tonics & Tinctures,,
+<<<<<<< HEAD
 26051,epca-ride-addon,,终末-归寄万物骑乘附加,E-PCA Ride Addon,
 26052,mekanism-pipez-fix,mekanism-pipez-fix,Mekanism Pipez Fix,,
 26053,,burvys-zombies,Burvy's Zombies,,
@@ -26909,3 +26945,5 @@
 26908,mi-item-hatch-stack-upgrade,mi-item-hatch-stack-upgrade,现代工业化物品堆叠升级,Modern Industrialization Item Hatch Stack Upgrade,MISU
 26909,sandrone-toy-mod,sandrone-toy-mod,Sandrone Toy Mod,,
 26910,cute-ships,,萌系船只,Cute Ships,
+=======
+>>>>>>> bc6353a0 (Merge pull request #16 from ProjectMiu/auto/update-mcmod-data)
