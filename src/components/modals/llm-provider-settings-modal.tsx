@@ -67,9 +67,12 @@ const LLMProviderSettingsModal: React.FC<LLMProviderSettingsModalProps> = ({
   }, [draft.apiKey]);
 
   const showBaseUrl = draft.providerType === "openAiCompatible";
+  const showApiKey = draft.providerType !== "ollama";
 
   const endpointHint = useMemo(() => {
     switch (draft.providerType) {
+      case "ollama":
+        return "http://localhost:11434/v1/chat/completions";
       case "openAiCompatible":
         return `${draft.baseUrl}/v1/chat/completions`;
       case "anthropic":
@@ -87,6 +90,9 @@ const LLMProviderSettingsModal: React.FC<LLMProviderSettingsModalProps> = ({
   const trimmedApiKey = useMemo(() => draft.apiKey.trim(), [draft.apiKey]);
 
   const canCheck = useMemo(() => {
+    if (draft.providerType === "ollama") {
+      return true;
+    }
     if (draft.providerType === "openAiCompatible") {
       return !!effectiveBaseUrl && !!trimmedApiKey;
     }
@@ -256,26 +262,29 @@ const LLMProviderSettingsModal: React.FC<LLMProviderSettingsModalProps> = ({
                 ),
               },
             ]),
-        // API Key
-        {
-          title: t(
-            "LLMProviderSettingsModal.content.model.settings.apiKey.title"
-          ),
-          children: (
-            <Input
-              size="xs"
-              w="60%"
-              borderRadius={unifiedFieldRadius}
-              focusBorderColor={`${primaryColor}.500`}
-              value={isApiKeyEditing ? draft.apiKey : maskedApiKey}
-              onChange={(e) => {
-                if (isApiKeyEditing) update("apiKey", e.target.value);
-              }}
-              onFocus={() => setIsApiKeyEditing(true)}
-              onBlur={() => setIsApiKeyEditing(false)}
-            />
-          ),
-        },
+        ...(showApiKey
+          ? [
+              {
+                title: t(
+                  "LLMProviderSettingsModal.content.model.settings.apiKey.title"
+                ),
+                children: (
+                  <Input
+                    size="xs"
+                    w="60%"
+                    borderRadius={unifiedFieldRadius}
+                    focusBorderColor={`${primaryColor}.500`}
+                    value={isApiKeyEditing ? draft.apiKey : maskedApiKey}
+                    onChange={(e) => {
+                      if (isApiKeyEditing) update("apiKey", e.target.value);
+                    }}
+                    onFocus={() => setIsApiKeyEditing(true)}
+                    onBlur={() => setIsApiKeyEditing(false)}
+                  />
+                ),
+              },
+            ]
+          : []),
         // Model selector
         {
           title: t(

@@ -1486,6 +1486,7 @@
     "deleteConfirm": "确定要删除此来源吗？",
     "failoverHint": "当主要来源请求失败时，将按优先级尝试其他已启用的来源。",
     "providerType": {
+      "ollama": "Ollama",
       "openAiCompatible": "OpenAI 兼容",
       "anthropic": "Anthropic (Claude)",
       "gemini": "Google Gemini"
@@ -1579,6 +1580,7 @@
           "provider": {
             "title": "服务提供商",
             "options": {
+              "ollama": "Ollama",
               "openAiCompatible": "OpenAI 兼容",
               "anthropic": "Anthropic (Claude)",
               "gemini": "Google Gemini"

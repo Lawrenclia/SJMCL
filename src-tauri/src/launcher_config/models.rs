@@ -69,6 +69,7 @@ pub enum FileValidatePolicy {
 pub enum LLMProviderType {
   Anthropic,
   Gemini,
+  Ollama,
   #[serde(other)]
   OpenAiCompatible,
 }

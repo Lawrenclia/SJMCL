@@ -2,13 +2,14 @@ use serde_json::Value;
 use tauri_plugin_http::reqwest;
 
 use crate::intelligence::models::{
-  AnthropicModelsResponse, AnthropicRequest, AnthropicResponse, AnthropicStreamEvent,
-  ChatCompletionChunk, ChatCompletionResponse, ChatMessage, ChatModelsResponse, GeminiContent,
-  GeminiGenerationConfig, GeminiModelsResponse, GeminiPart, GeminiRequest, GeminiResponse,
-  IntelligenceError,
+  AnthropicModelsResponse, AnthropicRequest, AnthropicResponse, AnthropicStreamEvent, ChatMessage,
+  GeminiContent, GeminiGenerationConfig, GeminiModelsResponse, GeminiPart, GeminiRequest,
+  GeminiResponse, IntelligenceError, OllamaChatModelsResponse, OpenAiCompatibleChatCompletionChunk,
+  OpenAiCompatibleChatCompletionResponse, OpenAiCompatibleChatModelsResponse,
 };
 use crate::launcher_config::models::{LLMModelConfig, LLMParametersConfig, LLMProviderType};
 
+const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const ANTHROPIC_BASE_URL: &str = "https://api.anthropic.com";
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 const GEMINI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta";
@@ -28,6 +29,9 @@ pub fn build_list_models_request(
   config: &LLMModelConfig,
 ) -> reqwest::RequestBuilder {
   match provider_type {
+    LLMProviderType::Ollama => client
+      .get(format!("{}/api/tags", OLLAMA_BASE_URL))
+      .bearer_auth(&config.api_key),
     LLMProviderType::OpenAiCompatible => client
       .get(format!("{}/v1/models", config.base_url))
       .bearer_auth(&config.api_key),
@@ -51,6 +55,29 @@ pub fn build_chat_request(
   response_format: &Option<Value>,
 ) -> reqwest::RequestBuilder {
   match provider_type {
+    LLMProviderType::Ollama => {
+      let mut body = serde_json::json!({
+        "model": config.model,
+        "messages": messages,
+        "stream": stream,
+        "temperature": params.temperature,
+        "max_tokens": params.max_tokens,
+        "top_p": params.top_p,
+      });
+      if params.frequency_penalty != 0.0 {
+        body["frequency_penalty"] = serde_json::json!(params.frequency_penalty);
+      }
+      if params.presence_penalty != 0.0 {
+        body["presence_penalty"] = serde_json::json!(params.presence_penalty);
+      }
+      if let Some(response_format) = response_format {
+        body["response_format"] = response_format.clone();
+      }
+      client
+        .post(format!("{}/v1/chat/completions", OLLAMA_BASE_URL))
+        .bearer_auth(&config.api_key)
+        .json(&body)
+    }
     LLMProviderType::OpenAiCompatible => {
       let mut body = serde_json::json!({
         "model": config.model,
@@ -164,8 +191,15 @@ pub fn parse_models_response(
   body: &str,
 ) -> Result<Vec<String>, IntelligenceError> {
   match provider_type {
+    LLMProviderType::Ollama => {
+      let resp: OllamaChatModelsResponse = serde_json::from_str(body).map_err(|e| {
+        log::error!("Error parsing Ollama models response: {}", e);
+        IntelligenceError::ApiParseError
+      })?;
+      Ok(resp.models.into_iter().map(|m| m.name).collect())
+    }
     LLMProviderType::OpenAiCompatible => {
-      let resp: ChatModelsResponse = serde_json::from_str(body).map_err(|e| {
+      let resp: OpenAiCompatibleChatModelsResponse = serde_json::from_str(body).map_err(|e| {
         log::error!("Error parsing OpenAI models response: {}", e);
         IntelligenceError::ApiParseError
       })?;
@@ -205,11 +239,12 @@ pub fn parse_chat_response(
   body: &str,
 ) -> Result<String, IntelligenceError> {
   match provider_type {
-    LLMProviderType::OpenAiCompatible => {
-      let resp: ChatCompletionResponse = serde_json::from_str(body).map_err(|e| {
-        log::error!("Error parsing OpenAI chat response: {}", e);
-        IntelligenceError::ApiParseError
-      })?;
+    LLMProviderType::Ollama | LLMProviderType::OpenAiCompatible => {
+      let resp: OpenAiCompatibleChatCompletionResponse =
+        serde_json::from_str(body).map_err(|e| {
+          log::error!("Error parsing OpenAI/Ollama chat response: {}", e);
+          IntelligenceError::ApiParseError
+        })?;
       resp
         .choices
         .first()
@@ -251,11 +286,11 @@ pub fn parse_chat_response(
 
 pub fn parse_stream_event(provider_type: &LLMProviderType, data: &str) -> StreamParseResult {
   match provider_type {
-    LLMProviderType::OpenAiCompatible => {
+    LLMProviderType::Ollama | LLMProviderType::OpenAiCompatible => {
       if data == "[DONE]" {
         return StreamParseResult::Done;
       }
-      match serde_json::from_str::<ChatCompletionChunk>(data) {
+      match serde_json::from_str::<OpenAiCompatibleChatCompletionChunk>(data) {
         Ok(chunk) => {
           if let Some(choice) = chunk.choices.first() {
             if let Some(content) = &choice.delta.content {

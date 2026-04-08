@@ -56,7 +56,8 @@ export interface GameDirectory {
 }
 
 export enum LLMProviderType {
-  OpenAICompatible = "openAiCompatible",
+  Ollama = "ollama",
+  OpenAiCompatible = "openAiCompatible",
   Anthropic = "anthropic",
   Gemini = "gemini",
 }
@@ -386,7 +387,7 @@ export const defaultLLMProviderConfig: LLMProviderConfig = {
   name: "",
   enabled: true,
   priority: 0,
-  providerType: LLMProviderType.OpenAICompatible,
+  providerType: LLMProviderType.OpenAiCompatible,
   baseUrl: "",
   apiKey: "",
   model: "",
