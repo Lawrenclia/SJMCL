@@ -68,6 +68,7 @@ pub async fn join_server(app_handle: &AppHandle, port: u16, name: String) -> SJM
       auth_account: None,
       auth_server_url: None,
       access_token: None,
+      access_token_expires: None,
       refresh_token: None,
       textures: vec![Texture {
         texture_type: TextureType::Skin,
