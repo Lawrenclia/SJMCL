@@ -4,15 +4,13 @@ import { ToolCallStatus } from "@/enums/tool-call";
 import { GetStateFlag } from "@/hooks/get-state";
 import { NewsPostRequest } from "@/models/news-post";
 import { defaultModLoaderResourceInfo } from "@/models/resource";
+import { TOOL_DEFINITIONS } from "@/prompts/tool";
 import { ConfigService } from "@/services/config";
 import { DiscoverService } from "@/services/discover";
 import { InstanceService } from "@/services/instance";
 import { ResourceService } from "@/services/resource";
-import {
-  TOOL_DEFINITIONS,
-  renderParamsSignature,
-} from "@/services/tool-definitions";
 import { UtilsService } from "@/services/utils";
+import { renderParamsSignature } from "@/utils/tool-call/definition-renderer";
 
 export async function executeToolCall(
   name: string,
@@ -187,12 +185,12 @@ export async function executeToolCall(
       return javaListResp;
     }
     case "fetch_news":
-      const sources: NewsPostRequest[] = config.discoverSourceEndpoints.map(
-        (url) => ({
+      const sources: NewsPostRequest[] = config.discoverSourceEndpoints
+        .filter(([, enabled]) => enabled)
+        .map(([url]) => ({
           url,
           cursor: null,
-        })
-      );
+        }));
       return await DiscoverService.fetchNewsPostSummaries(sources);
 
     // ── Meta tool: deferred tool search ────────────────────────────────
@@ -496,7 +494,9 @@ export async function commitToolCall(
         params.gameInfo,
         params.modLoaderInfo ?? defaultModLoaderResourceInfo,
         undefined,
-        true
+        undefined,
+        params.modLoaderInfo?.loaderType === "Fabric",
+        params.modLoaderInfo?.loaderType === "Quilt"
       );
 
     case "set_global_memory_size":
