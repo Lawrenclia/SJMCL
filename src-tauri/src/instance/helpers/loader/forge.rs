@@ -293,12 +293,8 @@ pub async fn download_forge_libraries(
       add_library_entry(&mut client_info.libraries, name, Some(lib.clone()))?;
       add_library_entry(&mut loader_libraries, name, Some(lib.clone()))?;
 
-      let url = lib
-        .downloads
-        .as_ref()
-        .and_then(|d| d.artifact.as_ref())
-        .map(|a| a.url.as_str())
-        .unwrap_or_default();
+      let artifact = lib.downloads.as_ref().and_then(|d| d.artifact.as_ref());
+      let url = artifact.map(|a| a.url.as_str()).unwrap_or_default();
       if url.is_empty() {
         continue;
       }
@@ -315,8 +311,8 @@ pub async fn download_forge_libraries(
         )?,
         dest: lib_dir.join(&convert_library_name_to_path(name, None)?),
         filename: None,
-        sha1: None,
-        size: None,
+        sha1: artifact.map(|a| a.sha1.clone()),
+        size: artifact.map(|a| a.size as u64),
       }));
     }
 
@@ -341,12 +337,8 @@ pub async fn download_forge_libraries(
 
     for lib in profile.libraries.iter() {
       let name = &lib.name;
-      let url = lib
-        .downloads
-        .as_ref()
-        .and_then(|d| d.artifact.as_ref())
-        .map(|a| a.url.as_str())
-        .unwrap_or_default();
+      let artifact = lib.downloads.as_ref().and_then(|d| d.artifact.as_ref());
+      let url = artifact.map(|a| a.url.as_str()).unwrap_or_default();
 
       if url.is_empty() {
         continue;
@@ -365,8 +357,8 @@ pub async fn download_forge_libraries(
         )?,
         dest: lib_dir.join(&rel),
         filename: None,
-        sha1: None,
-        size: None,
+        sha1: artifact.map(|a| a.sha1.clone()),
+        size: artifact.map(|a| a.size as u64),
       }));
     }
   } else {
