@@ -155,3 +155,8 @@ SJMCL 的扩展系统允许开发者在不修改核心代码的情况下添加�
 2. [步骤] → 验证：[检查方式]
 3. [步骤] → 验证：[检查方式]
 ```
+
+## Git 远端约定
+
+- 此工作区默认提交推送到 https://github.com/Lawrenclia/SJMCL（origin）。
+- UNIkeEN/SJMCL 保留为 upstream，仅用于获取上游更新；除非用户明确要求，否则不要向其推送。
