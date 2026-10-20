@@ -72,9 +72,7 @@ use crate::resource::models::{
   GameClientResourceInfo, ModLoaderResourceInfo, OptiFineResourceInfo,
 };
 use crate::tasks::PTaskParam;
-use crate::tasks::commands::{
-  schedule_progressive_task_group, schedule_progressive_task_group_inner,
-};
+use crate::tasks::commands::schedule_progressive_task_group_inner;
 use crate::tasks::download::DownloadParam;
 use crate::tasks::monitor::{GroupHooks, make_group_hook};
 use crate::utils::fs::{
@@ -1234,18 +1232,8 @@ pub async fn create_instance(
     extract_overrides(&file, &version_path)?;
   }
 
-  schedule_progressive_task_group(
-    app.clone(),
-    match java_version_to_download {
-      Some(java_version) => format!("game-client-w-java?{}&{}", name, java_version),
-      None => format!("game-client?{}", name),
-    },
-    task_params,
-    true,
-  )
-  .await?;
-
-  // Optionally skip first-screen options by adding options.txt.
+  // Prepare the optional first-screen options up front; they are written by
+  // the completion hook together with the config.
   let (language, skip_first_screen_options) = {
     let launcher_config = launcher_config_state.lock()?;
     (
@@ -1256,27 +1244,72 @@ pub async fn create_instance(
         .skip_first_screen_options,
     )
   };
-  if skip_first_screen_options
-    && let Some(lang_code) = get_minecraft_lang_tag(&language, &instance.version, &app)
-  {
-    let options_path = get_instance_subdir_paths(&app, &instance, &[&InstanceSubdirType::Root])
-      .ok_or(InstanceError::InstanceNotFoundByID)?[0]
-      .join("options.txt");
-    if !options_path.exists() {
-      fs::write(options_path, format!("lang:{}\n", lang_code))
-        .map_err(|_| InstanceError::FileCreationFailed)?;
+  let options_file = match (
+    skip_first_screen_options,
+    get_minecraft_lang_tag(&language, &instance.version, &app),
+  ) {
+    (true, Some(lang_code)) => {
+      get_instance_subdir_paths(&app, &instance, &[&InstanceSubdirType::Root]).map(|paths| {
+        (
+          paths[0].join("options.txt"),
+          format!("lang:{}\n", lang_code),
+        )
+      })
     }
-  }
+    _ => None,
+  };
 
-  // Save the edited client json
-  save_json_async(&version_info, &version_path.join(format!("{}.json", name))).await?;
-  // Save the SJMCL instance config json
-  instance
-    .save_json_cfg()
-    .await
-    .map_err(|_| InstanceError::FileCreationFailed)?;
+  let version_json_path = version_path.join(format!("{}.json", name));
 
-  dir_guard.commit();
+  // Persist the instance only once every download succeeded: a failed install
+  // must not leave a half-created instance behind. The guard is handed to the
+  // hook, which either commits the directory or removes it on failure.
+  let hook_instance = instance.clone();
+  let hook_version_info = version_info.clone();
+  let hook_json_path = version_json_path.clone();
+  let on_success = make_group_hook(move |_app| async move {
+    if let Some((options_path, content)) = options_file
+      && !options_path.exists()
+      && let Err(error) = fs::write(&options_path, content)
+    {
+      log::error!("Failed to write instance options.txt: {error:?}");
+    }
+    if let Err(error) = save_json_async(&hook_version_info, &hook_json_path).await {
+      log::error!("Failed to save instance version json: {error:?}");
+    }
+    if let Err(error) = hook_instance.save_json_cfg().await {
+      log::error!("Failed to save instance config: {error:?}");
+    }
+    dir_guard.commit();
+  });
+
+  let failure_dir = version_path.clone();
+  let on_failure = make_group_hook(move |_app| async move {
+    if failure_dir.exists()
+      && let Err(error) = fs::remove_dir_all(&failure_dir)
+    {
+      log::error!(
+        "Failed to clean up partial instance {}: {error:?}",
+        failure_dir.display()
+      );
+    }
+  });
+
+  schedule_progressive_task_group_inner(
+    app.clone(),
+    match java_version_to_download {
+      Some(java_version) => format!("game-client-w-java?{}&{}", name, java_version),
+      None => format!("game-client?{}", name),
+    },
+    task_params,
+    true,
+    Some(GroupHooks {
+      on_success: vec![on_success],
+      on_failure: vec![on_failure],
+    }),
+  )
+  .await?;
+
   Ok(())
 }
 
@@ -1634,8 +1667,6 @@ pub async fn change_optifine(
     status: ModLoaderStatus::NotDownloaded,
   };
 
-  instance.optifine = Some(optifine_info);
-
   let mut optifine_task_params: Vec<PTaskParam> = Vec::new();
   download_optifine_installer(
     &instance.version,
@@ -1646,19 +1677,41 @@ pub async fn change_optifine(
   .await?;
 
   if !optifine_task_params.is_empty() {
-    schedule_progressive_task_group(
+    // Only persist the OptiFine change after its installer downloaded.
+    let hook_instance = Instance {
+      optifine: Some(optifine_info.clone()),
+      ..instance.clone()
+    };
+    let on_success = make_group_hook(move |app| async move {
+      if let Err(error) = hook_instance.save_json_cfg().await {
+        log::error!("Failed to save instance config: {error:?}");
+      }
+      if let Ok(mut state) = app.state::<Mutex<HashMap<String, Instance>>>().lock() {
+        state.insert(hook_instance.id.clone(), hook_instance);
+      }
+    });
+
+    schedule_progressive_task_group_inner(
       app.clone(),
       format!("change-optifine?{}", new_optifine.filename),
       optifine_task_params,
       true,
+      Some(GroupHooks {
+        on_success: vec![on_success],
+        on_failure: Vec::new(),
+      }),
     )
     .await?;
+  } else {
+    instance.optifine = Some(optifine_info);
+    instance
+      .save_json_cfg()
+      .await
+      .map_err(|_| InstanceError::FileCreationFailed)?;
+    if let Ok(mut state) = app.state::<Mutex<HashMap<String, Instance>>>().lock() {
+      state.insert(instance.id.clone(), instance);
+    }
   }
-
-  instance
-    .save_json_cfg()
-    .await
-    .map_err(|_| InstanceError::FileCreationFailed)?;
 
   Ok(())
 }

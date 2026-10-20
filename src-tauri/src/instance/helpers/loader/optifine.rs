@@ -16,8 +16,9 @@ use crate::launch::helpers::jre_selector::select_java_runtime;
 use crate::resource::helpers::misc::{convert_url_to_target_source, get_download_api};
 use crate::resource::models::{OptiFineResourceInfo, ResourceType, SourceType};
 use crate::tasks::PTaskParam;
-use crate::tasks::commands::schedule_progressive_task_group;
+use crate::tasks::commands::schedule_progressive_task_group_inner;
 use crate::tasks::download::DownloadParam;
+use crate::tasks::monitor::GroupHooks;
 
 pub async fn download_optifine_installer(
   game_version: &str,
@@ -55,6 +56,7 @@ pub async fn download_optifine_libraries(
   priority: &[SourceType],
   instance: &Instance,
   client_info: &mut McClientInfo,
+  hooks: Option<GroupHooks>,
 ) -> SJMCLResult<()> {
   let optifine = instance
     .optifine
@@ -263,11 +265,12 @@ pub async fn download_optifine_libraries(
     return Ok(());
   }
 
-  schedule_progressive_task_group(
+  schedule_progressive_task_group_inner(
     app.clone(),
     format!("optifine-libraries?{}", instance.id),
     task_params,
     true,
+    hooks,
   )
   .await?;
 

@@ -7,8 +7,9 @@ use crate::launch::helpers::file_validator::convert_library_name_to_path;
 use crate::resource::helpers::misc::{convert_url_to_target_source, get_download_api};
 use crate::resource::models::{ResourceType, SourceType};
 use crate::tasks::PTaskParam;
-use crate::tasks::commands::schedule_progressive_task_group;
+use crate::tasks::commands::schedule_progressive_task_group_inner;
 use crate::tasks::download::DownloadParam;
+use crate::tasks::monitor::GroupHooks;
 use sjmcl_types::error::{SJMCLError, SJMCLResult};
 use std::collections::HashMap;
 use std::fs;
@@ -62,6 +63,7 @@ pub async fn download_cleanroom_libraries(
   priority: &[SourceType],
   instance: &Instance,
   client_info: &mut McClientInfo,
+  hooks: Option<GroupHooks>,
 ) -> SJMCLResult<()> {
   let subdirs = get_instance_subdir_paths(
     app,
@@ -310,11 +312,12 @@ pub async fn download_cleanroom_libraries(
     PTaskParam::Download(dp) => seen.insert(dp.dest.clone()),
   });
 
-  schedule_progressive_task_group(
+  schedule_progressive_task_group_inner(
     app.clone(),
     format!("cleanroom-libraries?{}", instance.id),
     task_params,
     true,
+    hooks,
   )
   .await?;
 

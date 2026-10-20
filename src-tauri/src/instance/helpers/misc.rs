@@ -1,7 +1,7 @@
 use sanitize_filename;
 use serde_json::Value;
 use sjmcl_types::error::SJMCLResult;
-use sjmcl_types::storage::load_json_async;
+use sjmcl_types::storage::{load_json_async, save_json_async};
 use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
@@ -22,6 +22,7 @@ use crate::instance::models::misc::{
 use crate::launcher_config::helpers::misc::get_global_game_config;
 use crate::launcher_config::models::{GameConfig, GameDirectory, LauncherConfig};
 use crate::resource::helpers::misc::get_source_priority_list;
+use crate::tasks::monitor::{GroupHooks, make_group_hook};
 
 pub fn get_instance_game_config(app: &AppHandle, instance: &Instance) -> GameConfig {
   if instance.use_spec_game_config
@@ -172,41 +173,71 @@ async fn refresh_instance(
     if let Err(e) = {
       match cfg_read.mod_loader.status {
         ModLoaderStatus::NotDownloaded => {
-          match cfg_read.mod_loader.loader_type {
-            ModLoaderType::Forge => {
-              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-              download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data).await?;
-            }
-            ModLoaderType::Cleanroom => {
-              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-              download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data)
-                .await?;
-            }
-            ModLoaderType::NeoForge => {
-              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-              download_neoforge_libraries(app, &priority_list, &cfg_read, &mut client_data).await?;
-            }
-            _ => {}
-          }
           let vjson_path = cfg_read
             .version_path
             .join(format!("{}.json", cfg_read.name));
-          fs::write(vjson_path, serde_json::to_vec_pretty(&client_data)?)?;
+          let vjson_client_data = client_data.clone();
+          let mut hooks = Some(GroupHooks {
+            on_success: vec![make_group_hook(move |_app| async move {
+              if let Err(error) = save_json_async(&vjson_client_data, &vjson_path).await {
+                log::error!("Failed to save instance version json: {error:?}");
+              }
+            })],
+            on_failure: Vec::new(),
+          });
+          match cfg_read.mod_loader.loader_type {
+            ModLoaderType::Forge => {
+              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+              download_forge_libraries(
+                app,
+                &priority_list,
+                &cfg_read,
+                &mut client_data,
+                hooks.take(),
+              )
+              .await?;
+            }
+            ModLoaderType::Cleanroom => {
+              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+              download_cleanroom_libraries(
+                app,
+                &priority_list,
+                &cfg_read,
+                &mut client_data,
+                hooks.take(),
+              )
+              .await?;
+            }
+            ModLoaderType::NeoForge => {
+              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+              download_neoforge_libraries(
+                app,
+                &priority_list,
+                &cfg_read,
+                &mut client_data,
+                hooks.take(),
+              )
+              .await?;
+            }
+            _ => {}
+          }
 
           Ok(())
         }
         ModLoaderStatus::DownloadFailed => match cfg_read.mod_loader.loader_type {
           ModLoaderType::Forge => {
             cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-            download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data).await
+            download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data, None).await
           }
           ModLoaderType::Cleanroom => {
             cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-            download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data).await
+            download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
+              .await
           }
           ModLoaderType::NeoForge => {
             cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-            download_neoforge_libraries(app, &priority_list, &cfg_read, &mut client_data).await
+            download_neoforge_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
+              .await
           }
           _ => Ok(()),
         },
@@ -250,18 +281,26 @@ async fn refresh_instance(
         }
         ModLoaderStatus::NotDownloaded => {
           cfg_read.optifine.as_mut().unwrap().status = ModLoaderStatus::Downloading;
-          download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data).await?;
-
           let vjson_path = cfg_read
             .version_path
             .join(format!("{}.json", cfg_read.name));
-          fs::write(vjson_path, serde_json::to_vec_pretty(&client_data)?)?;
+          let vjson_client_data = client_data.clone();
+          let hooks = Some(GroupHooks {
+            on_success: vec![make_group_hook(move |_app| async move {
+              if let Err(error) = save_json_async(&vjson_client_data, &vjson_path).await {
+                log::error!("Failed to save instance version json: {error:?}");
+              }
+            })],
+            on_failure: Vec::new(),
+          });
+          download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data, hooks)
+            .await?;
 
           Ok(())
         }
         ModLoaderStatus::DownloadFailed => {
           cfg_read.optifine.as_mut().unwrap().status = ModLoaderStatus::Downloading;
-          download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data).await
+          download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data, None).await
         }
         ModLoaderStatus::Installed => Ok(()),
       }
