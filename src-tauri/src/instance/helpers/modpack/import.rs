@@ -58,16 +58,40 @@ fn get_parsers() -> Vec<Parser> {
 }
 
 impl ModLoader {
+  /// Resolve the optional loader branch (e.g. `latest` / `recommended`) from
+  /// the remote loader version list.
+  ///
+  /// Only Forge uses the branch (to build the installer URL); other loaders do
+  /// not, so they skip the network round-trip entirely. The branch is also just
+  /// extra metadata: a network failure must not abort importing a modpack, so
+  /// the loader version from the modpack manifest is kept in that case.
   pub async fn with_branch(&self, app: &AppHandle, mc_version: String) -> SJMCLResult<Self> {
-    let version_list =
-      fetch_mod_loader_version_list(app.clone(), mc_version, self.loader_type).await?;
-    if let Some(version) = version_list.iter().find(|v| v.version == self.version) {
-      return Ok(Self {
-        branch: version.branch.clone(),
-        ..self.clone()
-      });
+    if !matches!(
+      self.loader_type,
+      ModLoaderType::Forge | ModLoaderType::LegacyForge
+    ) {
+      return Ok(self.clone());
     }
-    Err(InstanceError::ModLoaderVersionParseError.into())
+
+    match fetch_mod_loader_version_list(app.clone(), mc_version, self.loader_type).await {
+      Ok(version_list) => match version_list.iter().find(|v| v.version == self.version) {
+        Some(version) => Ok(Self {
+          branch: version.branch.clone(),
+          ..self.clone()
+        }),
+        None => {
+          log::warn!(
+            "mod loader version {} is not in the remote version list, importing without branch",
+            self.version
+          );
+          Ok(self.clone())
+        }
+      },
+      Err(error) => {
+        log::warn!("failed to fetch mod loader version list, importing without branch: {error:?}");
+        Ok(self.clone())
+      }
+    }
   }
 }
 
