@@ -4,14 +4,16 @@ use async_speed_limit::Limiter;
 use futures::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use sjmcl_types::error::{SJMCLError, SJMCLResult};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, LazyLock, Mutex as StdMutex, RwLock};
 use std::time::Duration;
 use tauri::http::StatusCode;
 use tauri::{AppHandle, Manager, Url};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_http::reqwest::header::RANGE;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 use crate::launcher_config::commands::retrieve_launcher_config;
@@ -51,6 +53,35 @@ pub struct DownloadParam {
   pub size: Option<u64>,
 }
 
+/// Per-destination write locks.
+///
+/// Two tasks must never write the same destination at the same time (e.g. a
+/// retried download racing with the original task). The lock is held for the
+/// whole transfer and released when the task ends or is aborted.
+static DEST_LOCKS: LazyLock<StdMutex<HashMap<PathBuf, Arc<AsyncMutex<()>>>>> =
+  LazyLock::new(|| StdMutex::new(HashMap::new()));
+
+fn dest_lock(path: &Path) -> Arc<AsyncMutex<()>> {
+  let mut locks = DEST_LOCKS.lock().unwrap();
+  locks
+    .entry(path.to_path_buf())
+    .or_insert_with(|| Arc::new(AsyncMutex::new(())))
+    .clone()
+}
+
+fn release_dest_lock(path: &Path, lock: &Arc<AsyncMutex<()>>) {
+  let mut locks = DEST_LOCKS.lock().unwrap();
+  let is_last_user = locks
+    .get(path)
+    .map(|entry| Arc::strong_count(entry) == 2)
+    .unwrap_or(false);
+  if is_last_user
+    && let Some(entry) = locks.get(path)
+    && Arc::ptr_eq(entry, lock)
+  {
+    locks.remove(path);
+  }
+}
 pub struct DownloadTask {
   p_handle: PTaskHandle,
   param: DownloadParam,
@@ -374,61 +405,91 @@ impl DownloadTask {
 
     Ok((
       async move {
-        // Keep an already verified file instead of downloading it again.
-        if Self::is_dest_verified(&param, &dest_path).await {
-          let total = std::fs::metadata(&dest_path)
-            .map(|meta| meta.len() as i64)
-            .unwrap_or(-1);
-          let mut handle = task_handle.write().unwrap();
-          handle.set_total(total);
-          handle.set_current(total);
-          handle.mark_started();
-          handle.mark_completed();
-          return Ok(());
-        }
+        // Serialize writers of the same destination (e.g. a retried download
+        // racing with the original task).
+        let dest_lock = dest_lock(&dest_path);
+        let guard = dest_lock.clone().lock_owned().await;
 
-        // Never leave an unverified final file behind after a failed transfer.
-        if dest_path.exists() {
-          let _ = tokio::fs::remove_file(&dest_path).await;
-        }
+        let result = Self::transfer_download(
+          &app_handle,
+          &task_handle,
+          &param,
+          &dest_path,
+          &part_path,
+          &candidates,
+          limiter,
+        )
+        .await;
 
-        let mut errors = Vec::with_capacity(candidates.len());
-        for candidate in &candidates {
-          match Self::try_download(
-            &app_handle,
-            &task_handle,
-            candidate,
-            &param,
-            &dest_path,
-            &part_path,
-            limiter.clone(),
-          )
-          .await
-          {
-            Ok(()) => return Ok(()),
-            Err(error) => {
-              log::warn!(
-                "download from {} failed: {}",
-                candidate.host_str().unwrap_or("unknown host"),
-                error.0
-              );
-              errors.push(format!(
-                "{}: {}",
-                candidate.host_str().unwrap_or("unknown host"),
-                error.0
-              ));
-            }
-          }
-        }
-
-        Err(SJMCLError(format!(
-          "download failed after trying {} source(s): {}",
-          candidates.len(),
-          errors.join("; ")
-        )))
+        drop(guard);
+        release_dest_lock(&dest_path, &dest_lock);
+        result
       },
       handle,
     ))
+  }
+
+  async fn transfer_download(
+    app_handle: &AppHandle,
+    task_handle: &Arc<RwLock<PTaskHandle>>,
+    param: &DownloadParam,
+    dest_path: &Path,
+    part_path: &Path,
+    candidates: &[Url],
+    limiter: Option<Limiter>,
+  ) -> SJMCLResult<()> {
+    // Keep an already verified file instead of downloading it again.
+    if Self::is_dest_verified(param, dest_path).await {
+      let total = std::fs::metadata(dest_path)
+        .map(|meta| meta.len() as i64)
+        .unwrap_or(-1);
+      let mut handle = task_handle.write().unwrap();
+      handle.set_total(total);
+      handle.set_current(total);
+      handle.mark_started();
+      handle.mark_completed();
+      return Ok(());
+    }
+
+    // Never leave an unverified final file behind after a failed transfer.
+    if dest_path.exists() {
+      let _ = tokio::fs::remove_file(dest_path).await;
+    }
+
+    let mut errors = Vec::with_capacity(candidates.len());
+    for candidate in candidates {
+      match Self::try_download(
+        app_handle,
+        task_handle,
+        candidate,
+        param,
+        dest_path,
+        part_path,
+        limiter.clone(),
+      )
+      .await
+      {
+        Ok(()) => return Ok(()),
+        Err(error) => {
+          log::warn!(
+            "download from {} failed: {}",
+            candidate.host_str().unwrap_or("unknown host"),
+            error.0
+          );
+          errors.push(format!(
+            "{}: {}",
+            candidate.host_str().unwrap_or("unknown host"),
+            error.0
+          ));
+        }
+      }
+    }
+
+    Err(SJMCLError(format!(
+      "download failed after trying {} source(s): {}",
+      candidates.len(),
+      errors.join("; ")
+    )))
   }
 
   pub async fn future(
