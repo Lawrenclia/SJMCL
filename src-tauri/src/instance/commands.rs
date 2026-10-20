@@ -72,8 +72,11 @@ use crate::resource::models::{
   GameClientResourceInfo, ModLoaderResourceInfo, OptiFineResourceInfo,
 };
 use crate::tasks::PTaskParam;
-use crate::tasks::commands::schedule_progressive_task_group;
+use crate::tasks::commands::{
+  schedule_progressive_task_group, schedule_progressive_task_group_inner,
+};
 use crate::tasks::download::DownloadParam;
+use crate::tasks::monitor::{GroupHooks, make_group_hook};
 use crate::utils::fs::{
   RemoveDirGuard, copy_whole_dir, create_url_shortcut, generate_unique_filename,
   get_files_with_regex, get_files_with_regex_recursive, get_subdirectories,
@@ -1489,8 +1492,6 @@ pub async fn change_mod_loader(
     branch: new_mod_loader.branch.clone(),
   };
 
-  instance.mod_loader = mod_loader.clone();
-
   if mod_loader.loader_type != ModLoaderType::Unknown {
     install_mod_loader(
       app.clone(),
@@ -1508,23 +1509,54 @@ pub async fn change_mod_loader(
   }
 
   if !modloader_task_params.is_empty() {
-    schedule_progressive_task_group(
+    // Do not touch the instance config until every installer/library download
+    // has succeeded: otherwise a failed install leaves the instance claiming a
+    // loader that is not on disk.
+    let hook_instance = instance.clone();
+    let hook_loader = mod_loader.clone();
+    let hook_version_info = version_info.clone();
+    let hook_json_path = json_path.clone();
+    let on_success = make_group_hook(move |app| async move {
+      let mut updated = hook_instance;
+      updated.mod_loader = hook_loader;
+
+      if let Err(error) = save_json_async(&hook_version_info, &hook_json_path).await {
+        log::error!("Failed to save instance version json: {error:?}");
+      }
+      if let Err(error) = updated.save_json_cfg().await {
+        log::error!("Failed to save instance config: {error:?}");
+      }
+      if let Ok(mut state) = app.state::<Mutex<HashMap<String, Instance>>>().lock() {
+        state.insert(updated.id.clone(), updated);
+      }
+    });
+
+    schedule_progressive_task_group_inner(
       app.clone(),
       format!(
         "change-mod-loader?{} {}",
-        instance.mod_loader.loader_type, instance.mod_loader.version
+        mod_loader.loader_type, mod_loader.version
       ),
       modloader_task_params,
       true,
+      Some(GroupHooks {
+        on_success: vec![on_success],
+        on_failure: Vec::new(),
+      }),
     )
     .await?;
+  } else {
+    // Nothing to download: apply the change immediately.
+    instance.mod_loader = mod_loader;
+    save_json_async(&version_info, &json_path).await?;
+    instance
+      .save_json_cfg()
+      .await
+      .map_err(|_| InstanceError::FileCreationFailed)?;
+    if let Ok(mut state) = app.state::<Mutex<HashMap<String, Instance>>>().lock() {
+      state.insert(instance.id.clone(), instance);
+    }
   }
-
-  save_json_async(&version_info, &json_path).await?;
-  instance
-    .save_json_cfg()
-    .await
-    .map_err(|_| InstanceError::FileCreationFailed)?;
 
   Ok(())
 }
