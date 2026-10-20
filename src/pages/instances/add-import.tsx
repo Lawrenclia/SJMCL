@@ -18,7 +18,6 @@ import {
   OptionItemGroup,
   OptionItemGroupProps,
 } from "@/components/common/option-item";
-import { CreateInstanceModal } from "@/components/modals/create-instance-modal";
 import { DownloadGameServerModal } from "@/components/modals/download-game-server-modal";
 import DownloadModpackModal from "@/components/modals/download-modpack-modal";
 import { useSharedModals } from "@/contexts/shared-modal";
@@ -28,11 +27,6 @@ const AddAndImportInstancePage = () => {
   const router = useRouter();
   const { openSharedModal } = useSharedModals();
 
-  const {
-    isOpen: isCreateInstanceModalOpen,
-    onOpen: onOpenCreateInstanceModal,
-    onClose: onCloseCreateInstanceModal,
-  } = useDisclosure();
   const {
     isOpen: isModpackMenuOpen,
     onOpen: onOpenModpackMenu,
@@ -67,7 +61,7 @@ const AddAndImportInstancePage = () => {
   };
 
   const addAndImportOptions: Record<string, () => void> = {
-    new: onOpenCreateInstanceModal,
+    new: () => openSharedModal("create-instance"),
     modpack: onOpenModpackMenu,
     manageDirs: () => router.push("/settings/global-game"),
   };
@@ -154,10 +148,6 @@ const AddAndImportInstancePage = () => {
           <OptionItemGroup w="100%" {...group} key={index} />
         ))}
       </VStack>
-      <CreateInstanceModal
-        isOpen={isCreateInstanceModalOpen}
-        onClose={onCloseCreateInstanceModal}
-      />
       <DownloadModpackModal
         isOpen={isDownloadModpackModalOpen}
         onClose={onCloseDownloadModpackModal}

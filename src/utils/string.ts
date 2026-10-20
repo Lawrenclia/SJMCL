@@ -145,3 +145,11 @@ export const displayLauncherVersion = (info: {
   // release builds: keep the existing format, distinguishing portable.
   return `${info.launcherVersion}${info.isPortable ? " (Portable)" : ""}`;
 };
+
+export const formatPrintable = (value: any): string => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return value.toString();
+  if (typeof value === "boolean") return value.toString();
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return "";
+};

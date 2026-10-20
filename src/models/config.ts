@@ -75,6 +75,33 @@ export interface GameDirectory {
   dir: string;
 }
 
+export enum LLMProviderType {
+  Ollama = "ollama",
+  OpenAiCompatible = "openAiCompatible",
+  Anthropic = "anthropic",
+  Gemini = "gemini",
+}
+
+export interface LLMParametersConfig {
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+}
+
+export interface LLMProviderConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  providerType: LLMProviderType;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  parameters: LLMParametersConfig;
+}
+
 export interface LauncherConfig {
   basicInfo: {
     launcherVersion: string;
@@ -154,6 +181,9 @@ export interface LauncherConfig {
     };
   };
   intelligence: {
+    enabled: boolean;
+    activeProviderId: string;
+    providers: LLMProviderConfig[];
     mcpServer: {
       launcher: {
         enabled: boolean;
@@ -347,6 +377,9 @@ export const defaultConfig: LauncherConfig = {
     },
   },
   intelligence: {
+    enabled: false,
+    activeProviderId: "",
+    providers: [],
     mcpServer: {
       launcher: {
         enabled: true,
@@ -358,8 +391,8 @@ export const defaultConfig: LauncherConfig = {
     enabled: [],
     homeWidgetState: [],
   },
-  localGameDirectories: [{ name: "Current", dir: ".minecraft/" }],
   globalGameConfig: defaultGameConfig,
+  localGameDirectories: [{ name: "Current", dir: ".minecraft/" }],
   discoverSourceEndpoints: [
     ["https://www.mualliance.cn/news/api-sjmcl/article", true],
     ["https://api.jsumc.fun/sjmcl?type=tribee&src=535", true],
@@ -407,4 +440,24 @@ export interface VersionMetaInfo {
 export const defaultVersionMetaInfo: VersionMetaInfo = {
   version: "",
   fileName: "",
+};
+
+export const defaultLLMParameters = {
+  temperature: 0.7,
+  maxTokens: 4096,
+  topP: 1.0,
+  frequencyPenalty: 0.0,
+  presencePenalty: 0.0,
+};
+
+export const defaultLLMProviderConfig: LLMProviderConfig = {
+  id: "",
+  name: "",
+  enabled: true,
+  priority: 0,
+  providerType: LLMProviderType.OpenAiCompatible,
+  baseUrl: "",
+  apiKey: "",
+  model: "",
+  parameters: { ...defaultLLMParameters },
 };

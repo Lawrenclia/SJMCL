@@ -107,7 +107,6 @@ export const MenuSelector: React.FC<MenuSelectorProps> = ({
         size={size}
         variant="outline"
         textAlign="left"
-        w="auto"
         flexShrink={0}
         {...buttonProps}
       >
@@ -133,6 +132,7 @@ export const MenuSelector: React.FC<MenuSelectorProps> = ({
                 value={v}
                 fontSize={fontSize}
                 isDisabled={disabled}
+                w="full"
               >
                 {renderLabel(label)}
               </MenuItemOption>

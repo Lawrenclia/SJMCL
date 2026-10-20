@@ -3,9 +3,10 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main", 
-    "game_log*", 
-    "game_error*", 
+    "main",
+    "game_log*",
+    "game_error*",
+    "agent_chat",
     "extension_standalone*"
   ],
   "permissions": [

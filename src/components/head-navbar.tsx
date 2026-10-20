@@ -73,6 +73,7 @@ const HeadNavBar = () => {
         pr={isDownloadIndicatorShown ? 4 : 8}
         py={2}
         className={`animated-card ${isAnimating ? "animate" : ""}`}
+        borderRadius="2xl"
       >
         <HStack spacing={4} h="100%">
           <TitleShort />

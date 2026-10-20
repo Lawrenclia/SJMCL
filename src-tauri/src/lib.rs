@@ -14,6 +14,8 @@ use account::helpers::offline::yggdrasil_server::YggdrasilServer;
 use account::models::AccountInfo;
 use instance::helpers::misc::refresh_and_update_instances;
 use instance::models::misc::Instance;
+use intelligence::azalea_bot::models::AgentState;
+use intelligence::models::ChatHistory;
 use launch::models::LaunchingState;
 use launcher_config::helpers::java::refresh_and_update_javas;
 use launcher_config::helpers::misc::auto_clear_download_cache;
@@ -125,6 +127,17 @@ pub async fn run() {
         account::commands::delete_auth_server,
         account::commands::retrieve_other_launcher_account_info,
         account::commands::import_external_account_info,
+        intelligence::commands::retrieve_llm_models,
+        intelligence::commands::fetch_llm_chat_response,
+        intelligence::commands::fetch_llm_chat_response_stream,
+        intelligence::commands::save_intelligence_provider,
+        intelligence::commands::delete_intelligence_provider,
+        intelligence::commands::set_active_intelligence_provider,
+        intelligence::commands::retrieve_chat_sessions,
+        intelligence::commands::retrieve_chat_session,
+        intelligence::commands::save_chat_session,
+        intelligence::commands::delete_chat_session,
+        intelligence::commands::join_local_server,
         instance::commands::retrieve_instance_list,
         instance::commands::create_instance,
         instance::commands::update_instance_config,
@@ -239,6 +252,9 @@ pub async fn run() {
         let instances: HashMap<String, Instance> = HashMap::new();
         app.manage(Mutex::new(instances));
 
+        let chat_history = ChatHistory::load().unwrap_or_default();
+        app.manage(Mutex::new(chat_history));
+
         let javas: Vec<JavaInfo> = vec![];
         app.manage(Mutex::new(javas));
 
@@ -258,6 +274,8 @@ pub async fn run() {
 
         let launching_queue = Vec::<LaunchingState>::new();
         app.manage(Mutex::new(launching_queue));
+
+        app.manage(Mutex::new(AgentState::default()));
 
         // start local yggdrasil server for offline accounts
         let local_ygg_server = YggdrasilServer::new();

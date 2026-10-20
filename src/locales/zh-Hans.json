@@ -73,7 +73,10 @@
           "description": "本项目遵循 GNU General Public License v3.0 协议（包含附加条款）"
         }
       }
-    }
+    },
+    "bottomWarning": "由 AI 助手生成的内容，仅供参考。",
+    "noHistory": "暂无聊天记录",
+    "untitledSession": "未命名会话"
   },
   "AccountsPage": {
     "button": {
@@ -221,6 +224,78 @@
       "buyMinecraft": "购买 Minecraft",
       "useOAuthLogin": "OAuth 登录",
       "usePasswordLogin": "账号密码登录"
+    }
+  },
+  "AgentButton": {
+    "enabled": "您好 {{name}}，很高兴为您服务！",
+    "disabled": "请先在设置中启用智能服务。",
+    "turnToSettings": "转到设置",
+    "startChatting": "开始聊天",
+    "joinGame": "想要和缪汐一起玩 Minecraft 吗？",
+    "joinGameConfirm": "加入游戏"
+  },
+  "AgentChatPage": {
+    "description": "与缪汐开始第一句对话吧！",
+    "placeholder": "问问缪汐，回车发送~",
+    "suggestions": {
+      "items": [
+        "帮我下载最新版本MC",
+        "启动游戏",
+        "看看SJMC新闻"
+      ]
+    },
+    "thinking": "正在思考",
+    "thinkingFinished": "思考完成",
+    "skipThinking": "跳过思考",
+    "skipThinkingPrompt": "请停止展示思考过程，直接给出最终答案，不要输出 <think> 标签内容。",
+    "toolCall": {
+      "title": "调用魔法",
+      "confirm": "确认",
+      "cancel": "取消",
+      "execute": "执行",
+      "result": "执行结果",
+      "error": "执行失败",
+      "launchInstance": {
+        "success": "已成功打开游戏启动界面",
+        "fail": "无法找到该游戏实例"
+      }
+    }
+  },
+  "AgentJoinGameModal": {
+    "header": {
+      "title": "邀请缪汐加入游戏"
+    },
+    "steps": {
+      "player": {
+        "title": "选择离线账号",
+        "noOfflineAccounts": "当前没有离线账号",
+        "addOfflineAccount": "添加离线账号"
+      },
+      "instance": {
+        "title": "选择实例",
+        "noSupportedInstances": "暂无可用实例（仅支持 Minecraft {{version}}）",
+        "goCreateInstance": "去下载",
+        "launchAndNext": "启动并下一步"
+      },
+      "server": {
+        "title": "连接局域网服务器",
+        "description1": "请在游戏中摁下",
+        "description2": "打开设置面板，并选择“向局域网开放”。",
+        "port": "端口号",
+        "portDescription": "本地游戏服务器端口（自动检测）",
+        "botName": "Bot 名称",
+        "botNameDescription": "仅允许英文、下划线和数字，且不能与游戏中玩家重名",
+        "botNameInvalid": "名称不合法",
+        "botInGame": "正在运行",
+        "joinServer": "加入服务器",
+        "error": {
+          "not_in_game": "尚未启动",
+          "connection_failed": "Bot 连接服务器失败",
+          "disconnected": "Bot 被踢出服务器",
+          "death": "Bot 已在游戏中死亡",
+          "unknown": "未知原因"
+        }
+      }
     }
   },
   "AlertResourceDependencyModal": {
@@ -664,11 +739,6 @@
       "mojang-java": "Java {{param}} 运行时"
     }
   },
-  "Editable": {
-    "edit": "编辑",
-    "save": "保存",
-    "cancel": "取消"
-  },
   "EditGameDirectoryModal": {
     "header": {
       "title": {
@@ -712,6 +782,11 @@
         "invalid": "目录路径不合法"
       }
     }
+  },
+  "Editable": {
+    "edit": "编辑",
+    "save": "保存",
+    "cancel": "取消"
   },
   "Empty": {
     "noData": "无数据"
@@ -1034,6 +1109,7 @@
       "javaVersion": "Java 版本"
     },
     "button": {
+      "aiAnalysis": "使用 AI 分析",
       "exportGameInfo": "导出游戏崩溃报告",
       "gameLogs": "游戏日志",
       "help": "帮助"
@@ -1107,8 +1183,9 @@
       "MOD_INTERNET_ERROR": "当前实例由于模组下载失败，无法继续运行。请检查网络连接或使用网络代理。",
       "VICS_MODERN_WARFARE_ERROR": "当前实例由于 Vics Modern Warfare 模组错误，无法继续运行。请尝试更新或删除该模组。",
       "FORGE_LITELOADER_CONFLICT": "当前实例由于 Forge 与 LiteLoader 冲突，无法继续运行。请尝试删除 LiteLoader 或更换 Forge 版本。",
-      "UNKNOWN": "暂时无法分析该错误，请查看游戏日志或导出错误崩溃报告。"
-    }
+      "UNKNOWN": "暂时无法分析该错误，可尝试使用 AI 分析，或查看游戏日志、导出错误崩溃报告。"
+    },
+    "aiAnalysis": "AI 崩溃分析"
   },
   "GameLogPage": {
     "placeholder": "输入关键词筛选",
@@ -1182,6 +1259,7 @@
       }
     },
     "skip": "跳过",
+    "unknown": "未知",
     "version": {
       "dev": "开发版本",
       "nightly": "夜间构建版本",
@@ -1221,6 +1299,10 @@
           "on": "开启",
           "search-only": "仅显示搜索",
           "off": "隐藏"
+        },
+        "enableAiProvider": {
+          "title": "生成式 AI 功能",
+          "description": "启用后，可在游戏崩溃页面使用 AI 分析崩溃原因"
         },
         "instancesNavType": {
           "title": "实例页导航栏模式",
@@ -1677,6 +1759,22 @@
   "IntelligenceSettingsPage": {
     "title": "SJMCL 智能",
     "description": "将人工智能模型整合进您的启动器使用与 Minecraft 游玩体验",
+    "masterSwitch": {
+      "title": "智能服务",
+      "description": "结合您提供的生成式语言模型，为 SJMCL 引入更多智能体验"
+    },
+    "setActive": "设为主要",
+    "add": "添加来源",
+    "edit": "编辑",
+    "delete": "删除",
+    "deleteConfirm": "确定要删除此来源吗？",
+    "failoverHint": "当主要来源请求失败时，将按优先级尝试其他已启用的来源。",
+    "providerType": {
+      "ollama": "Ollama",
+      "openAiCompatible": "OpenAI 兼容",
+      "anthropic": "Anthropic (Claude)",
+      "gemini": "Google Gemini"
+    },
     "mcpServer": {
       "title": "MCP 服务",
       "headExtra": "以下设置重启后生效",
@@ -1718,6 +1816,75 @@
     "confirmDelete": {
       "title": "移除 Java",
       "description": "确认要移除此版本 Java 吗？（SJMCL 将无法使用此 Java 启动游戏，但不会删除硬盘上的文件）"
+    }
+  },
+  "LLMProviderSettingsModal": {
+    "header": {
+      "title": {
+        "add": "添加大模型服务",
+        "edit": "编辑大模型服务"
+      }
+    },
+    "content": {
+      "model": {
+        "title": "模型",
+        "settings": {
+          "name": {
+            "title": "模型名称",
+            "placeholder": "例如：ChatGPT-4"
+          },
+          "provider": {
+            "title": "服务提供商",
+            "options": {
+              "ollama": "Ollama",
+              "openAiCompatible": "OpenAI 兼容",
+              "anthropic": "Anthropic (Claude)",
+              "gemini": "Google Gemini"
+            }
+          },
+          "baseUrl": {
+            "title": "基础 URL",
+            "fullUrl": "完整 URL: {{url}}"
+          },
+          "endpoint": {
+            "title": "API 端点"
+          },
+          "apiKey": {
+            "title": "API 密钥"
+          },
+          "model": {
+            "title": "模型名称"
+          },
+          "checkAvailability": {
+            "title": "模型服务可用性",
+            "available": "可用",
+            "unavailable": "不可用"
+          }
+        }
+      },
+      "parameters": {
+        "title": "高级参数",
+        "temperature": {
+          "title": "温度",
+          "description": "控制随机性。较高的值使输出更具创造性，较低的值使输出更确定。"
+        },
+        "maxTokens": {
+          "title": "最大词元数",
+          "description": "生成响应的最大词元数量。"
+        },
+        "topP": {
+          "title": "Top P",
+          "description": "核采样。考虑累积概率达到 top_p 的词元。"
+        },
+        "frequencyPenalty": {
+          "title": "频率惩罚",
+          "description": "根据词元在文本中出现的频率进行惩罚。仅适用于 OpenAI 兼容。"
+        },
+        "presencePenalty": {
+          "title": "存在惩罚",
+          "description": "根据词元是否已出现在文本中进行惩罚。仅适用于 OpenAI 兼容。"
+        }
+      }
     }
   },
   "LanguageMenu": {
@@ -1778,6 +1945,11 @@
     "notCompatibleWith": "与 {{item}} 不兼容",
     "noVersionSelected": "未选择版本"
   },
+  "MCVersionNumberHelper": {
+    "content": "自 2026 年起，Minecraft 版本号采取新的命名规则，以年份作为版本号首位（如 26.1）以取代原有的 1.x 版本号规则。",
+    "linkText": "阅读官方文档",
+    "url": "https://www.minecraft.net/zh-hans/article/minecraft-new-version-numbering-system"
+  },
   "MainLayout": {
     "fileDnD": {
       "title": "导入整合包",
@@ -1808,11 +1980,6 @@
     "placeholder": {
       "javaPath": "请输入或选择 Java 可执行文件路径"
     }
-  },
-  "MCVersionNumberHelper": {
-    "content": "自 2026 年起，Minecraft 版本号采取新的命名规则，以年份作为版本号首位（如 26.1）以取代原有的 1.x 版本号规则。",
-    "linkText": "阅读官方文档",
-    "url": "https://www.minecraft.net/zh-hans/article/minecraft-new-version-numbering-system"
   },
   "MemoryStatusProgress": {
     "title": "内存状态",
@@ -3069,6 +3236,32 @@
           "description": {
             "INVALID_IDENTIFIER": "扩展标识符无效",
             "EXTENSION_NOT_FOUND": "未找到对应扩展插件"
+          }
+        }
+      }
+    },
+    "intelligence": {
+      "checkLLMServiceAvailability": {
+        "success": "生成式 AI 服务可用",
+        "error": {
+          "title": "生成式 AI 服务不可用",
+          "description": {
+            "NETWORK_ERROR": "网络错误",
+            "API_PARSE_ERROR": "无法正常读取服务 API",
+            "NO_SUCH_MODEL": "指定模型不存在，请检查名称是否正确",
+            "INVALID_API_KEY": "API 密钥无效"
+          }
+        }
+      },
+      "fetchLLMChatResponse": {
+        "error": {
+          "title": "获取 AI 聊天响应失败",
+          "description": {
+            "NETWORK_ERROR": "网络错误",
+            "NOT_ENABLED": "生成式 AI 功能未启用",
+            "API_PARSE_ERROR": "无法正常读取服务 API",
+            "INVALID_API_KEY": "API 密钥无效",
+            "NO_RESPONSE": "没有返回任何内容"
           }
         }
       }

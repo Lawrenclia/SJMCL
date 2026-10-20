@@ -1,15 +1,16 @@
 .tabList {
   position: relative;
-  min-height: 28px;
-  padding: 2px;
+  min-height: 40px;
+  padding: 5px 4px;
+  gap: 2px;
   isolation: isolate;
 }
 
 .indicator {
   position: absolute;
   left: 0;
-  top: 2px;
-  bottom: 2px;
+  top: 5px;
+  bottom: 5px;
   width: 0;
   border-radius: var(--chakra-radii-full);
   pointer-events: none;
@@ -34,8 +35,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  height: 24px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 16px;
   font-size: var(--chakra-fontSizes-sm);
   line-height: 1;
   border-radius: var(--chakra-radii-full);
@@ -54,6 +55,8 @@
 .tabIcon {
   display: block;
   flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
 }
 
 .tabButton:hover {

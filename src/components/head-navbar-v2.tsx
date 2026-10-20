@@ -1,7 +1,7 @@
 import {
   Box,
-  Divider,
   Flex,
+  FlexProps,
   HStack,
   Icon,
   Text,
@@ -29,15 +29,13 @@ import {
   LuSettings,
   LuZap,
 } from "react-icons/lu";
-import AdvancedCard from "@/components/common/advanced-card";
 import { DownloadIndicator } from "@/components/download-indicator";
-import { TitleShort } from "@/components/logo-title";
 import { useLauncherConfig } from "@/contexts/config";
 import { useSharedModals } from "@/contexts/shared-modal";
 import { useTaskContext } from "@/contexts/task";
 import styles from "@/styles/head-navbar.module.css";
 
-const HeadNavBar = () => {
+const HeadNavBar: React.FC<Omit<FlexProps, "children">> = ({ ...props }) => {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { config } = useLauncherConfig();
@@ -53,7 +51,6 @@ const HeadNavBar = () => {
     (headNavStyle === "adaptive" && isCompactLayout);
   const isDownloadIndicatorShown = tasks.length > 0;
 
-  const [isAnimating, setIsAnimating] = useState(false);
   const [indicator, setIndicator] = useState({
     left: 0,
     width: 0,
@@ -109,17 +106,6 @@ const HeadNavBar = () => {
       { icon: LuSettings, label: "settings", path: "/settings" },
     ];
   }, [config.general.functionality.discoverPage, openSharedModal]);
-
-  // animation trigger
-  useEffect(() => {
-    setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 700);
-    return () => clearTimeout(timer);
-  }, [
-    config.appearance.theme.useLiquidGlassDesign,
-    isDownloadIndicatorShown,
-    isSimplified,
-  ]);
 
   const selectedIndex = navList.findIndex(
     (item) => item.path && router.pathname.startsWith(item.path)
@@ -200,88 +186,64 @@ const HeadNavBar = () => {
   };
 
   return (
-    <Flex justify="center" p={4}>
-      <AdvancedCard
-        level="back"
-        pl={8}
-        pr={isDownloadIndicatorShown ? 4 : 8}
-        py={2}
-        className={`animated-card ${isAnimating ? "animate" : ""}`}
-      >
-        <HStack spacing={4} h="100%">
-          <TitleShort />
-          <HStack
-            ref={navListRef}
-            role="tablist"
-            className={styles.tabList}
-            style={
-              {
-                "--head-nav-indicator-bg": indicatorBg,
-                "--head-nav-indicator-border": indicatorBorder,
-                "--head-nav-hover-bg": hoverBg,
-              } as CSSProperties
-            }
-          >
-            <Box
-              className={`${styles.indicator} ${indicator.visible ? styles.indicatorVisible : ""}`}
-              transform={`translateX(${indicator.left}px)`}
-              w={`${indicator.width}px`}
-            />
-            {navList.map((item, index) => {
-              const isSelected = selectedIndex === index;
-              return (
-                <Tooltip
-                  key={`${item.label}-${item.path ?? "action"}`}
-                  label={t(`HeadNavBar.navList.${item.label}`)}
-                  placement="bottom"
-                  isDisabled={!isSimplified || isSelected}
+    <Flex justify="center" p={0} {...props}>
+      <HStack spacing={4} h="100%" p={0}>
+        <HStack
+          p={0}
+          ref={navListRef}
+          role="tablist"
+          className={styles.tabList}
+          style={
+            {
+              "--head-nav-indicator-bg": indicatorBg,
+              "--head-nav-indicator-border": indicatorBorder,
+              "--head-nav-hover-bg": hoverBg,
+            } as CSSProperties
+          }
+        >
+          <Box
+            className={`${styles.indicator} ${indicator.visible ? styles.indicatorVisible : ""}`}
+            transform={`translateX(${indicator.left}px)`}
+            w={`${indicator.width}px`}
+          />
+          {navList.map((item, index) => {
+            const isSelected = selectedIndex === index;
+            return (
+              <Tooltip
+                key={`${item.label}-${item.path ?? "action"}`}
+                label={t(`HeadNavBar.navList.${item.label}`)}
+                placement="bottom"
+                isDisabled={!isSimplified || isSelected}
+              >
+                <Box
+                  as="button"
+                  ref={(el: HTMLButtonElement | null) => {
+                    tabRefs.current[index] = el;
+                  }}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => handleTabChange(index)}
+                  fontWeight={isSelected ? "600" : "normal"}
+                  color={isSelected ? selectedTextColor : unselectTabColor}
+                  className={styles.tabButton}
                 >
-                  <Box
-                    as="button"
-                    ref={(el: HTMLButtonElement | null) => {
-                      tabRefs.current[index] = el;
-                    }}
-                    type="button"
-                    role="tab"
-                    aria-selected={isSelected}
-                    onClick={() => handleTabChange(index)}
-                    fontWeight={isSelected ? "600" : "normal"}
-                    color={isSelected ? selectedTextColor : unselectTabColor}
-                    className={styles.tabButton}
+                  <HStack
+                    id={`head-navbar-tab-${item.label}`}
+                    className={styles.tabContent}
                   >
-                    <HStack
-                      id={`head-navbar-tab-${item.label}`}
-                      className={styles.tabContent}
-                    >
-                      <Icon
-                        as={item.icon}
-                        boxSize={3.5}
-                        className={styles.tabIcon}
-                      />
-                      {(!isSimplified || isSelected) && (
-                        <Text fontSize="sm" lineHeight="1">
-                          {t(`HeadNavBar.navList.${item.label}`)}
-                        </Text>
-                      )}
-                    </HStack>
-                  </Box>
-                </Tooltip>
-              );
-            })}
-          </HStack>
-          {isDownloadIndicatorShown && (
-            <>
-              <Divider
-                orientation="vertical"
-                size="xl"
-                h="100%"
-                borderColor="var(--chakra-colors-chakra-placeholder-color)"
-              />
-              <DownloadIndicator />
-            </>
-          )}
+                    <Icon as={item.icon} size="xs" className={styles.tabIcon} />
+                    {(!isSimplified || isSelected) && (
+                      <Text>{t(`HeadNavBar.navList.${item.label}`)}</Text>
+                    )}
+                  </HStack>
+                </Box>
+              </Tooltip>
+            );
+          })}
         </HStack>
-      </AdvancedCard>
+        {isDownloadIndicatorShown && <DownloadIndicator />}
+      </HStack>
     </Flex>
   );
 };

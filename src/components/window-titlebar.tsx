@@ -5,10 +5,15 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuMaximize2, LuMinimize2, LuMinus, LuX } from "react-icons/lu";
 import { CommonIconButton } from "@/components/common/common-icon-button";
+import HeadNavBar from "@/components/head-navbar-v2";
 import { useLauncherConfig } from "@/contexts/config";
 import { useExtensionHost } from "@/contexts/extension/host";
 
-const MainWindowExtensionTitle = () => {
+const MainWindowExtensionTitle = ({
+  titlebarHeight,
+}: {
+  titlebarHeight: number;
+}) => {
   const { t } = useTranslation();
   const router = useRouter();
   const { extensionList } = useExtensionHost();
@@ -33,7 +38,19 @@ const MainWindowExtensionTitle = () => {
     (extension) => extension.identifier === extensionIdentifier
   )?.name;
 
-  if (!extensionName) return null;
+  // if the current page is provided by an extension, show the extension name in titlebar center;
+  // otherwise the head navbar takes the place.
+  if (!extensionName) {
+    return (
+      <HeadNavBar
+        h={`${titlebarHeight}px`}
+        minH={`${titlebarHeight}px`}
+        pos="absolute"
+        left="50%"
+        transform="translateX(-50%)"
+      />
+    );
+  }
 
   return (
     <Flex
@@ -62,14 +79,14 @@ const WindowTitlebar = () => {
   const isMac = osType === "macos" || osType === "darwin";
   const isWindows = osType === "windows";
 
-  const titlebarHeight = isWindows ? 32 : 28; // the same as Windows 11 / macOS 15 native titlebar height.
+  const titlebarHeight = 40;
+  const decorumButtonSize = titlebarHeight - 10;
 
-  const [isMacFullscreen, setIsMacFullscreen] = useState(false);
   const [isLinuxMaximized, setIsLinuxMaximized] = useState(false);
   const [isMainWindow, setIsMainWindow] = useState(true);
   const [windowTitle, setWindowTitle] = useState("");
 
-  const titlebarBg = useColorModeValue("whiteAlpha.600", "blackAlpha.500");
+  const titlebarBg = useColorModeValue("whiteAlpha.800", "blackAlpha.700");
   const titlebarBorderColor = useColorModeValue(
     "blackAlpha.200",
     "whiteAlpha.300"
@@ -192,28 +209,6 @@ const WindowTitlebar = () => {
     });
   }, [isWindows]);
 
-  // Listen macOS native fullscreen mode, make titlebar hidden.
-  useEffect(() => {
-    if (typeof window === "undefined" || !isMac) return;
-    const currentWindow = getCurrentWindow();
-    let unlistenResized: (() => void) | undefined;
-    const syncFullscreen = async () => {
-      setIsMacFullscreen(await currentWindow.isFullscreen());
-    };
-    (async () => {
-      await syncFullscreen();
-      unlistenResized = await currentWindow.onResized(syncFullscreen);
-    })();
-
-    return () => {
-      if (unlistenResized) {
-        unlistenResized();
-      }
-    };
-  }, [isMac]);
-
-  if (isMac && isMacFullscreen) return null;
-
   return (
     <Flex
       h={`${titlebarHeight}px`}
@@ -224,9 +219,31 @@ const WindowTitlebar = () => {
       borderColor={titlebarBorderColor}
       zIndex={9999}
       pl={2}
+      sx={{
+        "& .decorum-tb-btn": {
+          height: `${decorumButtonSize}px`,
+          width: `${decorumButtonSize}px`,
+          minWidth: `${decorumButtonSize}px`,
+          aspectRatio: "1 / 1",
+          marginBlock: "5px",
+          borderRadius: "8px",
+          transition: "transform 0.12s ease",
+        },
+        "& .decorum-tb-btn:active": {
+          transform: "translateY(1px)",
+        },
+        "& [data-tauri-decorum-tb] .decorum-tb-btn:last-of-type": {
+          "&:is(:hover, :focus-visible, :active)": {
+            color: "white",
+          },
+          "&:is(:hover, :focus-visible, :active) svg": {
+            stroke: "currentColor",
+          },
+        },
+      }}
     >
       {isMainWindow && !router.pathname.startsWith("/standalone") && (
-        <MainWindowExtensionTitle />
+        <MainWindowExtensionTitle titlebarHeight={titlebarHeight} />
       )}
       <Flex
         id="sjmcl-window-drag-region"
@@ -257,8 +274,9 @@ const WindowTitlebar = () => {
         <HStack
           id="sjmcl-window-decorum-host"
           data-tauri-decorum-tb
-          spacing={0}
+          spacing="8px"
           h="100%"
+          pr="8px"
         />
       )}
       {isLinux && (
@@ -271,7 +289,8 @@ const WindowTitlebar = () => {
               label={button.label}
               withTooltip={false}
               borderRadius="full"
-              h={18}
+              h="30px"
+              my="5px"
               colorScheme={button.colorScheme}
               onClick={button.onClick}
             />

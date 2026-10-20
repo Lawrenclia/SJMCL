@@ -15,6 +15,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio;
 
 use crate::instance::models::misc::Instance;
+use crate::intelligence::azalea_bot::constants::SERVER_PORT_EVENT;
+use crate::intelligence::azalea_bot::models::ServerPortPayload;
 use crate::launch::constants::*;
 use crate::launch::models::{LaunchError, LaunchingState};
 use crate::launcher_config::models::{LauncherVisiablity, ProcessPriority};
@@ -22,6 +24,14 @@ use crate::utils::shell::execute_command_line;
 use crate::utils::window::create_webview_window;
 
 const POLLING_OPERATION_INTERVAL_MS: u64 = 2000;
+
+fn parse_server_port(line: &str) -> Option<String> {
+  const MARKER: &str = "Started serving on ";
+  let marker_idx = line.find(MARKER)?;
+  let tail = &line[(marker_idx + MARKER.len())..];
+  let port: String = tail.chars().take_while(|c| c.is_ascii_digit()).collect();
+  if port.is_empty() { None } else { Some(port) }
+}
 
 struct OutputPipe<T: Read + Send + 'static> {
   app: AppHandle,
@@ -32,6 +42,7 @@ struct OutputPipe<T: Read + Send + 'static> {
   display_log_window: bool,
   ready_tx: Sender<()>,
   game_ready_flag: Arc<AtomicBool>,
+  server_port_emitted: Arc<AtomicBool>,
 }
 
 impl<T: Read + Send + 'static> OutputPipe<T> {
@@ -45,6 +56,14 @@ impl<T: Read + Send + 'static> OutputPipe<T> {
             .emit_to(&self.label, GAME_PROCESS_OUTPUT_EVENT, &line);
         }
         writeln!(self.log_file.lock().unwrap(), "{line}").unwrap();
+        if !self.server_port_emitted.load(Ordering::SeqCst) {
+          if let Some(port) = parse_server_port(&line) {
+            self.server_port_emitted.store(true, Ordering::SeqCst);
+            let _ = self
+              .app
+              .emit_to("main", SERVER_PORT_EVENT, ServerPortPayload { port });
+          }
+        }
         // the first time when log contains 'render thread', 'lwjgl version', or 'lwjgl openal', send signal to launch command, close frontend modal.
         if !self.game_ready_flag.load(Ordering::SeqCst)
           && READY_FLAG.iter().any(|p| line.to_lowercase().contains(p))
@@ -120,6 +139,7 @@ pub async fn monitor_process(
   };
 
   let game_ready_flag = Arc::new(AtomicBool::new(false));
+  let server_port_emitted = Arc::new(AtomicBool::new(false));
   let start_time: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None)); // used to calculate play time
 
   let stdout = child.stdout.take().map(|out| {
@@ -132,6 +152,7 @@ pub async fn monitor_process(
       display_log_window,
       ready_tx: ready_tx.clone(),
       game_ready_flag: game_ready_flag.clone(),
+      server_port_emitted: server_port_emitted.clone(),
     })
     .listen_from_output()
   });
@@ -147,6 +168,7 @@ pub async fn monitor_process(
       display_log_window,
       ready_tx: ready_tx.clone(),
       game_ready_flag: game_ready_flag.clone(),
+      server_port_emitted: server_port_emitted.clone(),
     })
     .listen_from_output()
   });

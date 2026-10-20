@@ -4,6 +4,7 @@ import {
   Center,
   Flex,
   HStack,
+  Icon,
   Link,
   Text,
   useColorModeValue,
@@ -14,18 +15,20 @@ import { appLogDir, join } from "@tauri-apps/api/path";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { t } from "i18next";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from "react-i18next";
 import {
   LuGrid2X2Plus,
+  LuGripVertical,
   LuLanguages,
   LuPackagePlus,
   LuScrollText,
 } from "react-icons/lu";
 import { BeatLoader } from "react-spinners";
+import AgentChat from "@/components/agent-chat";
+import AgentHostess from "@/components/agent-hostess";
 import AdvancedCard from "@/components/common/advanced-card";
 import DevToolbar from "@/components/dev/dev-toolbar";
-import HeadNavBar from "@/components/head-navbar-v2";
 import LanguageMenu from "@/components/language-menu";
 import StarUsModal from "@/components/modals/star-us-modal";
 import WelcomeAndTermsModal from "@/components/modals/welcome-and-terms-modal";
@@ -34,6 +37,7 @@ import {
   useFileDnD,
 } from "@/components/special/file-dnd-overlay";
 import WindowTitlebar from "@/components/window-titlebar";
+import { useAgentChat } from "@/contexts/agent-chat";
 import { useLauncherConfig } from "@/contexts/config";
 import { useExtensionHost } from "@/contexts/extension/host";
 import { useSharedModals } from "@/contexts/shared-modal";
@@ -51,6 +55,54 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const { openGenericConfirmDialog } = useSharedModals();
 
   const isStartupFlowStarted = useRef(false);
+  const {
+    isOpen: isAgentChatOpen,
+    open: openAgentChat,
+    close: closeAgentChat,
+  } = useAgentChat();
+  const [panelWidth, setPanelWidth] = useState(300);
+  const [isDragging, setIsDragging] = useState(false);
+  const originalHeadNavStyle = useRef(config.appearance.theme.headNavStyle);
+  const isLaunchPage = router.pathname === "/launch";
+  const agentChatPanelWidth = `${panelWidth}px`;
+  const agentChatPanelTransform = isAgentChatOpen
+    ? "translateX(0)"
+    : "translateX(-100%)";
+  const agentChatPanelOffset = isAgentChatOpen ? agentChatPanelWidth : "0px";
+
+  useEffect(() => {
+    update(
+      "appearance.theme.headNavStyle",
+      isAgentChatOpen ? "simplified" : originalHeadNavStyle.current
+    );
+  }, [isAgentChatOpen, update]);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isDragging) return;
+      const maxWidth = Math.max(250, window.innerWidth - 450);
+      setPanelWidth(Math.min(Math.max(event.clientX, 250), maxWidth));
+    };
+
+    const handleMouseUp = () => {
+      if (!isDragging) return;
+      setIsDragging(false);
+      document.body.style.cursor = "default";
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const startResize = (event: React.MouseEvent) => {
+    event.preventDefault();
+    setIsDragging(true);
+    document.body.style.cursor = "col-resize";
+  };
 
   const {
     isOpen: isWelcomeAndTermsModalOpen,
@@ -248,6 +300,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     "white",
     "var(--chakra-colors-gray-900)"
   );
+  const resizeHoverBg = useColorModeValue("blackAlpha.600", "whiteAlpha.600");
+  const resizeHoverIconColor = useColorModeValue(
+    "whiteAlpha.800",
+    "blackAlpha.800"
+  );
 
   const linuxBorderStyle = {
     border: "0.5px solid",
@@ -283,6 +340,14 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       </Center>
     );
 
+  const handleAgentChatOpen = (state: boolean) => {
+    if (state) {
+      openAgentChat();
+    } else {
+      closeAgentChat();
+    }
+  };
+
   return (
     <Flex
       direction="column"
@@ -307,22 +372,68 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       >
         <FileDnDProvider>
           <MainLayoutFileDnD />
-          <HeadNavBar />
-          {router.pathname === "/launch" ? (
-            <>{children}</>
-          ) : (
-            <AdvancedCard
-              level="back"
-              flex="1"
-              overflow="auto"
-              mt={1}
-              mb={4}
-              mx={4}
+          <Flex flex="1" minH={0} w="full" flexDir="row">
+            <Flex
+              w={agentChatPanelOffset}
+              overflow="hidden"
+              transform={agentChatPanelTransform}
+              transition="transform 0.35s ease"
+              p={isAgentChatOpen ? 2 : 0}
+              position="relative"
             >
-              {children}
-            </AdvancedCard>
-          )}
+              {isAgentChatOpen && (
+                <>
+                  <AgentChat
+                    onAgentChatPanelClose={() => handleAgentChatOpen(false)}
+                  />
+                  <Flex
+                    role="group"
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    w={2}
+                    h="100%"
+                    borderRadius="full"
+                    cursor="col-resize"
+                    onMouseDown={startResize}
+                    zIndex={10}
+                    transition="background 0.2s"
+                    bgColor={isDragging ? resizeHoverBg : "transparent"}
+                    _hover={{ bgColor: resizeHoverBg }}
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <Icon
+                      as={LuGripVertical}
+                      opacity={isDragging ? 1 : 0}
+                      color={resizeHoverIconColor}
+                      _groupHover={{ opacity: 1 }}
+                      transition="opacity 0.2s"
+                    />
+                  </Flex>
+                </>
+              )}
+            </Flex>
 
+            <Flex flex={1} minW={0} minH={0} p={2} pl={0}>
+              {isLaunchPage ? (
+                children
+              ) : (
+                <AdvancedCard
+                  w="full"
+                  h="full"
+                  level="back"
+                  overflow="auto"
+                  borderRadius="xl"
+                >
+                  {children}
+                </AdvancedCard>
+              )}
+            </Flex>
+          </Flex>
+          {isLaunchPage && !isAgentChatOpen && (
+            <AgentHostess onToggleAgentChat={() => handleAgentChatOpen(true)} />
+          )}
           <WelcomeAndTermsModal
             isOpen={isWelcomeAndTermsModalOpen}
             onClose={onWelcomeAndTermsModalClose}

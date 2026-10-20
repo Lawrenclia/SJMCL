@@ -1,0 +1,75 @@
+use azalea::prelude::{Client, Component};
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, atomic::AtomicBool};
+use std::time::{Duration, Instant};
+use strum_macros::EnumIter;
+use tauri::AppHandle;
+
+#[derive(Clone, Component)]
+pub struct AgentState {
+  pub client: Arc<tokio::sync::Mutex<Option<Client>>>,
+  pub app_handle: Option<AppHandle>,
+  pub exit_notified: Arc<AtomicBool>,
+  pub decision_in_progress: Arc<AtomicBool>,
+  pub pending_chat_priority: Arc<AtomicBool>,
+  pub last_action_time: Arc<std::sync::Mutex<Instant>>,
+  pub cooldown: Duration,
+  pub recent_chats: Arc<std::sync::Mutex<Vec<String>>>,
+}
+
+impl Default for AgentState {
+  fn default() -> Self {
+    Self {
+      client: Arc::new(tokio::sync::Mutex::new(None)),
+      app_handle: None,
+      exit_notified: Arc::new(AtomicBool::new(false)),
+      decision_in_progress: Arc::new(AtomicBool::new(false)),
+      pending_chat_priority: Arc::new(AtomicBool::new(false)),
+      last_action_time: Arc::new(std::sync::Mutex::new(Instant::now())),
+      cooldown: Duration::from_secs(5),
+      recent_chats: Arc::new(std::sync::Mutex::new(Vec::new())),
+    }
+  }
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BotExitPayload {
+  pub reason: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerPortPayload {
+  pub port: String,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq, Hash)]
+pub struct AgentDecision {
+  pub thought: String,
+  pub dialogue: Option<String>,
+  pub action: ActionType,
+  pub target_coords: Option<Coordinates>,
+  pub target_entity_id: Option<u32>,
+  pub target_name: Option<String>,
+  pub slot_source: Option<usize>,
+  pub slot_destination: Option<usize>,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, EnumIter, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionType {
+  Move,
+  Mine,
+  Attack,
+  Equip,
+  GotoPlayer,
+  Wait,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq, Hash)]
+pub struct Coordinates {
+  pub x: i32,
+  pub y: i32,
+  pub z: i32,
+}

@@ -1,10 +1,15 @@
 {
   "identifier": "desktop-capability",
-  "platforms": ["macOS", "windows", "linux"],
+  "platforms": [
+    "macOS",
+    "windows",
+    "linux"
+  ],
   "windows": [
-    "main", 
-    "game_error*", 
-    "game_log*", 
+    "main",
+    "game_error*",
+    "game_log*",
+    "agent_chat",
     "extension_standalone*"
   ],
   "permissions": [

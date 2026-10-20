@@ -73,7 +73,10 @@
           "description": "此項遵 GNU General Public License v3.0（附增條）"
         }
       }
-    }
+    },
+    "bottomWarning": "By AI assistant, for reference only.",
+    "noHistory": "No chat history yet.",
+    "untitledSession": "Untitled Session"
   },
   "AccountsPage": {
     "button": {
@@ -221,6 +224,78 @@
       "buyMinecraft": "買礦藝",
       "useOAuthLogin": "OAuth 登入",
       "usePasswordLogin": "以戶簿符節登入"
+    }
+  },
+  "AgentButton": {
+    "enabled": "Glad to serve you, {{name}}!",
+    "disabled": "Please enable Intelligence functions.",
+    "turnToSettings": "Go to Settings",
+    "startChatting": "Start Chatting",
+    "joinGame": "Want to play Minecraft with me?",
+    "joinGameConfirm": "Join Miuxi"
+  },
+  "AgentChatPage": {
+    "description": "Start your first conversation with Miuxi!",
+    "placeholder": "Ask Miuxi anything, press Enter to send~",
+    "suggestions": {
+      "items": [
+        "Download the latest Minecraft",
+        "Launch the game",
+        "Check SJMC news"
+      ]
+    },
+    "thinking": "Thinking",
+    "thinkingFinished": "Thinking Finished",
+    "skipThinking": "Skip thinking",
+    "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
+    "toolCall": {
+      "title": "Call Magic",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "execute": "Execute",
+      "result": "Result",
+      "error": "Error",
+      "launchInstance": {
+        "success": "Successfully opened game launching panel",
+        "fail": "Failed to find the game instance"
+      }
+    }
+  },
+  "AgentJoinGameModal": {
+    "header": {
+      "title": "Invite Miuxi to Join the Game"
+    },
+    "steps": {
+      "player": {
+        "title": "Select Offline Account",
+        "noOfflineAccounts": "No offline accounts available",
+        "addOfflineAccount": "Add Offline Account"
+      },
+      "instance": {
+        "title": "Select Instance",
+        "noSupportedInstances": "No supported instances available (only supports Minecraft {{version}})",
+        "goCreateInstance": "Go to Download",
+        "launchAndNext": "Launch and Next"
+      },
+      "server": {
+        "title": "Connect to Local Network Server",
+        "description1": "Please press",
+        "description2": "in the game to open the settings panel, and select \"Open to LAN\".",
+        "port": "Port Number",
+        "portDescription": "Local game server port (auto-detected)",
+        "botName": "Bot Name",
+        "botNameDescription": "Only English letters, underscores, and numbers allowed, and cannot conflict with existing players in the game",
+        "botNameInvalid": "Invalid name",
+        "botInGame": "Running",
+        "joinServer": "Join Server",
+        "error": {
+          "not_in_game": "Not in game",
+          "connection_failed": "Bot connection to server failed",
+          "disconnected": "Bot disconnected from server",
+          "death": "Bot has died in the game",
+          "unknown": "Unknown reason"
+        }
+      }
     }
   },
   "AlertResourceDependencyModal": {
@@ -664,11 +739,6 @@
       "mojang-java": "爪哇 {{param}} 行時"
     }
   },
-  "Editable": {
-    "edit": "改",
-    "save": "存",
-    "cancel": "罷"
-  },
   "EditGameDirectoryModal": {
     "header": {
       "title": {
@@ -712,6 +782,11 @@
         "invalid": "夾徑不合法"
       }
     }
+  },
+  "Editable": {
+    "edit": "改",
+    "save": "存",
+    "cancel": "罷"
   },
   "Empty": {
     "noData": "無據"
@@ -1036,7 +1111,8 @@
     "button": {
       "exportGameInfo": "錄出戲潰報告",
       "gameLogs": "戲誌",
-      "help": "助"
+      "help": "助",
+      "aiAnalysis": "AI Analysis"
     },
     "autoCloseCountdown": "此匡將於 {{seconds}} 秒後自闔（擊匡中任意處可止）",
     "bottomAlert": "如需尋求他人助，請錄出並傳送潰報告，而非這個匡的截影",
@@ -1108,7 +1184,8 @@
       "VICS_MODERN_WARFARE_ERROR": "今例以 Vics Modern Warfare 改囊謬，不能續行。請試迭更或刪該改囊。",
       "FORGE_LITELOADER_CONFLICT": "今例以 Forge 與 LiteLoader 衝突，不能續行。請試刪 LiteLoader 或更換 Forge 版。",
       "UNKNOWN": "暫時不能分析該謬，請覽戲誌或錄出謬潰報告。"
-    }
+    },
+    "aiAnalysis": "AI Analysis"
   },
   "GameLogPage": {
     "placeholder": "書關鍵字以篩",
@@ -1188,7 +1265,8 @@
       "beta": "測試版",
       "test-build": "測試構建版"
     },
-    "viewOnWiki": "在 礦藝大典 中覽"
+    "viewOnWiki": "在 礦藝大典 中覽",
+    "unknown": "Unknown"
   },
   "GeneralSettingsPage": {
     "language": {
@@ -1237,6 +1315,10 @@
         "autoDownloadJava": {
           "title": "自調引可用之爪哇行時",
           "description": "啟後，新建例時若無可用之爪哇行時，將自裝至特定夾"
+        },
+        "enableAiProvider": {
+          "title": "Generative AI Features",
+          "description": "When enabled, AI can analyze crash causes on the game crash page."
         }
       }
     },
@@ -1695,6 +1777,22 @@
           "description": "啟者 MCP 服務使用的固定本地埠"
         }
       }
+    },
+    "masterSwitch": {
+      "title": "Intelligent Services",
+      "description": "Enhance SJMCL with intelligent features powered by user-provided generative language models"
+    },
+    "setActive": "Set as Active",
+    "add": "Add Provider",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this provider?",
+    "failoverHint": "When the active provider fails, enabled providers will be tried in priority order.",
+    "providerType": {
+      "ollama": "Ollama",
+      "openAiCompatible": "OpenAI Compatible",
+      "anthropic": "Anthropic (Claude)",
+      "gemini": "Google Gemini"
     }
   },
   "JavaSettingsPage": {
@@ -1718,6 +1816,75 @@
     "confirmDelete": {
       "title": "卸此爪哇",
       "description": "誠欲移除此版爪哇乎？（SJMCL 將不能用此爪哇啟戲，然不刪硬碟上之案。）"
+    }
+  },
+  "LLMProviderSettingsModal": {
+    "header": {
+      "title": {
+        "add": "Add LLM Provider",
+        "edit": "Edit LLM Provider"
+      }
+    },
+    "content": {
+      "model": {
+        "title": "Model",
+        "settings": {
+          "name": {
+            "title": "Model Name",
+            "placeholder": "e.g., ChatGPT-4"
+          },
+          "provider": {
+            "title": "Service Provider",
+            "options": {
+              "ollama": "Ollama",
+              "openAiCompatible": "OpenAI Compatible",
+              "anthropic": "Anthropic (Claude)",
+              "gemini": "Google Gemini"
+            }
+          },
+          "baseUrl": {
+            "title": "Base URL",
+            "fullUrl": "Full URL: {{url}}"
+          },
+          "endpoint": {
+            "title": "API Endpoint"
+          },
+          "apiKey": {
+            "title": "API Key"
+          },
+          "model": {
+            "title": "Model Name"
+          },
+          "checkAvailability": {
+            "title": "Availability",
+            "available": "Available",
+            "unavailable": "Unavailable"
+          }
+        }
+      },
+      "parameters": {
+        "title": "Advanced Parameters",
+        "temperature": {
+          "title": "Temperature",
+          "description": "Controls randomness. Higher values make output more creative, lower values more deterministic."
+        },
+        "maxTokens": {
+          "title": "Max Tokens",
+          "description": "The maximum number of tokens to generate in the response."
+        },
+        "topP": {
+          "title": "Top P",
+          "description": "Nucleus sampling. Consider tokens with cumulative probability reaching top_p."
+        },
+        "frequencyPenalty": {
+          "title": "Frequency Penalty",
+          "description": "Penalizes tokens based on their frequency in the text so far. OpenAI-compatible only."
+        },
+        "presencePenalty": {
+          "title": "Presence Penalty",
+          "description": "Penalizes tokens based on their presence in the text so far. OpenAI-compatible only."
+        }
+      }
     }
   },
   "LanguageMenu": {
@@ -1778,6 +1945,11 @@
     "notCompatibleWith": "與 {{item}} 不相容",
     "noVersionSelected": "未選擇版"
   },
+  "MCVersionNumberHelper": {
+    "content": "自 2026 年起，礦藝 版號採取新的命名規則，以年份作為版號首位（如 26.1）以取代原有的 1.x 版號規則。",
+    "linkText": "覽官方案文",
+    "url": "https://www.minecraft.net/zh-hans/article/minecraft-new-version-numbering-system"
+  },
   "MainLayout": {
     "fileDnD": {
       "title": "導入改囊集",
@@ -1808,11 +1980,6 @@
     "placeholder": {
       "javaPath": "請書入或擇爪哇可執行案之徑"
     }
-  },
-  "MCVersionNumberHelper": {
-    "content": "自 2026 年起，礦藝 版號採取新的命名規則，以年份作為版號首位（如 26.1）以取代原有的 1.x 版號規則。",
-    "linkText": "覽官方案文",
-    "url": "https://www.minecraft.net/zh-hans/article/minecraft-new-version-numbering-system"
   },
   "MemoryStatusProgress": {
     "title": "記憶體狀態",
@@ -3092,6 +3259,32 @@
         "success": "刪案既成",
         "error": {
           "title": "刪案未成"
+        }
+      }
+    },
+    "intelligence": {
+      "checkLLMServiceAvailability": {
+        "success": "GenAI service available",
+        "error": {
+          "title": "GenAI service unavailable",
+          "description": {
+            "NETWORK_ERROR": "Network error",
+            "API_PARSE_ERROR": "Failed to parse service API",
+            "NO_SUCH_MODEL": "The specified model does not exist, please check if the name is correct",
+            "INVALID_API_KEY": "Invalid API key"
+          }
+        }
+      },
+      "fetchLLMChatResponse": {
+        "error": {
+          "title": "Failed to retrieve AI chat response",
+          "description": {
+            "NETWORK_ERROR": "Network error",
+            "NOT_ENABLED": "GenAI feature not enabled",
+            "API_PARSE_ERROR": "Failed to parse service API",
+            "INVALID_API_KEY": "Invalid API key",
+            "NO_RESPONSE": "No response received"
+          }
         }
       }
     }
