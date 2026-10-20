@@ -35,9 +35,30 @@ use crate::launcher_config::models::{LauncherConfig, ProxyType};
 /// let client = build_sjmcl_client(&app, true);
 /// ```
 pub fn build_sjmcl_client(app: &AppHandle, use_proxy: bool) -> Client {
-  let mut builder = ClientBuilder::new()
+  build_sjmcl_client_builder(app, use_proxy)
     .timeout(Duration::from_secs(10))
-    .tcp_keepalive(Duration::from_secs(10));
+    .tcp_keepalive(Duration::from_secs(10))
+    .build()
+    .unwrap_or_else(|_| Client::new())
+}
+
+/// Builds a client dedicated to file transfers.
+///
+/// The shared client uses a short overall request timeout, which is right for
+/// metadata but would abort long file transfers. Downloads therefore only
+/// bound connection setup and idle reads, and retries are handled by the
+/// download task itself.
+pub fn build_sjmcl_download_client(app: &AppHandle) -> Client {
+  build_sjmcl_client_builder(app, true)
+    .connect_timeout(Duration::from_secs(10))
+    .read_timeout(Duration::from_secs(60))
+    .tcp_keepalive(Duration::from_secs(10))
+    .build()
+    .unwrap_or_else(|_| Client::new())
+}
+
+fn build_sjmcl_client_builder(app: &AppHandle, use_proxy: bool) -> ClientBuilder {
+  let mut builder = ClientBuilder::new();
 
   if let Ok(config) = app.state::<Mutex<LauncherConfig>>().lock() {
     // According to the User-Agent requirements of mozilla and BMCLAPI, the User-Agent is set to start with ${NAME}/${VERSION}
@@ -62,7 +83,7 @@ pub fn build_sjmcl_client(app: &AppHandle, use_proxy: bool) -> Client {
     }
   }
 
-  builder.build().unwrap_or_else(|_| Client::new())
+  builder
 }
 
 struct SJMCLRetryableStrategy;
@@ -91,6 +112,20 @@ pub fn with_retry(client: Client) -> ClientWithMiddleware {
   ClientWithMiddlewareBuilder::new(client)
     .with(RetryTransientMiddleware::new_with_policy_and_strategy(
       ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(3600)),
+      SJMCLRetryableStrategy {},
+    ))
+    .build()
+}
+
+/// Retry policy for file transfers.
+///
+/// A downloaded file can be retried from a fallback source quickly, so each
+/// source gets a much shorter retry budget than metadata requests. This keeps
+/// mirror failover fast instead of stalling for a long time on one source.
+pub fn with_download_retry(client: Client) -> ClientWithMiddleware {
+  ClientWithMiddlewareBuilder::new(client)
+    .with(RetryTransientMiddleware::new_with_policy_and_strategy(
+      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(60)),
       SJMCLRetryableStrategy {},
     ))
     .build()

@@ -272,6 +272,9 @@ pub async fn run() {
         let client = build_sjmcl_client(app.handle(), true);
         app.manage(client);
 
+        // Dedicated client for long file transfers (no short overall timeout).
+        app.manage(tasks::download::DownloadClient::new(app.handle()));
+
         let launching_queue = Vec::<LaunchingState>::new();
         app.manage(Mutex::new(launching_queue));
 

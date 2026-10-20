@@ -46,6 +46,12 @@ where
     self.total = total;
   }
 
+  /// Reset the baseline used for speed / ETA computation, e.g. when a
+  /// partially downloaded file is resumed from an offset.
+  pub fn set_last_reported(&mut self, current: i64) {
+    self.last_reported = current;
+  }
+
   pub fn from_desc_interval<T: Clone + Serialize + for<'de> Deserialize<'de>>(
     desc: &PDesc<T>,
     interval: &Duration,

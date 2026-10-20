@@ -7,7 +7,6 @@ pub mod streams;
 
 use download::DownloadParam;
 use events::TauriEventSink;
-use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use sjmcl_types::error::SJMCLResult;
 use std::future::Future;

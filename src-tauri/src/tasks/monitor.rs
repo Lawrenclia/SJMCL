@@ -5,7 +5,7 @@ use log::info;
 use sjmcl_types::error::SJMCLResult;
 use std::collections::HashMap;
 use std::future::Future;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::vec::Vec;
 use tauri::AppHandle;
@@ -13,10 +13,10 @@ use tauri::async_runtime::JoinHandle;
 use tokio::sync::Semaphore;
 
 use crate::launcher_config::commands::retrieve_launcher_config;
-use crate::tasks::download::DownloadTask;
+use crate::tasks::download::{DownloadTask, descriptors_dir};
 use crate::tasks::events::{GEvent, GEventStatus, PEvent, TEvent};
 use crate::tasks::streams::desc::PStatus;
-use crate::tasks::{SJMCLFuture, *};
+use crate::tasks::{SJMCLBoxedFuture, SJMCLFuture, *};
 
 pub struct GroupMonitor {
   pub phs: HashMap<u32, Arc<RwLock<PTaskHandle>>>,
@@ -68,53 +68,111 @@ impl TaskMonitor {
     }
   }
 
-  #[allow(clippy::manual_flatten)]
+  /// Restore unfinished tasks persisted by a previous run.
+  ///
+  /// Descriptors are stored next to the download cache as
+  /// `descriptors/task_{id}.json`. Terminal tasks are cleaned up, the task id
+  /// counter is advanced past every restored id, and all pending downloads are
+  /// re-enqueued (their `.part` files let the transfer resume).
   pub async fn load_saved_tasks(&self) {
     let cache_dir = retrieve_launcher_config(self.app_handle.clone())
       .unwrap()
       .download
       .cache
       .directory;
+    let pattern = format!(
+      "{}/task_*.json",
+      descriptors_dir(&cache_dir).to_string_lossy()
+    );
 
-    for entry in glob(&format!(
-      "{}/descriptors/task_*.json",
-      cache_dir.to_str().unwrap()
-    ))
-    .unwrap()
-    {
-      if let Ok(task) = entry {
-        match PTaskDesc::load(&task.clone()) {
+    let mut restored: Vec<PTaskDesc> = Vec::new();
+    let mut max_task_id = 0u32;
+
+    if let Ok(entries) = glob(&pattern) {
+      for entry in entries.flatten() {
+        match PTaskDesc::load(&entry) {
           Ok(desc) => {
-            let task_id = desc.task_id;
-            let task_group = desc.task_group.clone();
-            match desc.payload {
-              PTaskParam::Download(_) => {
-                let task = DownloadTask::from_descriptor(
-                  self.app_handle.clone(),
-                  desc,
-                  Duration::from_secs(1),
-                  false,
-                );
-                let (f, p_handle) = task
-                  .future(self.app_handle.clone(), self.download_rate_limiter.clone())
-                  .await
-                  .unwrap();
-                self.enqueue_task(task_id, task_group, f, p_handle).await;
-              }
+            if matches!(
+              desc.status,
+              PStatus::Completed | PStatus::Cancelled | PStatus::Failed
+            ) {
+              let _ = std::fs::remove_file(&entry);
+              continue;
             }
+            max_task_id = max_task_id.max(desc.task_id);
+            restored.push(desc);
           }
-          Err(_) => {
-            info!("Failed to load task descriptor: {}", task.display());
-          }
+          Err(_) => info!("Failed to load task descriptor: {}", entry.display()),
         }
+      }
+    }
+
+    self
+      .id_counter
+      .store(max_task_id.saturating_add(1), Ordering::SeqCst);
+
+    for desc in restored {
+      let task_id = desc.task_id;
+      let task_group = desc.task_group.clone();
+      let task =
+        DownloadTask::from_descriptor(self.app_handle.clone(), desc, Duration::from_secs(1), false);
+      match task
+        .future(self.app_handle.clone(), self.download_rate_limiter.clone())
+        .await
+      {
+        Ok((future, handle)) => {
+          self.enqueue_task(task_id, task_group, future, handle).await;
+        }
+        Err(error) => info!("Failed to restore task {task_id}: {error:?}"),
       }
     }
   }
 
   pub fn get_new_id(&self) -> u32 {
-    self
-      .id_counter
-      .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    self.id_counter.fetch_add(1, Ordering::SeqCst)
+  }
+
+  /// Drop the persisted descriptor of a task once it reached a terminal state.
+  fn remove_terminal_descriptor(handle: &Arc<RwLock<PTaskHandle>>) {
+    let path = {
+      let handle = handle.read().unwrap();
+      if matches!(
+        handle.desc.status,
+        PStatus::Completed | PStatus::Cancelled | PStatus::Failed
+      ) {
+        Some(handle.path.clone())
+      } else {
+        None
+      }
+    };
+    if let Some(path) = path {
+      let _ = std::fs::remove_file(path);
+    }
+  }
+
+  /// Wrap a task future so that failures are both reported on the task and
+  /// propagated to the scheduler (needed for group-level failure handling).
+  fn wrap_task_future<T>(task: T, p_handle: Arc<RwLock<PTaskHandle>>) -> SJMCLBoxedFuture
+  where
+    T: Future<Output = SJMCLResult<()>> + Send + 'static,
+  {
+    Box::pin(async move {
+      if p_handle.read().unwrap().desc.status.is_cancelled() {
+        return Ok(());
+      }
+
+      match task.await {
+        Ok(()) => {
+          Self::remove_terminal_descriptor(&p_handle);
+          Ok(())
+        }
+        Err(error) => {
+          p_handle.write().unwrap().mark_failed(error.0.clone());
+          Self::remove_terminal_descriptor(&p_handle);
+          Err(error)
+        }
+      }
+    })
   }
 
   pub async fn enqueue_task<T>(
@@ -129,13 +187,13 @@ impl TaskMonitor {
     p_handle.write().unwrap().desc.status = PStatus::Waiting;
     self.phs.write().unwrap().insert(id, p_handle.clone());
 
-    if let Some(ref g) = task_group {
+    if let Some(ref group) = task_group {
       let mut group_map = self.group_map.write().unwrap();
-      if let Some(group) = group_map.get_mut(g) {
+      if let Some(group) = group_map.get_mut(group) {
         group.phs.insert(id, p_handle.clone());
       } else {
         group_map.insert(
-          g.clone(),
+          group.clone(),
           GroupMonitor {
             phs: HashMap::from_iter([(id, p_handle.clone())]),
             status: GEventStatus::Started,
@@ -147,34 +205,20 @@ impl TaskMonitor {
     PEvent::emit_created(
       &self.app_handle,
       id,
-      task_group.clone().as_deref(),
+      task_group.as_deref(),
       p_handle.read().unwrap().desc.clone(),
     );
-
-    let task = Box::pin(async move {
-      if p_handle.read().unwrap().desc.status.is_cancelled() {
-        return Ok(());
-      }
-
-      let result = task.await;
-      let mut p_handle = p_handle.write().unwrap();
-
-      if let Err(e) = result {
-        p_handle.mark_failed(e.0);
-      }
-
-      Ok(())
-    });
 
     if let Some(ref task_group) = task_group {
       GEvent::emit_group_started(&self.app_handle, task_group);
     }
 
+    let task = Self::wrap_task_future(task, p_handle);
     self
       .tx
       .send_async(SJMCLFuture {
         task_id: id,
-        task_group: task_group.clone(),
+        task_group,
         f: task,
       })
       .await
@@ -210,17 +254,7 @@ impl TaskMonitor {
     GEvent::emit_group_started(&self.app_handle, &task_group);
 
     for future in futures {
-      let task = Box::pin(async move {
-        if future.h.read().unwrap().desc.status.is_cancelled() {
-          return Ok(());
-        }
-        let result = future.f.await;
-        let mut p_handle = future.h.write().unwrap();
-        if let Err(e) = result {
-          p_handle.mark_failed(e.0);
-        }
-        Ok(())
-      });
+      let task = Self::wrap_task_future(future.f, future.h.clone());
       self
         .tx
         .send_async(SJMCLFuture {
@@ -236,96 +270,119 @@ impl TaskMonitor {
   pub async fn background_process(&self) {
     loop {
       let future = self.rx.recv_async().await.unwrap();
-      if self
+
+      let is_cancelled = self
         .phs
         .read()
         .unwrap()
         .get(&future.task_id)
-        .unwrap()
-        .read()
-        .unwrap()
-        .desc
-        .status
-        .is_cancelled()
-      {
+        .map(|handle| handle.read().unwrap().desc.status.is_cancelled())
+        .unwrap_or(false);
+      if is_cancelled {
         continue;
       }
-      // Check if the task group is stopped before acquiring permit
+
+      // Check if the task group is stopped before acquiring a permit.
       if let Some(ref task_group) = future.task_group {
         let is_stopped = self
           .group_map
           .read()
           .unwrap()
           .get(task_group)
-          .map(|g| g.status == GEventStatus::Stopped)
+          .map(|group| group.status == GEventStatus::Stopped)
           .unwrap_or(false);
 
         if is_stopped {
-          // Store the future in the stopped_futures list and continue to next task
           self.stopped_futures.lock().unwrap().push(future);
           continue;
         }
       }
 
-      // Acquire permit before spawning the task
-      let permit = self.concurrency.clone().acquire_owned().await.unwrap();
-
       let tasks = self.tasks.clone();
       let group_map = self.group_map.clone();
+      let stopped_futures = self.stopped_futures.clone();
+      let concurrency = self.concurrency.clone();
       let app = self.app_handle.clone();
 
       self.tasks.lock().unwrap().insert(
         future.task_id,
         tauri::async_runtime::spawn(async move {
-          // Move the permit into the spawned task
-          let _permit = permit;
+          let task_id = future.task_id;
+          let task_group = future.task_group.clone();
 
-          if let Some(task_group) = future.task_group.clone() {
-            // Wait for the task group to be resumed if it is stopped
+          // Wait for the task group to be resumed before taking a transfer
+          // slot, so a paused group never starves other groups.
+          if let Some(task_group) = task_group.clone() {
             loop {
               let is_stopped = group_map
                 .read()
                 .unwrap()
                 .get(&task_group)
-                .map(|g| g.status == GEventStatus::Stopped)
+                .map(|group| group.status == GEventStatus::Stopped)
                 .unwrap_or(false);
               if !is_stopped {
                 break;
               }
-              tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+              tokio::time::sleep(Duration::from_secs(1)).await;
             }
           }
 
-          let r = future.f.await;
-          match r {
-            Ok(_) => {
-              if let Some(group_name) = future.task_group
+          let permit = concurrency.clone().acquire_owned().await.unwrap();
+          let result = future.f.await;
+          drop(permit);
+
+          match result {
+            Ok(()) => {
+              if let Some(group_name) = task_group
                 && let Some(group) = group_map.write().unwrap().get_mut(&group_name)
               {
-                group.phs.remove(&future.task_id);
-                if group.phs.is_empty() {
+                group.phs.remove(&task_id);
+                if group.phs.is_empty() && group.status != GEventStatus::Failed {
                   group.status = GEventStatus::Completed;
-                  GEvent::emit_group_completed(&app, &group_name)
+                  GEvent::emit_group_completed(&app, &group_name);
                 }
               }
             }
-            Err(e) => {
-              info!("Task failed: {e:?}");
-              if let Some(group_name) = future.task_group {
-                GEvent::emit_group_failed(&app, &group_name);
-                if let Some(group) = group_map.write().unwrap().remove(&group_name) {
-                  for (_, handle) in group.phs {
-                    let mut handle = handle.write().unwrap();
-                    if handle.desc.status.is_waiting() {
-                      handle.mark_cancelled()
+            Err(error) => {
+              info!("Task failed: {error:?}");
+              if let Some(group_name) = task_group {
+                let mut aborted = Vec::new();
+                let failed = {
+                  let mut groups = group_map.write().unwrap();
+                  match groups.get_mut(&group_name) {
+                    Some(group) => {
+                      group.status = GEventStatus::Failed;
+                      group.phs.remove(&task_id);
+                      for (id, handle) in group.phs.drain() {
+                        handle.write().unwrap().mark_cancelled();
+                        aborted.push(id);
+                      }
+                      true
                     }
+                    None => false,
+                  }
+                };
+
+                if failed {
+                  GEvent::emit_group_failed(&app, &group_name);
+                }
+
+                for id in aborted {
+                  if let Some(join_handle) = tasks.lock().unwrap().remove(&id) {
+                    join_handle.abort();
                   }
                 }
+
+                // Drop futures of this group that are still waiting to be dispatched.
+                stopped_futures
+                  .lock()
+                  .unwrap()
+                  .retain(|queued| queued.task_group.as_deref() != Some(group_name.as_str()));
               }
             }
           }
-          tasks.lock().unwrap().remove(&future.task_id);
-          // The permit will be automatically released when _permit is dropped
+
+          tasks.lock().unwrap().remove(&task_id);
         }),
       );
     }
@@ -344,38 +401,54 @@ impl TaskMonitor {
   }
 
   pub fn cancel_progress(&self, id: u32) {
-    if let Some(p_handle) = self.phs.read().unwrap().get(&id) {
-      p_handle.write().unwrap().mark_cancelled();
-      if let Some(j_handle) = self.tasks.lock().unwrap().remove(&id) {
-        j_handle.abort();
-      }
+    let path = if let Some(p_handle) = self.phs.read().unwrap().get(&id).cloned() {
+      let mut handle = p_handle.write().unwrap();
+      handle.mark_cancelled();
+      Some(handle.path.clone())
+    } else {
+      None
+    };
+
+    if let Some(path) = path {
+      let _ = std::fs::remove_file(path);
+    }
+
+    if let Some(j_handle) = self.tasks.lock().unwrap().remove(&id) {
+      j_handle.abort();
     }
   }
 
   pub async fn restart_progress(&self, id: u32) {
-    let handle = self.phs.write().unwrap().remove(&id);
-    if let Some(handle) = handle {
-      let desc = handle.read().unwrap().desc.clone();
-      let task_group = desc.task_group.clone();
-      let task_state = desc.status.clone();
-      let j_handle = self.tasks.lock().unwrap().remove(&id).unwrap();
-      if !task_state.is_completed() {
-        handle.write().unwrap().mark_cancelled();
-        j_handle.abort();
-      }
-      match desc.payload {
-        PTaskParam::Download(_) => {
-          let task = DownloadTask::from_descriptor(
-            self.app_handle.clone(),
-            desc,
-            Duration::from_secs(1),
-            true,
-          );
-          let (f, new_h) = task
-            .future(self.app_handle.clone(), self.download_rate_limiter.clone())
-            .await
-            .unwrap();
-          self.enqueue_task(id, task_group, f, new_h).await;
+    let Some(handle) = self.phs.write().unwrap().remove(&id) else {
+      return;
+    };
+
+    let desc = handle.read().unwrap().desc.clone();
+    let task_group = desc.task_group.clone();
+    let was_completed = desc.status.is_completed();
+
+    if let Some(j_handle) = self.tasks.lock().unwrap().remove(&id)
+      && !was_completed
+    {
+      j_handle.abort();
+    }
+    if !was_completed {
+      handle.write().unwrap().mark_cancelled();
+    }
+
+    match desc.payload {
+      PTaskParam::Download(_) => {
+        let task = DownloadTask::from_descriptor(
+          self.app_handle.clone(),
+          desc,
+          Duration::from_secs(1),
+          true,
+        );
+        if let Ok((future, new_handle)) = task
+          .future(self.app_handle.clone(), self.download_rate_limiter.clone())
+          .await
+        {
+          self.enqueue_task(id, task_group, future, new_handle).await;
         }
       }
     }
@@ -405,7 +478,12 @@ impl TaskMonitor {
   pub fn cancel_progressive_task_group(&self, task_group: String) {
     if let Some(group) = self.group_map.write().unwrap().remove(&task_group) {
       for handle in group.phs.values() {
-        handle.write().unwrap().mark_cancelled();
+        let path = {
+          let mut handle = handle.write().unwrap();
+          handle.mark_cancelled();
+          handle.path.clone()
+        };
+        let _ = std::fs::remove_file(path);
         if let Some(join_handle) = self
           .tasks
           .lock()
@@ -415,6 +493,11 @@ impl TaskMonitor {
           join_handle.abort();
         }
       }
+      self
+        .stopped_futures
+        .lock()
+        .unwrap()
+        .retain(|queued| queued.task_group.as_deref() != Some(task_group.as_str()));
       GEvent::emit_group_cancelled(&self.app_handle, &task_group);
     }
   }
@@ -449,7 +532,6 @@ impl TaskMonitor {
       let mut stopped_futures = self.stopped_futures.lock().unwrap();
       let mut futures = Vec::new();
 
-      // Extract futures that belong to this task group
       let mut i = 0;
       while i < stopped_futures.len() {
         if stopped_futures[i].task_group.as_ref() == Some(&task_group) {
@@ -462,7 +544,6 @@ impl TaskMonitor {
       futures
     };
 
-    // Re-send the futures
     for future in futures_to_resend {
       self.tx.send_async(future).await.unwrap();
     }

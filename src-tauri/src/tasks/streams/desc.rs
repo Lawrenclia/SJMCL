@@ -74,6 +74,9 @@ where
     }
   }
   pub fn save(&self, path: &PathBuf) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+      std::fs::create_dir_all(parent)?;
+    }
     let file = std::fs::File::create(path)?;
     serde_json::to_writer(file, self)?;
     Ok(())

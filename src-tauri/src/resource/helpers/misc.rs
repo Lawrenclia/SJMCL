@@ -159,7 +159,8 @@ pub fn convert_url_to_target_source(
   for resource_type in resource_candidates {
     let dst_api = match get_download_api(*dst_type, resource_type) {
       Ok(api) => api,
-      Err(_) => return Ok(url.clone()), // If destination API is not available, return the original URL
+      // Skip resource types without a destination API and keep trying the others.
+      Err(_) => continue,
     };
 
     for src_type in SourceType::iter() {
