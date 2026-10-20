@@ -5,6 +5,7 @@ use log::info;
 use sjmcl_types::error::SJMCLResult;
 use std::collections::HashMap;
 use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::vec::Vec;
@@ -13,7 +14,7 @@ use tauri::async_runtime::JoinHandle;
 use tokio::sync::Semaphore;
 
 use crate::launcher_config::commands::retrieve_launcher_config;
-use crate::tasks::download::{DownloadTask, descriptors_dir};
+use crate::tasks::download::{DownloadTask, descriptors_dir, part_path_for};
 use crate::tasks::events::{GEvent, GEventStatus, PEvent, TEvent};
 use crate::tasks::streams::desc::PStatus;
 use crate::tasks::{SJMCLBoxedFuture, SJMCLFuture, *};
@@ -21,6 +22,61 @@ use crate::tasks::{SJMCLBoxedFuture, SJMCLFuture, *};
 pub struct GroupMonitor {
   pub phs: HashMap<u32, Arc<RwLock<PTaskHandle>>>,
   pub status: GEventStatus,
+}
+
+/// Callback executed once a whole task group finishes.
+///
+/// Successful groups run `on_success` hooks (finalize instance/loader config,
+/// remove superseded files, ...); failed groups run `on_failure` hooks.
+pub type GroupHook =
+  Box<dyn FnOnce(AppHandle) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static>;
+
+#[derive(Default)]
+pub struct GroupHooks {
+  pub on_success: Vec<GroupHook>,
+  pub on_failure: Vec<GroupHook>,
+}
+
+/// Convenience wrapper turning an async closure into a [`GroupHook`].
+pub fn make_group_hook<F, Fut>(callback: F) -> GroupHook
+where
+  F: FnOnce(AppHandle) -> Fut + Send + 'static,
+  Fut: Future<Output = ()> + Send + 'static,
+{
+  Box::new(move |app| Box::pin(callback(app)))
+}
+
+async fn run_group_hooks(
+  hooks: &Arc<Mutex<HashMap<String, GroupHooks>>>,
+  app: &AppHandle,
+  task_group: &str,
+  success: bool,
+) {
+  let Some(mut group_hooks) = hooks.lock().unwrap().remove(task_group) else {
+    return;
+  };
+  let callbacks = if success {
+    std::mem::take(&mut group_hooks.on_success)
+  } else {
+    std::mem::take(&mut group_hooks.on_failure)
+  };
+  for callback in callbacks {
+    callback(app.clone()).await;
+  }
+}
+
+/// Mark a task as cancelled, drop its persisted descriptor and the partial
+/// file so a cancelled download does not leave orphans behind.
+fn cancel_task_handle(app: &AppHandle, handle: &Arc<RwLock<PTaskHandle>>) {
+  let payload = {
+    let mut handle = handle.write().unwrap();
+    handle.mark_cancelled();
+    handle.desc.payload.clone()
+  };
+  TaskMonitor::remove_terminal_descriptor(handle);
+  if let PTaskParam::Download(param) = &payload {
+    crate::tasks::download::cleanup_part(app, param);
+  }
 }
 
 pub struct TaskMonitor {
@@ -34,6 +90,7 @@ pub struct TaskMonitor {
   rx: FlumeReceiver<SJMCLFuture>,
   group_map: Arc<RwLock<HashMap<String, GroupMonitor>>>,
   stopped_futures: Arc<Mutex<Vec<SJMCLFuture>>>,
+  group_hooks: Arc<Mutex<HashMap<String, GroupHooks>>>,
   pub download_rate_limiter: Option<Limiter>,
 }
 
@@ -58,6 +115,7 @@ impl TaskMonitor {
       rx,
       group_map: Arc::new(RwLock::new(HashMap::new())),
       stopped_futures: Arc::new(Mutex::new(Vec::new())),
+      group_hooks: Arc::new(Mutex::new(HashMap::new())),
       download_rate_limiter: if config.download.transmission.enable_speed_limit {
         Some(Limiter::new(
           (config.download.transmission.speed_limit_value as i64 * 1024) as f64,
@@ -111,6 +169,15 @@ impl TaskMonitor {
       .id_counter
       .store(max_task_id.saturating_add(1), Ordering::SeqCst);
 
+    // Partial files of unfinished tasks are kept for resume; every other
+    // `*.part` file (cancelled/failed/aborted runs) is garbage.
+    let active_parts: std::collections::HashSet<std::path::PathBuf> = restored
+      .iter()
+      .filter_map(|desc| match &desc.payload {
+        PTaskParam::Download(param) => Some(part_path_for(&cache_dir.join(&param.dest))),
+      })
+      .collect();
+
     for desc in restored {
       let task_id = desc.task_id;
       let task_group = desc.task_group.clone();
@@ -126,10 +193,31 @@ impl TaskMonitor {
         Err(error) => info!("Failed to restore task {task_id}: {error:?}"),
       }
     }
+
+    let part_pattern = format!("{}/**/*.part", cache_dir.to_string_lossy());
+    if let Ok(entries) = glob(&part_pattern) {
+      for entry in entries.flatten() {
+        if !active_parts.contains(&entry) {
+          let _ = std::fs::remove_file(&entry);
+        }
+      }
+    }
   }
 
   pub fn get_new_id(&self) -> u32 {
     self.id_counter.fetch_add(1, Ordering::SeqCst)
+  }
+
+  /// Register callbacks that run once the whole group reaches a terminal state.
+  /// Callers must register before the group is enqueued, otherwise an instantly
+  /// completed group (e.g. an already-downloaded file) could close before the
+  /// hooks are installed.
+  pub fn set_group_hooks(&self, task_group: &str, hooks: GroupHooks) {
+    self
+      .group_hooks
+      .lock()
+      .unwrap()
+      .insert(task_group.to_string(), hooks);
   }
 
   /// Drop the persisted descriptor of a task once it reached a terminal state.
@@ -301,6 +389,7 @@ impl TaskMonitor {
       let tasks = self.tasks.clone();
       let group_map = self.group_map.clone();
       let stopped_futures = self.stopped_futures.clone();
+      let group_hooks = self.group_hooks.clone();
       let concurrency = self.concurrency.clone();
       let app = self.app_handle.clone();
 
@@ -333,12 +422,27 @@ impl TaskMonitor {
 
           match result {
             Ok(()) => {
-              if let Some(group_name) = task_group
-                && let Some(group) = group_map.write().unwrap().get_mut(&group_name)
-              {
-                group.phs.remove(&task_id);
-                if group.phs.is_empty() && group.status != GEventStatus::Failed {
-                  group.status = GEventStatus::Completed;
+              if let Some(group_name) = task_group {
+                let completed = {
+                  let mut groups = group_map.write().unwrap();
+                  match groups.get_mut(&group_name) {
+                    Some(group) => {
+                      group.phs.remove(&task_id);
+                      if group.phs.is_empty() && group.status != GEventStatus::Failed {
+                        group.status = GEventStatus::Completed;
+                        true
+                      } else {
+                        false
+                      }
+                    }
+                    None => false,
+                  }
+                };
+
+                if completed {
+                  // Finalize group state (instance/loader config, cleanup of
+                  // superseded files, ...) before notifying the frontend.
+                  run_group_hooks(&group_hooks, &app, &group_name, true).await;
                   GEvent::emit_group_completed(&app, &group_name);
                 }
               }
@@ -347,6 +451,7 @@ impl TaskMonitor {
               info!("Task failed: {error:?}");
               if let Some(group_name) = task_group {
                 let mut aborted = Vec::new();
+                let mut cancelled_handles = Vec::new();
                 let failed = {
                   let mut groups = group_map.write().unwrap();
                   match groups.get_mut(&group_name) {
@@ -354,7 +459,7 @@ impl TaskMonitor {
                       group.status = GEventStatus::Failed;
                       group.phs.remove(&task_id);
                       for (id, handle) in group.phs.drain() {
-                        handle.write().unwrap().mark_cancelled();
+                        cancelled_handles.push(handle);
                         aborted.push(id);
                       }
                       true
@@ -364,6 +469,10 @@ impl TaskMonitor {
                 };
 
                 if failed {
+                  for handle in cancelled_handles {
+                    cancel_task_handle(&app, &handle);
+                  }
+                  run_group_hooks(&group_hooks, &app, &group_name, false).await;
                   GEvent::emit_group_failed(&app, &group_name);
                 }
 
@@ -401,16 +510,8 @@ impl TaskMonitor {
   }
 
   pub fn cancel_progress(&self, id: u32) {
-    let path = if let Some(p_handle) = self.phs.read().unwrap().get(&id).cloned() {
-      let mut handle = p_handle.write().unwrap();
-      handle.mark_cancelled();
-      Some(handle.path.clone())
-    } else {
-      None
-    };
-
-    if let Some(path) = path {
-      let _ = std::fs::remove_file(path);
+    if let Some(p_handle) = self.phs.read().unwrap().get(&id).cloned() {
+      cancel_task_handle(&self.app_handle, &p_handle);
     }
 
     if let Some(j_handle) = self.tasks.lock().unwrap().remove(&id) {
@@ -477,13 +578,9 @@ impl TaskMonitor {
 
   pub fn cancel_progressive_task_group(&self, task_group: String) {
     if let Some(group) = self.group_map.write().unwrap().remove(&task_group) {
+      self.group_hooks.lock().unwrap().remove(&task_group);
       for handle in group.phs.values() {
-        let path = {
-          let mut handle = handle.write().unwrap();
-          handle.mark_cancelled();
-          handle.path.clone()
-        };
-        let _ = std::fs::remove_file(path);
+        cancel_task_handle(&self.app_handle, handle);
         if let Some(join_handle) = self
           .tasks
           .lock()
@@ -557,6 +654,7 @@ impl TaskMonitor {
       // Only delete non-active groups (not Started/Stopped); backend status is authoritative for race-condition protection.
       if group.status != GEventStatus::Started && group.status != GEventStatus::Stopped {
         group_map.remove(&task_group);
+        self.group_hooks.lock().unwrap().remove(&task_group);
       }
     }
   }

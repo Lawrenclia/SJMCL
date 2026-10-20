@@ -272,6 +272,7 @@ impl DownloadTask {
     }
 
     let mut use_range = resume_from > 0;
+    let mut retried_after_verify_error = false;
 
     loop {
       let response = Self::send_request(app_handle, candidate, resume_from, use_range).await?;
@@ -363,9 +364,16 @@ impl DownloadTask {
       }
 
       // A verification failure means the (possibly resumed) partial file is
-      // unusable: drop it so the next candidate starts from scratch.
+      // unusable: drop it and retry this candidate once from scratch before
+      // falling back to another source.
       if let Err(error) = Self::verify_file(param, part_path).await {
         let _ = tokio::fs::remove_file(part_path).await;
+        if !retried_after_verify_error {
+          retried_after_verify_error = true;
+          resume_from = 0;
+          use_range = false;
+          continue;
+        }
         return Err(error);
       }
 
@@ -451,10 +459,9 @@ impl DownloadTask {
       return Ok(());
     }
 
-    // Never leave an unverified final file behind after a failed transfer.
-    if dest_path.exists() {
-      let _ = tokio::fs::remove_file(dest_path).await;
-    }
+    // The previous file at this destination (for example an older version of a
+    // mod) is kept until the new download is verified and atomically renamed
+    // into place, so a failed transfer never leaves a missing file behind.
 
     let mut errors = Vec::with_capacity(candidates.len());
     for candidate in candidates {
@@ -509,6 +516,15 @@ pub fn part_path_for(dest_path: &Path) -> PathBuf {
   let mut os_string = dest_path.as_os_str().to_os_string();
   os_string.push(".part");
   PathBuf::from(os_string)
+}
+
+/// Remove the partial file of a download whose task was cancelled or aborted.
+pub fn cleanup_part(app: &AppHandle, param: &DownloadParam) {
+  let Ok(config) = retrieve_launcher_config(app.clone()) else {
+    return;
+  };
+  let dest_path = config.download.cache.directory.join(&param.dest);
+  let _ = std::fs::remove_file(part_path_for(&dest_path));
 }
 
 /// Directory holding persisted task descriptors.

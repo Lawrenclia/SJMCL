@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::tasks::download::DownloadTask;
 use crate::tasks::events::GEventStatus;
-use crate::tasks::monitor::TaskMonitor;
+use crate::tasks::monitor::{GroupHooks, TaskMonitor};
 use crate::tasks::{PTaskGroupDesc, PTaskParam, SJMCLFutureDesc, THandle};
 use crate::utils::fs::extract_filename;
 
@@ -15,6 +15,18 @@ pub async fn schedule_progressive_task_group(
   task_group: String,
   params: Vec<PTaskParam>,
   with_timestamp: bool,
+) -> SJMCLResult<PTaskGroupDesc> {
+  schedule_progressive_task_group_inner(app, task_group, params, with_timestamp, None).await
+}
+
+/// Schedule a group and (optionally) install its completion hooks before the
+/// tasks are enqueued, so instantly-completed groups cannot close first.
+pub async fn schedule_progressive_task_group_inner(
+  app: AppHandle,
+  task_group: String,
+  params: Vec<PTaskParam>,
+  with_timestamp: bool,
+  hooks: Option<GroupHooks>,
 ) -> SJMCLResult<PTaskGroupDesc> {
   let monitor = app.state::<Pin<Box<TaskMonitor>>>();
   let mut task_descs = Vec::new();
@@ -59,6 +71,11 @@ pub async fn schedule_progressive_task_group(
       }
     }
   }
+
+  if let Some(hooks) = hooks {
+    monitor.set_group_hooks(&task_group, hooks);
+  }
+
   monitor
     .enqueue_task_group(task_group.clone(), future_descs)
     .await;

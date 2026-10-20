@@ -29,8 +29,11 @@ use crate::resource::models::{
   OtherResourceSource, OtherResourceVersionPack, OtherResourceVersionPackQuery, ResourceError,
 };
 use crate::tasks::PTaskParam;
-use crate::tasks::commands::schedule_progressive_task_group;
+use crate::tasks::commands::{
+  schedule_progressive_task_group, schedule_progressive_task_group_inner,
+};
 use crate::tasks::download::DownloadParam;
+use crate::tasks::monitor::{GroupHooks, make_group_hook};
 
 #[tauri::command]
 pub async fn fetch_game_version_list(app: AppHandle) -> SJMCLResult<Vec<GameClientResourceInfo>> {
@@ -213,17 +216,43 @@ pub async fn update_mods(
     download_tasks.push(PTaskParam::Download(download_param));
   }
 
-  schedule_progressive_task_group(app, "mod-update".to_string(), download_tasks, true).await?;
-
-  for (old_file_path, new_file_path) in update_paths {
-    if old_file_path != new_file_path {
-      let old_backup_path = format!("{}.old", old_file_path.display());
-      if let Err(e) = std::fs::rename(&old_file_path, old_backup_path) {
-        log::error!("Failed to rename old mod file: {}", e);
-        return Err(ResourceError::FileOperationError.into());
+  // Keep the old files until every replacement has been downloaded and
+  // verified: deleting them up front would leave the instance without a
+  // working mod when the download fails. The superseded files (and legacy
+  // `.old` leftovers from earlier versions) are removed by the group hook.
+  let old_paths: Vec<std::path::PathBuf> = update_paths
+    .iter()
+    .filter(|(old_file_path, new_file_path)| old_file_path != new_file_path)
+    .map(|(old_file_path, _)| old_file_path.clone())
+    .collect();
+  let hooks = GroupHooks {
+    on_success: vec![make_group_hook(move |_app| async move {
+      for old_path in old_paths {
+        let legacy_path = format!("{}.old", old_path.display());
+        for path in [old_path, std::path::PathBuf::from(legacy_path)] {
+          if path.is_file()
+            && let Err(e) = std::fs::remove_file(&path)
+          {
+            log::warn!(
+              "Failed to remove superseded mod file {}: {}",
+              path.display(),
+              e
+            );
+          }
+        }
       }
-    }
-  }
+    })],
+    on_failure: Vec::new(),
+  };
+
+  schedule_progressive_task_group_inner(
+    app,
+    "mod-update".to_string(),
+    download_tasks,
+    true,
+    Some(hooks),
+  )
+  .await?;
 
   Ok(())
 }
