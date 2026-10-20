@@ -12,13 +12,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuSettings, LuTrash2 } from "react-icons/lu";
-import {
-  LuChevronDown,
-  LuPause,
-  LuPlay,
-  LuRotateCcw,
-  LuX,
-} from "react-icons/lu";
+import { LuChevronDown, LuRotateCcw } from "react-icons/lu";
 import { CommonIconButton } from "@/components/common/common-icon-button";
 import Empty from "@/components/common/empty";
 import { OptionItem, OptionItemGroup } from "@/components/common/option-item";
@@ -43,9 +37,6 @@ export const DownloadTasksPage = () => {
   const {
     tasks,
     handleScheduleProgressiveTaskGroup,
-    handleCancelProgressiveTaskGroup,
-    handleStopProgressiveTaskGroup,
-    handleResumeProgressiveTaskGroup,
     handleClearHistoryTaskGroups,
   } = useTaskContext();
 
@@ -175,42 +166,6 @@ export const DownloadTasksPage = () => {
                       </Text>
                     )}
 
-                    {(group.status === GTaskEventStatusEnums.Stopped ||
-                      group.status === GTaskEventStatusEnums.Started) && (
-                      <Tooltip
-                        label={t(
-                          `DownloadTasksPage.button.${
-                            group.status === GTaskEventStatusEnums.Started
-                              ? "pause"
-                              : "begin"
-                          }`
-                        )}
-                      >
-                        <IconButton
-                          aria-label="pause / download"
-                          icon={
-                            group.status === GTaskEventStatusEnums.Started ? (
-                              <LuPause />
-                            ) : (
-                              <LuPlay />
-                            )
-                          }
-                          size="xs"
-                          fontSize="sm"
-                          h={21}
-                          ml={1}
-                          variant="ghost"
-                          onClick={() => {
-                            group.status === GTaskEventStatusEnums.Started
-                              ? handleStopProgressiveTaskGroup(group.taskGroup)
-                              : handleResumeProgressiveTaskGroup(
-                                  group.taskGroup
-                                );
-                          }}
-                        />
-                      </Tooltip>
-                    )}
-
                     {(group.status === GTaskEventStatusEnums.Failed ||
                       group.status === GTaskEventStatusEnums.Cancelled) && (
                       <Tooltip label={t("DownloadTasksPage.button.retry")}>
@@ -240,23 +195,6 @@ export const DownloadTasksPage = () => {
                         />
                       </Tooltip>
                     )}
-
-                    {group.status !== GTaskEventStatusEnums.Cancelled &&
-                      group.status !== GTaskEventStatusEnums.Completed && (
-                        <Tooltip label={t("General.cancel")}>
-                          <IconButton
-                            aria-label="cancel"
-                            icon={<LuX />}
-                            size="xs"
-                            fontSize="sm"
-                            h={21}
-                            variant="ghost"
-                            onClick={() =>
-                              handleCancelProgressiveTaskGroup(group.taskGroup)
-                            }
-                          />
-                        </Tooltip>
-                      )}
 
                     <IconButton
                       aria-label="toggle expansion"
