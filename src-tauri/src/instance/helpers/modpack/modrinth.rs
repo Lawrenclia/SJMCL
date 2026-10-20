@@ -139,6 +139,7 @@ impl ModpackManifest for ModrinthManifest {
         Ok(PTaskParam::Download(DownloadParam {
           src: url::Url::parse(download_url).map_err(|_| InstanceError::InvalidSourcePath)?,
           sha1: Some(file.hashes.sha1.clone()),
+          size: Some(file.file_size),
           dest: instance_path.join(&file.path),
           filename: None,
         }))

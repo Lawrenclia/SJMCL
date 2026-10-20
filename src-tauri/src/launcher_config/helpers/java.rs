@@ -535,13 +535,18 @@ pub async fn build_mojang_java_download_params(
     .iter()
     .filter_map(|(path, info)| {
       let raw = info["downloads"]["raw"].as_object()?;
-      let (url, sha1) = (raw["url"].as_str()?, raw["sha1"].as_str()?);
+      let (url, sha1, size) = (
+        raw["url"].as_str()?,
+        raw["sha1"].as_str()?,
+        raw["size"].as_u64().unwrap_or(0),
+      );
 
       Some(PTaskParam::Download(DownloadParam {
         src: url.parse().ok()?,
         dest: runtime_dir.join(path),
         filename: None,
         sha1: Some(sha1.into()),
+        size: (size > 0).then_some(size),
       }))
     })
     .collect();

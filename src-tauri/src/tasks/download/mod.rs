@@ -45,6 +45,10 @@ pub struct DownloadParam {
   pub dest: PathBuf,
   pub filename: Option<String>,
   pub sha1: Option<String>,
+  /// Expected size in bytes when the caller knows it. Used to detect truncated
+  /// transfers even when no sha1 is available (most loader libraries).
+  #[serde(default)]
+  pub size: Option<u64>,
 }
 
 pub struct DownloadTask {
@@ -96,7 +100,7 @@ impl DownloadTask {
         PDesc::<PTaskParam>::new(
           task_id,
           task_group,
-          0,
+          param.size.unwrap_or(0) as i64,
           PTaskParam::Download(param.clone()),
           PStatus::InProgress,
         ),
@@ -151,13 +155,13 @@ impl DownloadTask {
   /// `true` when the final destination already holds a verified file, so the
   /// transfer can be skipped entirely (kept intact on retry).
   async fn is_dest_verified(param: &DownloadParam, dest_path: &Path) -> bool {
-    if param.sha1.is_none() || !dest_path.is_file() {
+    if (param.sha1.is_none() && param.size.is_none()) || !dest_path.is_file() {
       return false;
     }
     Self::verify_file(param, dest_path).await.is_ok()
   }
 
-  /// Verify a local file against the expected sha1 of the task.
+  /// Verify a local file against the expected sha1 and size of the task.
   async fn verify_file(param: &DownloadParam, path: &Path) -> SJMCLResult<()> {
     if let Some(truth) = param.sha1.clone() {
       let path = path.to_path_buf();
@@ -165,6 +169,20 @@ impl DownloadTask {
         .await
         .map_err(|e| SJMCLError(format!("file verification task failed: {e}")))??;
     }
+
+    if let Some(expected) = param.size {
+      let length = tokio::fs::metadata(path)
+        .await
+        .map_err(|e| SJMCLError(format!("failed to read {}: {e}", path.display())))?
+        .len();
+      if length != expected {
+        return Err(SJMCLError(format!(
+          "size mismatch for {}: expected {expected} bytes, got {length} bytes",
+          path.display()
+        )));
+      }
+    }
+
     Ok(())
   }
 
@@ -211,6 +229,17 @@ impl DownloadTask {
       .map(|meta| meta.len())
       .unwrap_or(0);
 
+    if let Some(expected) = param.size {
+      if resume_from > expected {
+        let _ = tokio::fs::remove_file(part_path).await;
+        resume_from = 0;
+      }
+      if resume_from == expected {
+        Self::verify_file(param, part_path).await?;
+        return Self::finish_download(part_path, dest_path, handle).await;
+      }
+    }
+
     let mut use_range = resume_from > 0;
 
     loop {
@@ -248,7 +277,8 @@ impl DownloadTask {
       // For 206 responses content-length is the remaining length.
       let full_total = response
         .content_length()
-        .map(|length| length as i64 + resume_from as i64);
+        .map(|length| length as i64 + resume_from as i64)
+        .or_else(|| param.size.map(|size| size as i64));
 
       {
         let mut handle = handle.write().unwrap();
@@ -428,4 +458,57 @@ pub fn descriptors_dir(cache_dir: &Path) -> PathBuf {
 /// Path of the persisted descriptor of a task.
 pub fn descriptor_path(cache_dir: &Path, task_id: u32) -> PathBuf {
   descriptors_dir(cache_dir).join(format!("task_{task_id}.json"))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn test_param(dest: PathBuf, sha1: Option<&str>, size: Option<u64>) -> DownloadParam {
+    DownloadParam {
+      src: Url::parse("https://example.invalid/payload").unwrap(),
+      dest,
+      filename: None,
+      sha1: sha1.map(|value| value.to_string()),
+      size,
+    }
+  }
+
+  #[tokio::test]
+  async fn verify_file_checks_sha1_and_size() {
+    let dir = std::env::temp_dir().join(format!("sjmcl-download-test-{}", std::process::id()));
+    tokio::fs::create_dir_all(&dir).await.unwrap();
+    let path = dir.join("payload.bin");
+    tokio::fs::write(&path, b"hello").await.unwrap();
+
+    assert!(
+      DownloadTask::verify_file(&test_param(path.clone(), None, Some(4)), &path)
+        .await
+        .is_err()
+    );
+    assert!(
+      DownloadTask::verify_file(&test_param(path.clone(), None, Some(5)), &path)
+        .await
+        .is_ok()
+    );
+    assert!(
+      DownloadTask::verify_file(
+        &test_param(
+          path.clone(),
+          Some("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"),
+          None
+        ),
+        &path
+      )
+      .await
+      .is_ok()
+    );
+    assert!(
+      DownloadTask::verify_file(&test_param(path.clone(), Some("deadbeef"), None), &path)
+        .await
+        .is_err()
+    );
+
+    let _ = tokio::fs::remove_dir_all(&dir).await;
+  }
 }

@@ -1160,6 +1160,7 @@ pub async fn create_instance(
     dest: instance.version_path.join(format!("{}.jar", name)),
     filename: None,
     sha1: Some(client_download_info.sha1.clone()),
+    size: Some(client_download_info.size as u64),
   }));
   let subdirs = get_instance_subdir_paths(
     &app,

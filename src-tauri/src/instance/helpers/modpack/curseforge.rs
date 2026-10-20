@@ -56,6 +56,8 @@ structstruck::strike! {
     pub data: struct {
       pub download_url: Option<String>,
       pub file_name: String,
+      #[serde(default)]
+      pub file_length: u64,
       pub hashes: Option<Vec<pub struct {
         pub value: String,
         pub algo: u64,
@@ -197,6 +199,7 @@ impl ModpackManifest for CurseForgeManifest {
         let task_param = PTaskParam::Download(DownloadParam {
           src: url::Url::parse(&download_url).map_err(|_| InstanceError::InvalidSourcePath)?,
           sha1,
+          size: Some(file_manifest.data.file_length),
           dest: instance_path
             .join(match class_id {
               Some(12) | Some(6945) => "resourcepacks",

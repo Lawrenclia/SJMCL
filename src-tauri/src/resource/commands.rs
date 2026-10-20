@@ -157,6 +157,7 @@ pub async fn download_game_server(
       dest: dest.clone().into(),
       filename: None,
       sha1: Some(download_info.sha1.clone()),
+      size: Some(download_info.size as u64),
     })],
     true,
   )
@@ -207,6 +208,7 @@ pub async fn update_mods(
       dest: new_file_path.clone(),
       filename: None,
       sha1: Some(query.sha1.clone()),
+      size: None,
     };
     download_tasks.push(PTaskParam::Download(download_param));
   }

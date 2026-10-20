@@ -10,6 +10,7 @@ export interface DownloadTaskParam {
   dest: string; // destination path
   filename?: string; // destination filename
   sha1?: string;
+  size?: number | null; // expected size in bytes, used to verify the transfer
 }
 
 export type TaskParam = DownloadTaskParam;
@@ -20,6 +21,7 @@ export interface DownloadTaskPayload {
   dest: string; // destination path
   filename: string; // destination filename
   sha1: string;
+  size?: number | null;
 }
 
 export type TaskPayload = DownloadTaskPayload;
