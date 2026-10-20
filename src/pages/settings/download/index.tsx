@@ -50,7 +50,8 @@ const DownloadSettingsPage = () => {
     (taskGroup) =>
       !(
         taskGroup.status === GTaskEventStatusEnums.Completed ||
-        taskGroup.status === GTaskEventStatusEnums.Failed
+        taskGroup.status === GTaskEventStatusEnums.Failed ||
+        taskGroup.status === GTaskEventStatusEnums.Cancelled
       )
   );
 

@@ -12,7 +12,7 @@ import {
   ModalProps,
   Text,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BeatLoader } from "react-spinners";
 import Empty from "@/components/common/empty";
@@ -39,6 +39,10 @@ const WorldLevelDataModal: React.FC<WorldLevelDataModalProps> = ({
   const [levelData, setLevelData] = useState<WorldDetails>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isOpen, onClose } = props;
+  // The shared-modal provider recreates onClose on every render; keep the
+  // effect depending on the request inputs only.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const treeNodes = useMemo(() => {
     if (!levelData) return [];
@@ -73,11 +77,11 @@ const WorldLevelDataModal: React.FC<WorldLevelDataModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      if (!worldName) onClose();
+      if (!worldName) onCloseRef.current();
       else if (instanceId !== undefined)
         handleRetrieveWorldDetails(instanceId, worldName);
     }
-  }, [handleRetrieveWorldDetails, instanceId, worldName, isOpen, onClose]);
+  }, [handleRetrieveWorldDetails, instanceId, worldName, isOpen]);
 
   return (
     <Modal
