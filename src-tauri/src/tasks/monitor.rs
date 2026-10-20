@@ -74,9 +74,8 @@ fn cancel_task_handle(app: &AppHandle, handle: &Arc<RwLock<PTaskHandle>>) {
     handle.desc.payload.clone()
   };
   TaskMonitor::remove_terminal_descriptor(handle);
-  if let PTaskParam::Download(param) = &payload {
-    crate::tasks::download::cleanup_part(app, param);
-  }
+  let PTaskParam::Download(param) = &payload;
+  crate::tasks::download::cleanup_part(app, param);
 }
 
 pub struct TaskMonitor {
