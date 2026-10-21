@@ -177,13 +177,20 @@ async fn refresh_instance(
             .version_path
             .join(format!("{}.json", cfg_read.name));
           let vjson_client_data = client_data.clone();
+          let failure_instance = cfg_read.clone();
           let mut hooks = Some(GroupHooks {
             on_success: vec![make_group_hook(move |_app| async move {
               if let Err(error) = save_json_async(&vjson_client_data, &vjson_path).await {
                 log::error!("Failed to save instance version json: {error:?}");
               }
             })],
-            on_failure: Vec::new(),
+            on_failure: vec![make_group_hook(move |_app| async move {
+              let mut instance = failure_instance;
+              instance.mod_loader.status = ModLoaderStatus::DownloadFailed;
+              if let Err(error) = instance.save_json_cfg().await {
+                log::error!("Failed to save failed mod loader state: {error:?}");
+              }
+            })],
           });
           match cfg_read.mod_loader.loader_type {
             ModLoaderType::Forge => {
@@ -224,23 +231,32 @@ async fn refresh_instance(
 
           Ok(())
         }
-        ModLoaderStatus::DownloadFailed => match cfg_read.mod_loader.loader_type {
-          ModLoaderType::Forge => {
-            cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-            download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data, None).await
+        ModLoaderStatus::DownloadFailed => {
+          // Retry automatically at most once per launcher start; otherwise a
+          // broken download would be queued again on every instance refresh.
+          if !is_first_run {
+            Ok(())
+          } else {
+            match cfg_read.mod_loader.loader_type {
+              ModLoaderType::Forge => {
+                cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+                download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
+                  .await
+              }
+              ModLoaderType::Cleanroom => {
+                cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+                download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
+                  .await
+              }
+              ModLoaderType::NeoForge => {
+                cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+                download_neoforge_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
+                  .await
+              }
+              _ => Ok(()),
+            }
           }
-          ModLoaderType::Cleanroom => {
-            cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-            download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
-              .await
-          }
-          ModLoaderType::NeoForge => {
-            cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
-            download_neoforge_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
-              .await
-          }
-          _ => Ok(()),
-        },
+        }
         ModLoaderStatus::Downloading | ModLoaderStatus::Installing => {
           if is_first_run {
             // The instance failed to install mod loader during last run.
@@ -285,13 +301,22 @@ async fn refresh_instance(
             .version_path
             .join(format!("{}.json", cfg_read.name));
           let vjson_client_data = client_data.clone();
+          let failure_instance = cfg_read.clone();
           let hooks = Some(GroupHooks {
             on_success: vec![make_group_hook(move |_app| async move {
               if let Err(error) = save_json_async(&vjson_client_data, &vjson_path).await {
                 log::error!("Failed to save instance version json: {error:?}");
               }
             })],
-            on_failure: Vec::new(),
+            on_failure: vec![make_group_hook(move |_app| async move {
+              let mut instance = failure_instance;
+              if let Some(optifine) = instance.optifine.as_mut() {
+                optifine.status = ModLoaderStatus::DownloadFailed;
+              }
+              if let Err(error) = instance.save_json_cfg().await {
+                log::error!("Failed to save failed OptiFine state: {error:?}");
+              }
+            })],
           });
           download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data, hooks)
             .await?;
@@ -299,8 +324,13 @@ async fn refresh_instance(
           Ok(())
         }
         ModLoaderStatus::DownloadFailed => {
-          cfg_read.optifine.as_mut().unwrap().status = ModLoaderStatus::Downloading;
-          download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data, None).await
+          if !is_first_run {
+            Ok(())
+          } else {
+            cfg_read.optifine.as_mut().unwrap().status = ModLoaderStatus::Downloading;
+            download_optifine_libraries(app, &priority_list, &cfg_read, &mut client_data, None)
+              .await
+          }
         }
         ModLoaderStatus::Installed => Ok(()),
       }
