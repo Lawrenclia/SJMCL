@@ -535,7 +535,7 @@ pub async fn generate_launch_command(
     match shlex::split(&game_config.advanced.custom_commands.minecraft_argument) {
       Some(mut extra_args) => cmd.append(&mut extra_args),
       None => {
-        eprintln!("[Warn] Failed to parse minecraftArgument");
+        log::warn!("[Warn] Failed to parse minecraftArgument");
       }
     }
   }

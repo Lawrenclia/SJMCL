@@ -288,7 +288,7 @@ fn perceive_world_state(bot: &Client) -> String {
 }
 
 async fn execute_action(bot: &Client, decision: AgentDecision) {
-  println!(">>> AI 思考: {}", decision.thought);
+  log::info!(">>> AI 思考: {}", decision.thought);
 
   if let Some(spoken_text) = decision.dialogue {
     if !spoken_text.is_empty() {
@@ -300,9 +300,11 @@ async fn execute_action(bot: &Client, decision: AgentDecision) {
   match decision.action {
     ActionType::Move => {
       if let Some(coords) = decision.target_coords {
-        println!(
+        log::info!(
           ">>> 执行: 寻路前往 [{}, {}, {}]",
-          coords.x, coords.y, coords.z
+          coords.x,
+          coords.y,
+          coords.z
         );
         let goal = BlockPosGoal(BlockPos::new(coords.x, coords.y, coords.z));
         // 使用底层 Baritone 算法的异步寻路启动器
@@ -312,9 +314,11 @@ async fn execute_action(bot: &Client, decision: AgentDecision) {
     ActionType::Mine => {
       if let Some(coords) = decision.target_coords {
         let pos = BlockPos::new(coords.x, coords.y, coords.z);
-        println!(
+        log::info!(
           ">>> 执行: 自动匹配工具并挖掘方块 [{}, {}, {}]",
-          pos.x, pos.y, pos.z
+          pos.x,
+          pos.y,
+          pos.z
         );
 
         let bot_clone = bot.clone();
@@ -335,13 +339,13 @@ async fn execute_action(bot: &Client, decision: AgentDecision) {
         // 校验武器攻击冷却，防止因高频攻击而触发反作弊断开连接
         if !bot.has_attack_cooldown() {
           bot.attack(target.id());
-          println!(">>> 执行: 挥击并攻击了最近的实体");
+          log::info!(">>> 执行: 挥击并攻击了最近的实体");
         }
       }
     }
     ActionType::Equip => {
       if let (Some(src), Some(dst)) = (decision.slot_source, decision.slot_destination) {
-        println!(">>> 执行: 整理物品，将槽位 {} 移动至槽位 {}", src, dst);
+        log::info!(">>> 执行: 整理物品，将槽位 {} 移动至槽位 {}", src, dst);
         let inv = bot.get_inventory();
         inv.left_click(src);
         inv.left_click(dst);
@@ -349,7 +353,7 @@ async fn execute_action(bot: &Client, decision: AgentDecision) {
     }
     ActionType::GotoPlayer => {
       if let Some(player_name) = decision.target_name {
-        println!(">>> 执行: 寻路前往玩家 {}", player_name);
+        log::info!(">>> 执行: 寻路前往玩家 {}", player_name);
 
         let target = bot.any_entity_by::<&GameProfileComponent, With<Player>>(
           |profile: &GameProfileComponent| profile.name == player_name,
@@ -363,7 +367,7 @@ async fn execute_action(bot: &Client, decision: AgentDecision) {
       }
     }
     ActionType::Wait => {
-      println!(">>> 执行: 保持待机");
+      log::info!(">>> 执行: 保持待机");
     }
   }
 }

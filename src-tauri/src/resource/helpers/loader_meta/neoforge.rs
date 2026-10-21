@@ -52,11 +52,10 @@ async fn get_neoforge_meta_by_game_version_official(
 
   if game_version == "1.20.1" {
     let url = get_download_api(SourceType::Official, ResourceType::NeoforgeMetaForge)?;
-    let response = client
-      .get(url)
-      .send()
-      .await
-      .map_err(|_| ResourceError::NetworkError)?;
+    let response = client.get(url).send().await.map_err(|error| {
+      log::warn!("neoforge meta request failed: {error:?}");
+      ResourceError::NetworkError
+    })?;
     if !response.status().is_success() {
       return Err(ResourceError::NetworkError.into());
     }
@@ -100,11 +99,10 @@ async fn get_neoforge_meta_by_game_version_official(
   }
 
   let url = get_download_api(SourceType::Official, ResourceType::NeoforgeMetaNeoforge)?;
-  let response = client
-    .get(url)
-    .send()
-    .await
-    .map_err(|_| ResourceError::NetworkError)?;
+  let response = client.get(url).send().await.map_err(|error| {
+    log::warn!("neoforge meta request failed: {error:?}");
+    ResourceError::NetworkError
+  })?;
   if !response.status().is_success() {
     return Err(ResourceError::NetworkError.into());
   }
@@ -277,7 +275,7 @@ pub async fn get_neoforge_meta_by_game_version(
         }
       }
     }
-    println!("{:?} failed, fallback", source_type);
+    log::warn!("{:?} failed, fallback", source_type);
   }
   Err(ResourceError::NetworkError.into())
 }

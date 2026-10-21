@@ -72,7 +72,7 @@ pub fn get_native_library_artifacts(client_info: &McClientInfo) -> Vec<Downloads
           artifacts.insert(artifact.clone());
         }
       } else {
-        println!("natives is None");
+        log::debug!("natives is None");
       }
     }
   }
@@ -387,7 +387,7 @@ pub fn get_native_library_paths(
         }
         result.push(library_path.join(path));
       } else {
-        println!("natives is None");
+        log::debug!("natives is None");
       }
     }
   }
@@ -476,7 +476,7 @@ pub async fn extract_native_libraries(
 
   for result in results {
     if let Err(e) = result {
-      println!("Error handling artifact: {:?}", e);
+      log::warn!("Error handling artifact: {:?}", e);
       return Err(sjmcl_types::error::SJMCLError::from(e));
     }
   }

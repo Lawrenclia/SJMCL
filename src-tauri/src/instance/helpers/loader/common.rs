@@ -145,7 +145,7 @@ pub async fn execute_processors(
     let output = cmd_base.output()?;
 
     if !output.status.success() {
-      eprintln!(
+      log::error!(
         "[{}] Processor failed with exit code: {:?}",
         instance.name,
         output.status.code()

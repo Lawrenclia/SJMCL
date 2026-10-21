@@ -37,7 +37,10 @@ async fn get_optifine_meta_by_game_version_bmcl(
         let mut manifest = response
           .json::<Vec<OptiFineResourceInfo>>()
           .await
-          .map_err(|_| ResourceError::ParseError)?;
+          .map_err(|error| {
+            log::warn!("optifine meta parse failed: {error:?}");
+            ResourceError::ParseError
+          })?;
 
         manifest.iter_mut().for_each(|info| {
           info.filename = split_filename(OsStr::new(&info.filename)).0;
