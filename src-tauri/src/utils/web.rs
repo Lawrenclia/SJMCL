@@ -108,10 +108,16 @@ impl RetryableStrategy for SJMCLRetryableStrategy {
   }
 }
 
+/// Retry policy for metadata requests (resource lists, update checks, ...).
+///
+/// The strategy treats every request error as transient, so the budget must be
+/// bounded: with a very large budget a broken host or proxy keeps the UI
+/// waiting for a long time (previously up to one hour). Once the budget is
+/// exhausted the caller receives the error and can fall back / report it.
 pub fn with_retry(client: Client) -> ClientWithMiddleware {
   ClientWithMiddlewareBuilder::new(client)
     .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(3600)),
+      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(30)),
       SJMCLRetryableStrategy {},
     ))
     .build()
@@ -125,7 +131,7 @@ pub fn with_retry(client: Client) -> ClientWithMiddleware {
 pub fn with_download_retry(client: Client) -> ClientWithMiddleware {
   ClientWithMiddlewareBuilder::new(client)
     .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(60)),
+      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(20)),
       SJMCLRetryableStrategy {},
     ))
     .build()
