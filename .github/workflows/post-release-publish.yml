@@ -1,14 +1,13 @@
 name: Post Release Publish
 
+# 自动触发（push / pull_request / schedule / release）已禁用：构建与检查只在本地执行。
+# 需要时可在 Actions 页面手动 Run workflow。
 on:
   workflow_dispatch:
     inputs:
       release_tag:
         description: "Release tag to publish from, for example v1.2.3"
         required: true
-  release:
-    types:
-      - published
 
 permissions:
   contents: read

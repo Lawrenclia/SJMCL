@@ -1,11 +1,9 @@
 name: PR Size Label
 
+# 自动触发（push / pull_request / schedule / release）已禁用：构建与检查只在本地执行。
+# 需要时可在 Actions 页面手动 Run workflow。
 on:
-  pull_request_target:
-    types:
-      - opened
-      - reopened
-      - synchronize
+  workflow_dispatch:
 
 permissions:
   contents: read

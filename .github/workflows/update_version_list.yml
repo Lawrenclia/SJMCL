@@ -3,9 +3,9 @@ permissions:
   contents: write
   pull-requests: write
 
+# 自动触发（push / pull_request / schedule / release）已禁用：构建与检查只在本地执行。
+# 需要时可在 Actions 页面手动 Run workflow。
 on:
-  schedule:
-    - cron: '0 0 * * *' # Every day at midnight UTC
   workflow_dispatch:
 
 jobs:

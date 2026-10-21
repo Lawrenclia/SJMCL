@@ -1,16 +1,9 @@
 name: Security audit
 
+# 自动触发（push / pull_request / schedule / release）已禁用：构建与检查只在本地执行。
+# 需要时可在 Actions 页面手动 Run workflow。
 on:
-  schedule:
-    # Mondays 00:00 UTC
-    - cron: "0 0 * * 1"
   workflow_dispatch:
-  push:
-    paths:
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-      - '.cargo/audit.toml'
-      - '.github/workflows/audit.yml'
 
 jobs:
   audit:
