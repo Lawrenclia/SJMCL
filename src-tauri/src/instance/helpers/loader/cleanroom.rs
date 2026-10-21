@@ -65,6 +65,11 @@ pub async fn download_cleanroom_libraries(
   client_info: &mut McClientInfo,
   hooks: Option<GroupHooks>,
 ) -> SJMCLResult<()> {
+  // Avoid scheduling duplicate library downloads when the instance
+  // list is refreshed while the same group is still running.
+  if crate::tasks::monitor::has_active_group(app, &format!("cleanroom-libraries?{}", instance.id)) {
+    return Ok(());
+  }
   let subdirs = get_instance_subdir_paths(
     app,
     instance,

@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::vec::Vec;
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri::async_runtime::JoinHandle;
 use tokio::sync::Semaphore;
 
@@ -658,6 +659,15 @@ impl TaskMonitor {
     }
   }
 
+  /// Whether a group whose name starts with `prefix` is still active
+  /// (Started or Stopped). Used to avoid scheduling the same downloads twice
+  /// when an instance is refreshed repeatedly.
+  pub fn has_active_group_with_prefix(&self, prefix: &str) -> bool {
+    self.group_map.read().unwrap().iter().any(|(name, group)| {
+      name.starts_with(prefix)
+        && matches!(group.status, GEventStatus::Started | GEventStatus::Stopped)
+    })
+  }
   pub fn state_list(&self) -> Vec<PTaskGroupDesc> {
     self
       .group_map
@@ -690,4 +700,12 @@ impl TaskMonitor {
     }
     false
   }
+}
+
+/// Convenience wrapper for call sites that only have an [`AppHandle`].
+pub fn has_active_group(app: &AppHandle, prefix: &str) -> bool {
+  app
+    .try_state::<Pin<Box<TaskMonitor>>>()
+    .map(|monitor| monitor.has_active_group_with_prefix(prefix))
+    .unwrap_or(false)
 }

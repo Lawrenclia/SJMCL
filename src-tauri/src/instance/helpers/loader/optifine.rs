@@ -58,6 +58,11 @@ pub async fn download_optifine_libraries(
   client_info: &mut McClientInfo,
   hooks: Option<GroupHooks>,
 ) -> SJMCLResult<()> {
+  // Avoid scheduling duplicate library downloads when the instance
+  // list is refreshed while the same group is still running.
+  if crate::tasks::monitor::has_active_group(app, &format!("optifine-libraries?{}", instance.id)) {
+    return Ok(());
+  }
   let optifine = instance
     .optifine
     .as_ref()
