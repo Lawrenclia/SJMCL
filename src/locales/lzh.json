@@ -73,10 +73,7 @@
           "description": "此項遵 GNU General Public License v3.0（附增條）"
         }
       }
-    },
-    "bottomWarning": "By AI assistant, for reference only.",
-    "noHistory": "No chat history yet.",
-    "untitledSession": "Untitled Session"
+    }
   },
   "AccountsPage": {
     "button": {
@@ -235,20 +232,38 @@
     "joinGameConfirm": "Join Miuxi"
   },
   "AgentChatPage": {
+    "bottomWarning": "By AI assistant, for reference only.",
+    "noHistory": "No chat history yet.",
+    "untitledSession": "Untitled Session",
     "description": "Start your first conversation with Miuxi!",
     "placeholder": "Ask Miuxi anything, press Enter to send~",
     "suggestions": {
       "items": [
-        "Download the latest Minecraft",
-        "Launch the game",
-        "Check SJMC news"
+        "取 Minecraft 最新版",
+        "啟遊戲",
+        "覽 SJMC 新聞",
+        "汝能助我何事",
+        "檢 Java 之環境",
+        "新建 Fabric 實例",
+        "為實例配宜用之記憶體",
+        "覽已裝模組",
+        "查模組相衝之由",
+        "析崩潰日誌",
+        "覽實例之存檔",
+        "調遊戲視窗之大小"
       ]
     },
     "thinking": "Thinking",
     "thinkingFinished": "Thinking Finished",
     "skipThinking": "Skip thinking",
     "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
+    "resizePanel": "調 MiuChat 之寬",
     "toolCall": {
+      "params": "參數 / 腳本",
+      "running": "正行",
+      "pending": "待允",
+      "cancelled": "已止",
+      "waiting": "待行",
       "title": "Call Magic",
       "confirm": "Confirm",
       "cancel": "Cancel",

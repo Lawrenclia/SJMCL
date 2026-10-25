@@ -73,10 +73,7 @@
           "description": "Ce projet est sous licence GNU General Public License v3.0 (avec conditions supplémentaires)"
         }
       }
-    },
-    "bottomWarning": "By AI assistant, for reference only.",
-    "noHistory": "No chat history yet.",
-    "untitledSession": "Untitled Session"
+    }
   },
   "AccountsPage": {
     "button": {
@@ -235,20 +232,38 @@
     "joinGameConfirm": "Join Miuxi"
   },
   "AgentChatPage": {
+    "bottomWarning": "By AI assistant, for reference only.",
+    "noHistory": "No chat history yet.",
+    "untitledSession": "Untitled Session",
     "description": "Start your first conversation with Miuxi!",
     "placeholder": "Ask Miuxi anything, press Enter to send~",
     "suggestions": {
       "items": [
-        "Download the latest Minecraft",
-        "Launch the game",
-        "Check SJMC news"
+        "Télécharger la dernière version de Minecraft",
+        "Lancer le jeu",
+        "Voir les actualités SJMC",
+        "Comment peux-tu m’aider ?",
+        "Vérifier ma configuration Java",
+        "Créer une instance Fabric",
+        "Choisir la mémoire d’une instance",
+        "Afficher les mods installés",
+        "Résoudre les conflits entre mods",
+        "Analyser un journal de plantage",
+        "Afficher les mondes d’une instance",
+        "Modifier la taille de la fenêtre du jeu"
       ]
     },
     "thinking": "Thinking",
     "thinkingFinished": "Thinking Finished",
     "skipThinking": "Skip thinking",
     "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
+    "resizePanel": "Redimensionner le panneau MiuChat",
     "toolCall": {
+      "params": "Paramètres / script",
+      "running": "Exécution en cours",
+      "pending": "En attente de confirmation",
+      "cancelled": "Annulé",
+      "waiting": "En attente d’exécution",
       "title": "Call Magic",
       "confirm": "Confirm",
       "cancel": "Cancel",

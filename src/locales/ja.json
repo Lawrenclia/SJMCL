@@ -73,10 +73,7 @@
           "description": "このプロジェクトは GNU General Public License v3.0 （追加条項が適用）に準拠"
         }
       }
-    },
-    "bottomWarning": "By AI assistant, for reference only.",
-    "noHistory": "No chat history yet.",
-    "untitledSession": "Untitled Session"
+    }
   },
   "AccountsPage": {
     "button": {
@@ -235,20 +232,38 @@
     "joinGameConfirm": "Join Miuxi"
   },
   "AgentChatPage": {
+    "bottomWarning": "By AI assistant, for reference only.",
+    "noHistory": "No chat history yet.",
+    "untitledSession": "Untitled Session",
     "description": "Start your first conversation with Miuxi!",
     "placeholder": "Ask Miuxi anything, press Enter to send~",
     "suggestions": {
       "items": [
-        "Download the latest Minecraft",
-        "Launch the game",
-        "Check SJMC news"
+        "最新版の Minecraft をダウンロード",
+        "ゲームを起動",
+        "SJMC のニュースを見る",
+        "どんなことを手伝える？",
+        "Java 環境を確認して",
+        "Fabric インスタンスを作成",
+        "インスタンスに適したメモリを設定",
+        "インストール済みの MOD を表示",
+        "MOD の競合を調べたい",
+        "クラッシュログを分析して",
+        "インスタンスのワールドを表示",
+        "ゲームウィンドウのサイズを変更"
       ]
     },
     "thinking": "Thinking",
     "thinkingFinished": "Thinking Finished",
     "skipThinking": "Skip thinking",
     "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
+    "resizePanel": "MiuChat パネルの幅を変更",
     "toolCall": {
+      "params": "パラメーター / スクリプト",
+      "running": "実行中",
+      "pending": "確認待ち",
+      "cancelled": "キャンセル済み",
+      "waiting": "実行待ち",
       "title": "Call Magic",
       "confirm": "Confirm",
       "cancel": "Cancel",

@@ -46,6 +46,7 @@ const MainWindowExtensionTitle = ({
         h={`${titlebarHeight}px`}
         minH={`${titlebarHeight}px`}
         pos="absolute"
+        zIndex={1}
         left="50%"
         transform="translateX(-50%)"
       />

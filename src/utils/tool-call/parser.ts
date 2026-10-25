@@ -46,9 +46,19 @@ export function findToolCalls(content: string): ToolCallParseResult[] {
 
     // Brace counting to find full JSON object with support for nesting
     let braceCount = 0;
+    let inString = false;
+    let escaped = false;
     let jsonEnd = -1;
     for (let i = jsonStart; i < content.length; i++) {
-      if (content[i] === "{") braceCount++;
+      const char = content[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+      if (char === '"') inString = true;
+      else if (char === "{") braceCount++;
       else if (content[i] === "}") {
         braceCount--;
         if (braceCount === 0) {

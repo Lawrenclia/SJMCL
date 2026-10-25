@@ -9,6 +9,7 @@ import {
   Text,
   useColorModeValue,
   useDisclosure,
+  usePrefersReducedMotion,
 } from "@chakra-ui/react";
 import { exit } from "@tauri-apps/api/app";
 import { appLogDir, join } from "@tauri-apps/api/path";
@@ -62,46 +63,57 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   } = useAgentChat();
   const [panelWidth, setPanelWidth] = useState(300);
   const [isDragging, setIsDragging] = useState(false);
-  const originalHeadNavStyle = useRef(config.appearance.theme.headNavStyle);
+  const resizeStartRef = useRef({ x: 0, width: panelWidth });
+  const [hasOpenedAgentChat, setHasOpenedAgentChat] = useState(isAgentChatOpen);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const isLaunchPage = router.pathname === "/launch";
   const agentChatPanelWidth = `${panelWidth}px`;
-  const agentChatPanelTransform = isAgentChatOpen
-    ? "translateX(0)"
-    : "translateX(-100%)";
   const agentChatPanelOffset = isAgentChatOpen ? agentChatPanelWidth : "0px";
 
   useEffect(() => {
-    update(
-      "appearance.theme.headNavStyle",
-      isAgentChatOpen ? "simplified" : originalHeadNavStyle.current
-    );
-  }, [isAgentChatOpen, update]);
+    if (isAgentChatOpen) setHasOpenedAgentChat(true);
+  }, [isAgentChatOpen]);
 
   useEffect(() => {
+    const previousCursor = document.body.style.cursor;
+    if (isDragging) document.body.style.cursor = "col-resize";
+
     const handleMouseMove = (event: MouseEvent) => {
       if (!isDragging) return;
       const maxWidth = Math.max(250, window.innerWidth - 450);
-      setPanelWidth(Math.min(Math.max(event.clientX, 250), maxWidth));
+      const width =
+        resizeStartRef.current.width + event.clientX - resizeStartRef.current.x;
+      setPanelWidth(Math.min(Math.max(width, 250), maxWidth));
     };
 
     const handleMouseUp = () => {
       if (!isDragging) return;
       setIsDragging(false);
-      document.body.style.cursor = "default";
     };
 
+    const handleWindowResize = () => {
+      setPanelWidth((width) =>
+        Math.min(width, Math.max(250, window.innerWidth - 450))
+      );
+    };
+
+    handleWindowResize();
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("resize", handleWindowResize);
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("resize", handleWindowResize);
+      if (isDragging) document.body.style.cursor = previousCursor;
     };
   }, [isDragging]);
 
   const startResize = (event: React.MouseEvent) => {
+    if (event.button !== 0) return;
     event.preventDefault();
+    resizeStartRef.current = { x: event.clientX, width: panelWidth };
     setIsDragging(true);
-    document.body.style.cursor = "col-resize";
   };
 
   const {
@@ -372,22 +384,48 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       >
         <FileDnDProvider>
           <MainLayoutFileDnD />
-          <Flex flex="1" minH={0} w="full" flexDir="row">
+          <Flex flex="1" minH={0} w="full" flexDir="row" p={2}>
             <Flex
               w={agentChatPanelOffset}
+              flexShrink={0}
+              minH={0}
               overflow="hidden"
-              transform={agentChatPanelTransform}
-              transition="transform 0.35s ease"
-              p={isAgentChatOpen ? 2 : 0}
-              position="relative"
+              transition={
+                isDragging || prefersReducedMotion
+                  ? "none"
+                  : `width 0.25s ease, visibility 0s linear ${isAgentChatOpen ? "0s" : "0.25s"}`
+              }
+              visibility={isAgentChatOpen ? "visible" : "hidden"}
+              pointerEvents={isAgentChatOpen ? "auto" : "none"}
+              aria-hidden={!isAgentChatOpen}
+              ref={(node) => {
+                if (node) node.inert = !isAgentChatOpen;
+              }}
             >
-              {isAgentChatOpen && (
-                <>
+              {(hasOpenedAgentChat || isAgentChatOpen) && (
+                <Flex
+                  w={agentChatPanelWidth}
+                  minW={agentChatPanelWidth}
+                  minH={0}
+                  pr={2}
+                  position="relative"
+                >
                   <AgentChat
                     onAgentChatPanelClose={() => handleAgentChatOpen(false)}
                   />
                   <Flex
-                    role="group"
+                    role="separator"
+                    data-group
+                    aria-orientation="vertical"
+                    aria-valuemin={250}
+                    aria-valuemax={
+                      typeof window === "undefined"
+                        ? panelWidth
+                        : Math.max(250, window.innerWidth - 450)
+                    }
+                    aria-valuenow={panelWidth}
+                    tabIndex={isAgentChatOpen ? 0 : -1}
+                    aria-label={t("AgentChatPage.resizePanel")}
                     position="absolute"
                     top={0}
                     right={0}
@@ -396,26 +434,53 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     borderRadius="full"
                     cursor="col-resize"
                     onMouseDown={startResize}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key !== "ArrowLeft" &&
+                        event.key !== "ArrowRight"
+                      )
+                        return;
+                      event.preventDefault();
+                      setPanelWidth((width) =>
+                        Math.min(
+                          Math.max(
+                            250,
+                            width + (event.key === "ArrowRight" ? 20 : -20)
+                          ),
+                          Math.max(250, window.innerWidth - 450)
+                        )
+                      );
+                    }}
                     zIndex={10}
-                    transition="background 0.2s"
-                    bgColor={isDragging ? resizeHoverBg : "transparent"}
-                    _hover={{ bgColor: resizeHoverBg }}
+                    _focusVisible={{ outline: "none" }}
                     alignItems="center"
                     justifyContent="center"
                   >
-                    <Icon
-                      as={LuGripVertical}
+                    <Box
+                      h={10}
+                      w="full"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      borderRadius="full"
+                      bgColor={resizeHoverBg}
                       opacity={isDragging ? 1 : 0}
-                      color={resizeHoverIconColor}
                       _groupHover={{ opacity: 1 }}
+                      _groupFocusVisible={{ opacity: 1 }}
                       transition="opacity 0.2s"
-                    />
+                    >
+                      <Icon
+                        as={LuGripVertical}
+                        color={resizeHoverIconColor}
+                        boxSize={3}
+                      />
+                    </Box>
                   </Flex>
-                </>
+                </Flex>
               )}
             </Flex>
 
-            <Flex flex={1} minW={0} minH={0} p={2} pl={0}>
+            <Flex flex={1} minW={0} minH={0}>
               {isLaunchPage ? (
                 children
               ) : (

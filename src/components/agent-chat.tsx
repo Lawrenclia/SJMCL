@@ -89,6 +89,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   const currentSessionIdRef = useRef<string>(crypto.randomUUID());
   const sessionCreatedAtRef = useRef<number>(Math.floor(Date.now() / 1000));
   const wasLoadingRef = useRef(false);
+  const isBusyRef = useRef(false);
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [isDraggingSuggestions, setIsDraggingSuggestions] = useState(false);
@@ -106,7 +107,9 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
     ? topicSuggestionsValue
     : [];
   const shouldShowTopicSuggestions =
-    topicSuggestions.length > 0 && input.trim().length === 0;
+    topicSuggestions.length > 0 &&
+    input.trim().length === 0 &&
+    !messages.some((message) => message.role === "user");
 
   const { runAgentLoop, clearPendingConfirmation } = useAgentLoop({
     requestIdRef,
@@ -219,10 +222,6 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
     setInput("");
     setShowHistory(false);
   };
-
-  useEffect(() => {
-    console.log(messages);
-  }, [messages]);
 
   const handleShowHistory = async () => {
     const resp = await IntelligenceService.retrieveChatSessions();
@@ -436,19 +435,20 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
     });
   };
 
-  const handleToolCallConfirmationAction = async (
-    action: "confirm" | "cancel"
-  ) => {
-    if (isBusy) return;
+  const handleToolCallConfirmationAction = useCallback(
+    async (action: "confirm" | "cancel") => {
+      if (isBusyRef.current) return;
 
-    const actionText = action === "confirm" ? "确认" : "取消";
-    const userMsg: ChatMessage = { role: "user", content: actionText };
-    const newMessages = [...messagesRef.current, userMsg];
+      const actionText = action === "confirm" ? "确认" : "取消";
+      const userMsg: ChatMessage = { role: "user", content: actionText };
+      const newMessages = [...messagesRef.current, userMsg];
 
-    setMessages(newMessages);
-    setInput("");
-    await runAgentLoop(newMessages);
-  };
+      setMessages(newMessages);
+      setInput("");
+      await runAgentLoop(newMessages);
+    },
+    [runAgentLoop]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -476,6 +476,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   );
   const canSend = input.trim().length > 0;
   const isBusy = isLoading || hasExecutingToolCall();
+  isBusyRef.current = isBusy;
   const isThinking = useMemo(() => {
     if (!isBusy) return false;
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -494,6 +495,8 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
       borderRadius="xl"
       h="100%"
       w="100%"
+      minW={0}
+      minH={0}
       p={2}
       sx={{
         "p, span, li, code, h1, h2, h3, h4, h5, h6": {
@@ -501,8 +504,8 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
         },
       }}
     >
-      <VStack h="100%" w="100%">
-        <Flex w="100%" align="center" justify="space-between">
+      <VStack h="100%" w="100%" minH={0}>
+        <Flex w="100%" align="center" justify="space-between" flexShrink={0}>
           <MiuChatLogoTitle ml={1} />
           <HStack spacing={1}>
             <IconButton
@@ -526,17 +529,13 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
               aria-label="agent-chat-close"
               size="sm"
               variant="ghost"
-              onClick={() => {
-                setIsLoading(false);
-                setInput("");
-                onAgentChatPanelClose();
-              }}
+              onClick={onAgentChatPanelClose}
             />
           </HStack>
         </Flex>
 
         {showHistory ? (
-          <Flex w="100%" flex={1} overflowY="auto" direction="column">
+          <Flex w="100%" flex={1} minH={0} overflowY="auto" direction="column">
             {sessions.length === 0 ? (
               <Flex
                 direction="column"
@@ -586,7 +585,9 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
               onScroll={handleContainerScroll}
               w="100%"
               flex={1}
+              minH={0}
               overflowY="auto"
+              overflowX="hidden"
               direction="column"
               gap={2}
               fontSize="sm"
@@ -617,11 +618,12 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
                     direction={msg.role === "user" ? "row-reverse" : "row"}
                     gap={3}
                     width="100%"
+                    flexShrink={0}
                   >
                     {(msg.role !== "user" ||
                       (selectedPlayer && selectedPlayer.avatar)) &&
                       (i > 0 && filteredMessages[i - 1].role === msg.role ? (
-                        <Box boxSize="32px" />
+                        <Box boxSize="32px" flexShrink={0} />
                       ) : (
                         <PlayerAvatar
                           avatar={
@@ -638,8 +640,11 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
                       color={msg.role === "user" ? "white" : undefined}
                       p={msg.role === "user" ? 2 : 0}
                       borderRadius="lg"
-                      maxW={msg.role === "user" ? "80%" : undefined}
-                      w={msg.role === "user" ? undefined : "80%"}
+                      maxW={msg.role === "user" ? "80%" : "100%"}
+                      flex={msg.role === "user" ? undefined : 1}
+                      minW={0}
+                      overflowWrap="anywhere"
+                      sx={{ pre: { maxWidth: "100%", overflowX: "auto" } }}
                       position="relative"
                     >
                       <MarkdownContainer
@@ -677,6 +682,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
             {/* Input */}
             <Box
               w="100%"
+              flexShrink={0}
               bg={inputShellBg}
               borderWidth={1}
               borderColor={inputShellBorder}

@@ -73,10 +73,7 @@
           "description": "本项目遵循 GNU General Public License v3.0 协议（包含附加条款）"
         }
       }
-    },
-    "bottomWarning": "由 AI 助手生成的内容，仅供参考。",
-    "noHistory": "暂无聊天记录",
-    "untitledSession": "未命名会话"
+    }
   },
   "AccountsPage": {
     "button": {
@@ -235,20 +232,38 @@
     "joinGameConfirm": "加入游戏"
   },
   "AgentChatPage": {
+    "bottomWarning": "由 AI 助手生成的内容，仅供参考。",
+    "noHistory": "暂无聊天记录",
+    "untitledSession": "未命名会话",
     "description": "与缪汐开始第一句对话吧！",
     "placeholder": "问问缪汐，回车发送~",
     "suggestions": {
       "items": [
         "帮我下载最新版本MC",
         "启动游戏",
-        "看看SJMC新闻"
+        "看看SJMC新闻",
+        "你能帮我做什么",
+        "帮我检查 Java 环境",
+        "新建一个 Fabric 实例",
+        "给实例分配合适的内存",
+        "查看已安装的模组",
+        "帮我排查模组冲突",
+        "帮我分析崩溃日志",
+        "查看实例里的存档",
+        "调整游戏窗口大小"
       ]
     },
     "thinking": "正在思考",
     "thinkingFinished": "思考完成",
     "skipThinking": "跳过思考",
     "skipThinkingPrompt": "请停止展示思考过程，直接给出最终答案，不要输出 <think> 标签内容。",
+    "resizePanel": "调整 MiuChat 面板宽度",
     "toolCall": {
+      "params": "参数 / 脚本",
+      "running": "执行中",
+      "pending": "等待确认",
+      "cancelled": "已取消",
+      "waiting": "等待执行",
       "title": "调用魔法",
       "confirm": "确认",
       "cancel": "取消",
