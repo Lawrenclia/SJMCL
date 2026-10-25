@@ -162,7 +162,7 @@ SJMCL 的扩展系统允许开发者在不修改核心代码的情况下添加�
 - UNIkeEN/SJMCL 保留为 upstream，仅用于获取上游更新；除非用户明确要求，否则不要向其推送。
 ## 本地验证
 
-GitHub Actions 的自动触发已禁用（构建、检查、数据更新都只在本地执行）。提交前运行：
+仓库不再包含 GitHub Actions workflow（GitHub 侧自动编译/发布已移除，启动器遥测上报也已删除），构建与检查只在本地执行。提交前运行：
 
 ```powershell
 pwsh scripts/local-check.ps1

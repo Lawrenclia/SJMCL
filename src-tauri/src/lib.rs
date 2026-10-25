@@ -219,9 +219,6 @@ pub async fn run() {
         let mut launcher_config: LauncherConfig = LauncherConfig::load().unwrap_or_default();
         launcher_config.setup_with_app(app.handle()).unwrap();
         launcher_config.save().unwrap();
-        let version = launcher_config.basic_info.launcher_version.clone();
-        let os = launcher_config.basic_info.platform.clone();
-        let exe_sha256 = launcher_config.basic_info.exe_sha256.clone();
         let auto_purge_launcher_logs = launcher_config.general.advanced.auto_purge_launcher_logs;
         let launcher_mcp_config = launcher_config.intelligence.mcp_server.launcher.clone();
         app.manage(Mutex::new(launcher_config));
@@ -309,12 +306,6 @@ pub async fn run() {
           initialize_mod_db(&app_handle).await.unwrap_or_default();
         });
 
-        // Send statistics
-        tokio::spawn(async move {
-          utils::sys_info::send_statistics(version, os, exe_sha256).await;
-        });
-
-        // Auto purge launcher logs older than 30 days if enabled
         if auto_purge_launcher_logs {
           let app_handle = app.handle().clone();
           tauri::async_runtime::spawn(async move {
