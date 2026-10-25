@@ -15,7 +15,7 @@ use url::Url;
 use crate::launcher_config::models::{LauncherConfig, ProxyType};
 
 /// Builds a reqwest client with SJMCL User-Agent and proxy support.
-/// Defaults to 10s timeout.
+/// Uses a 10s total request timeout.
 ///
 /// # Arguments
 ///
@@ -32,33 +32,29 @@ use crate::launcher_config::models::{LauncherConfig, ProxyType};
 /// # Example
 ///
 /// ```rust,ignore
-/// let client = build_sjmcl_client(&app, true);
+/// let client = build_sjmcl_general_client(&app, true);
 /// ```
-pub fn build_sjmcl_client(app: &AppHandle, use_proxy: bool) -> Client {
-  build_sjmcl_client_builder(app, use_proxy)
+pub fn build_sjmcl_general_client(app: &AppHandle, use_proxy: bool) -> Client {
+  let builder = ClientBuilder::new()
     .timeout(Duration::from_secs(10))
-    .tcp_keepalive(Duration::from_secs(10))
-    .build()
-    .unwrap_or_else(|_| Client::new())
+    .tcp_keepalive(Duration::from_secs(10));
+
+  build_sjmcl_client(app, use_proxy, Some(builder))
 }
 
-/// Builds a client dedicated to file transfers.
-///
-/// The shared client uses a short overall request timeout, which is right for
-/// metadata but would abort long file transfers. Downloads therefore only
-/// bound connection setup and idle reads, and retries are handled by the
-/// download task itself.
-pub fn build_sjmcl_download_client(app: &AppHandle) -> Client {
-  build_sjmcl_client_builder(app, true)
+/// Builds a separate streaming download client with the launcher User-Agent and proxy settings.
+/// Uses a 10s connect timeout and a 30s read timeout, without a total request deadline.
+pub fn build_sjmcl_download_client(app: &AppHandle, use_proxy: bool) -> Client {
+  let builder = ClientBuilder::new()
     .connect_timeout(Duration::from_secs(10))
-    .read_timeout(Duration::from_secs(60))
-    .tcp_keepalive(Duration::from_secs(10))
-    .build()
-    .unwrap_or_else(|_| Client::new())
+    .read_timeout(Duration::from_secs(30))
+    .tcp_keepalive(Duration::from_secs(10));
+
+  build_sjmcl_client(app, use_proxy, Some(builder))
 }
 
-fn build_sjmcl_client_builder(app: &AppHandle, use_proxy: bool) -> ClientBuilder {
-  let mut builder = ClientBuilder::new();
+fn build_sjmcl_client(app: &AppHandle, use_proxy: bool, builder: Option<ClientBuilder>) -> Client {
+  let mut builder = builder.unwrap_or_default();
 
   if let Ok(config) = app.state::<Mutex<LauncherConfig>>().lock() {
     // According to the User-Agent requirements of mozilla and BMCLAPI, the User-Agent is set to start with ${NAME}/${VERSION}
@@ -83,7 +79,7 @@ fn build_sjmcl_client_builder(app: &AppHandle, use_proxy: bool) -> ClientBuilder
     }
   }
 
-  builder
+  builder.build().unwrap_or_else(|_| Client::new())
 }
 
 struct SJMCLRetryableStrategy;
@@ -108,30 +104,10 @@ impl RetryableStrategy for SJMCLRetryableStrategy {
   }
 }
 
-/// Retry policy for metadata requests (resource lists, update checks, ...).
-///
-/// The strategy treats every request error as transient, so the budget must be
-/// bounded: with a very large budget a broken host or proxy keeps the UI
-/// waiting for a long time (previously up to one hour). Once the budget is
-/// exhausted the caller receives the error and can fall back / report it.
 pub fn with_retry(client: Client) -> ClientWithMiddleware {
   ClientWithMiddlewareBuilder::new(client)
     .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(30)),
-      SJMCLRetryableStrategy {},
-    ))
-    .build()
-}
-
-/// Retry policy for file transfers.
-///
-/// A downloaded file can be retried from a fallback source quickly, so each
-/// source gets a much shorter retry budget than metadata requests. This keeps
-/// mirror failover fast instead of stalling for a long time on one source.
-pub fn with_download_retry(client: Client) -> ClientWithMiddleware {
-  ClientWithMiddlewareBuilder::new(client)
-    .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(20)),
+      ExponentialBackoff::builder().build_with_total_retry_duration(Duration::from_secs(3600)),
       SJMCLRetryableStrategy {},
     ))
     .build()

@@ -22,6 +22,7 @@
     "core:window:allow-set-title",
     "deep-link:default",
     "dialog:default",
+    "sjmcl-downloader:default",
     "log:default",
     "os:default"
   ]
