@@ -104,9 +104,11 @@ pnpm run tauri build
 
 ### GitHub 手动构建安装包
 
-将改动推送到 GitHub 仓库的默认分支后，打开 **Actions → Build installers (manual) → Run workflow**，选择要构建的分支并运行。此 workflow 仅支持手动触发，不会因 push 或 tag 自动执行，也不会创建 Release。
+将改动推送到 GitHub 仓库的默认分支后，打开 **Actions → Build installers (manual) → Run workflow**，选择要构建的分支并运行。此 workflow 仅支持手动触发，不会因 push 或 tag 自动执行。
 
-构建完成后，在该次运行页面的 **Artifacts** 中下载：
+两个平台都构建成功后，workflow 会将安装包发布到 **Releases**，并在运行摘要中给出下载页面链接。Tag 使用 `v<package.json 版本号>`；当前为 `v1.4.0-miu`，带有 prerelease 后缀的版本会标记为预发布。同一 commit 重跑会更新其安装包；若同名 tag 已指向其他 commit，会停止发布，需要先修改版本号，不会移动已有 tag。
+
+安装包也会保存在该次运行页面的 **Artifacts** 中：
 
 - `SJMCL-windows-x64-installer`：Windows x64 NSIS `.exe` 安装包。
 - `SJMCL-macos-universal-installer`：兼容 Intel 和 Apple Silicon 的通用 `.dmg` 安装包。

@@ -162,7 +162,7 @@ SJMCL 的扩展系统允许开发者在不修改核心代码的情况下添加�
 - UNIkeEN/SJMCL 保留为 upstream，仅用于获取上游更新；除非用户明确要求，否则不要向其推送。
 ## 本地验证
 
-GitHub Actions 仅保留手动触发的安装包构建（Windows EXE 和 macOS 通用 DMG），不自动编译或发布 Release；启动器遥测上报已删除。代码检查在本地执行，提交前运行：
+GitHub Actions 仅保留手动触发的安装包构建（Windows EXE 和 macOS 通用 DMG），两者成功后发布到 GitHub Release；push 或 tag 不触发构建。启动器遥测上报已删除。代码检查在本地执行，提交前运行：
 
 ```powershell
 pwsh scripts/local-check.ps1
