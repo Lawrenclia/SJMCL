@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "SJMCL"
-version = "1.4.0"
+version = "1.4.0-miu"
 dependencies = [
  "async-trait",
  "axum",
@@ -6741,7 +6741,7 @@ checksum = "8ee5873ec9cce0195efcb7a4e9507a04cd49aec9c83d0389df45b1ef7ba2e649"
 
 [[package]]
 name = "sjmcl-downloader"
-version = "1.4.0"
+version = "1.4.0-miu"
 dependencies = [
  "async-channel",
  "bytes",
@@ -6764,7 +6764,7 @@ dependencies = [
 
 [[package]]
 name = "sjmcl-macros"
-version = "1.4.0"
+version = "1.4.0-miu"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6773,7 +6773,7 @@ dependencies = [
 
 [[package]]
 name = "sjmcl-types"
-version = "1.4.0"
+version = "1.4.0-miu"
 dependencies = [
  "serde",
  "serde_json",

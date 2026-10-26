@@ -1,6 +1,6 @@
 import { useMediaQuery } from "@chakra-ui/react";
 import { useRouter } from "next/router";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useLauncherConfig } from "@/contexts/config";
 import styles from "@/styles/liquid-glass.module.css";
 
@@ -12,11 +12,15 @@ type LiquidGlassEffectProps = {
 const layoutUpdates = new Set<() => void>();
 let layoutFrame = 0;
 
+const updateLayout = () => {
+  layoutUpdates.forEach((update) => update());
+};
+
 const scheduleLayoutUpdate = () => {
   if (layoutFrame || !layoutUpdates.size) return;
   layoutFrame = requestAnimationFrame(() => {
     layoutFrame = 0;
-    layoutUpdates.forEach((update) => update());
+    updateLayout();
   });
 };
 
@@ -94,6 +98,7 @@ const LiquidGlassLayer = ({
 }: LiquidGlassLayerProps) => {
   const id = `glass-${useId().replace(/:/g, "")}`;
   const layerRef = useRef<HTMLDivElement>(null);
+  const wallpaperRef = useRef<SVGImageElement>(null);
 
   const [map, setMap] = useState("");
   const [bounds, setBounds] = useState({
@@ -105,7 +110,7 @@ const LiquidGlassLayer = ({
     viewportHeight: 0,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!enabled) return;
     const layer = layerRef.current!;
     const card = layer.parentElement!;
@@ -124,6 +129,15 @@ const LiquidGlassLayer = ({
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
       };
+      // Keep the wallpaper anchored before paint, even when React batches the
+      // filter/map update. A card's movement must not move the sampled image.
+      const wallpaper = wallpaperRef.current;
+      if (wallpaper) {
+        wallpaper.setAttribute("x", String(nextBounds.x));
+        wallpaper.setAttribute("y", String(nextBounds.y));
+        wallpaper.setAttribute("width", String(nextBounds.viewportWidth));
+        wallpaper.setAttribute("height", String(nextBounds.viewportHeight));
+      }
       setBounds((previous) =>
         previous.width === nextBounds.width &&
         previous.height === nextBounds.height &&
@@ -154,10 +168,10 @@ const LiquidGlassLayer = ({
       if (/(color|shadow)$|^opacity$/.test(event.propertyName)) return;
       scheduleLayoutUpdate();
     };
-    const observer = new ResizeObserver(scheduleLayoutUpdate);
+    const observer = new ResizeObserver(updateLayout);
     observer.observe(card);
     layoutUpdates.add(update);
-    scheduleLayoutUpdate();
+    updateLayout();
     if (layoutUpdates.size === 1) {
       window.addEventListener("resize", scheduleLayoutUpdate);
       document.addEventListener("animationend", scheduleLayoutUpdate, true);
@@ -245,6 +259,7 @@ const LiquidGlassLayer = ({
           </defs>
           <g filter={`url(#${id})`}>
             <image
+              ref={wallpaperRef}
               href={bgImageSrc}
               x={bounds.x}
               y={bounds.y}
@@ -279,8 +294,8 @@ const LiquidGlassEffect = ({ isDark = false }: LiquidGlassEffectProps) => {
     !router.pathname.startsWith("/standalone") && Boolean(bgImageSrc);
 
   // Parent renders can move a card without resizing it, for example on sorting.
-  useEffect(() => {
-    scheduleLayoutUpdate();
+  useLayoutEffect(() => {
+    updateLayout();
   });
 
   return (

@@ -314,6 +314,29 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   }, [shouldShowTopicSuggestions, updateSuggestionMask]);
 
   useEffect(() => {
+    const container = suggestionsContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      // Keep horizontal trackpad gestures and pinch-to-zoom native.
+      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))
+        return;
+      const unit =
+        event.deltaMode === 1
+          ? 16
+          : event.deltaMode === 2
+            ? container.clientWidth
+            : 1;
+      const previous = container.scrollLeft;
+      container.scrollLeft += event.deltaY * unit;
+      if (container.scrollLeft !== previous) event.preventDefault();
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, [shouldShowTopicSuggestions, showHistory]);
+
+  useEffect(() => {
     if (!isDraggingSuggestions) return;
 
     const handleMouseMove = (event: MouseEvent) => {

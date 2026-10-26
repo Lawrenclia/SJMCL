@@ -1,6 +1,6 @@
 {
   "name": "sjmcl",
-  "version": "1.4.0",
+  "version": "1.4.0-miu",
   "private": true,
   "browserslist": [
     "Safari >= 14"
@@ -10,7 +10,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "tauri": "tauri",
+    "tauri": "node scripts/tauri.js",
     "lint-staged": "lint-staged",
     "prepare": "husky",
     "version": "node scripts/version/index.js",

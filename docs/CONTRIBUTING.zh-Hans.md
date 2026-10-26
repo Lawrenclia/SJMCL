@@ -49,7 +49,7 @@ pnpm install
 
 ### 配置环境变量
 
-将 `.env.template` 文件复制为 `.env`，并根据模板中的注释填写所需的环境变量。
+将 `src-tauri/.env.template` 文件复制到仓库根目录并命名为 `.env`，根据模板中的注释填写所需的环境变量。
 
 这些值将作为编译时常量嵌入 Rust 后端。
 
@@ -90,13 +90,30 @@ cargo fmt -- src/**/*.rs                           # 修复
 
 ### 构建
 
-将项目构建为可执行文件。
+在仓库根目录手动构建。Windows 默认生成 NSIS 安装包：
 
 ```bash
-pnpm tauri build
+pnpm run tauri build
 ```
 
+该命令会先执行前端生产构建，再编译 Rust 后端并打包。Windows 的 `dev` 和 `build` 会自动使用与 `scripts/local-check.ps1` 相同的 stable Rust 兼容参数，以绕过当前 nightly 编译 `azalea-entity` 时的编译器崩溃。请先安装 stable 和 nightly Rust 工具链。
+
+安装包输出到 `src-tauri/target/release/bundle/nsis/`。当前版本为 `1.4.0-miu`，版本号在 `package.json`、`src-tauri/Cargo.toml` 和 `src-tauri/tauri.conf.json` 中保持一致，工作区 crate 的版本由 Cargo 继承。
+
 如需跨平台编译、打包为特定格式或了解更多信息，请参阅 Tauri 官方的[分发指南](https://tauri.app/distribute/)。
+
+### GitHub 手动构建安装包
+
+将改动推送到 GitHub 仓库的默认分支后，打开 **Actions → Build installers (manual) → Run workflow**，选择要构建的分支并运行。此 workflow 仅支持手动触发，不会因 push 或 tag 自动执行，也不会创建 Release。
+
+构建完成后，在该次运行页面的 **Artifacts** 中下载：
+
+- `SJMCL-windows-x64-installer`：Windows x64 NSIS `.exe` 安装包。
+- `SJMCL-macos-universal-installer`：兼容 Intel 和 Apple Silicon 的通用 `.dmg` 安装包。
+
+Artifacts 保留 14 天，仅上传上述安装包，不上传便携版、MSI 或单独的 `.app`。Windows 安装包未签名；macOS 使用临时签名（ad-hoc），未经过 Apple 公证。
+
+若需内置 CurseForge API Key，在仓库 **Settings → Secrets and variables → Actions** 中添加 `SJMCL_CURSEFORGE_API_KEY` secret。未设置也可以编译，但使用 CurseForge 需要用户自行配置 API Key。CI 不读取本地 `.env`。
 
 ## 成为协作者
 

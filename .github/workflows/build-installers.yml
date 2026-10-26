@@ -1,0 +1,96 @@
+name: Build installers (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64 EXE
+            os: windows-2025
+            target: x86_64-pc-windows-msvc
+            rust-targets: x86_64-pc-windows-msvc
+            bundle: nsis
+            artifact: SJMCL-windows-x64-installer
+            path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          - name: macOS universal DMG
+            os: macos-15
+            target: universal-apple-darwin
+            rust-targets: aarch64-apple-darwin x86_64-apple-darwin
+            bundle: dmg
+            artifact: SJMCL-macos-universal-installer
+            path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      # Optional: without this secret, users must supply their own CurseForge key.
+      SJMCL_CURSEFORGE_API_KEY: ${{ secrets.SJMCL_CURSEFORGE_API_KEY }}
+      SJMCL_COMMIT_SHA: ${{ github.sha }}
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Ad-hoc signing supports Apple Silicon without a developer certificate.
+      APPLE_SIGNING_IDENTITY: "-"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Rust compatibility toolchains
+        env:
+          RUST_TARGETS: ${{ matrix.rust-targets }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          rustup toolchain install stable nightly --profile minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup target add --toolchain stable ($env:RUST_TARGETS -split ' ')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Match scripts/local-check.ps1 to avoid the azalea-entity nightly ICE.
+          $sysroot = (rustup run stable rustc --print sysroot).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $suffix = if ($IsWindows) { '.exe' } else { '' }
+          "RUSTC=$(Join-Path $sysroot "bin/rustc$suffix")" >> $env:GITHUB_ENV
+          "RUSTDOC=$(Join-Path $sysroot "bin/rustdoc$suffix")" >> $env:GITHUB_ENV
+          'RUSTC_BOOTSTRAP=1' >> $env:GITHUB_ENV
+          'RUSTUP_TOOLCHAIN=nightly' >> $env:GITHUB_ENV
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check version consistency
+        run: node scripts/version/index.js check
+
+      - name: Build installer
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+          BUILD_BUNDLE: ${{ matrix.bundle }}
+        run: pnpm run tauri build --ci --target $env:BUILD_TARGET --bundles $env:BUILD_BUNDLE -- --locked
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

@@ -28,7 +28,7 @@ const LaunchPage = () => {
   }, []);
 
   return (
-    <HStack ref={layoutRef} p={7} pt={1} align="stretch" h="100%" spacing={6}>
+    <HStack ref={layoutRef} p={7} pt={0} align="stretch" h="100%" spacing={6}>
       <HomeWidgetContainer maxWidth={maxWidgetWidth} />
 
       <Flex justify="flex-end" align="flex-end" minW="14.5rem" w="100%">

@@ -1,6 +1,7 @@
 {
   "identifier": "SJMCL",
   "bundle": {
+    "targets": ["dmg"],
     "resources": {
       "infoplist": ""
     },

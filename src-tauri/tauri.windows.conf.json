@@ -1,6 +1,7 @@
 {
   "identifier": "SJMCL",
   "bundle": {
+    "targets": ["nsis"],
     "windows": {
       "nsis": {
         "installerIcon": "assets/icons/icon.ico",
