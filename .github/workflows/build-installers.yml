@@ -22,13 +22,13 @@ jobs:
             bundle: nsis
             artifact: SJMCL-windows-x64-installer
             path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
-          - name: macOS universal DMG
+          - name: macOS Apple Silicon DMG
             os: macos-15
-            target: universal-apple-darwin
-            rust-targets: aarch64-apple-darwin x86_64-apple-darwin
+            target: aarch64-apple-darwin
+            rust-targets: aarch64-apple-darwin
             bundle: dmg
-            artifact: SJMCL-macos-universal-installer
-            path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            artifact: SJMCL-macos-arm64-installer
+            path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
     defaults:
       run:
         shell: pwsh
@@ -64,6 +64,9 @@ jobs:
           rustup toolchain install stable nightly --profile minimal
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           rustup target add --toolchain stable ($env:RUST_TARGETS -split ' ')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Tauri checks the active nightly toolchain's installed targets too.
+          rustup target add --toolchain nightly ($env:RUST_TARGETS -split ' ')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # Match scripts/local-check.ps1 to avoid the azalea-entity nightly ICE.
           $sysroot = (rustup run stable rustc --print sysroot).Trim()
@@ -150,7 +153,7 @@ jobs:
             fi
             printf '%s\n' \
               'Windows: download the x64 .exe installer.' \
-              'macOS: download the universal .dmg for Intel and Apple Silicon.' \
+              'macOS: download the ARM64 .dmg for Apple Silicon (M-series Macs).' \
               '' \
               'Windows is unsigned. macOS is ad-hoc signed and not notarized.' \
               '' \

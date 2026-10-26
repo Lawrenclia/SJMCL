@@ -111,7 +111,7 @@ pnpm run tauri build
 安装包也会保存在该次运行页面的 **Artifacts** 中：
 
 - `SJMCL-windows-x64-installer`：Windows x64 NSIS `.exe` 安装包。
-- `SJMCL-macos-universal-installer`：兼容 Intel 和 Apple Silicon 的通用 `.dmg` 安装包。
+- `SJMCL-macos-arm64-installer`：Apple Silicon（M 系列芯片）的 ARM64 `.dmg` 安装包，不包含 Intel 版本。
 
 Artifacts 保留 14 天，仅上传上述安装包，不上传便携版、MSI 或单独的 `.app`。Windows 安装包未签名；macOS 使用临时签名（ad-hoc），未经过 Apple 公证。
 
