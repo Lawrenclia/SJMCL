@@ -125,27 +125,27 @@ export default function App({ Component, pageProps }: AppProps) {
           <LauncherConfigContextProvider>
             <GlobalDataContextProvider>
               <GuidedTourProvider>
-                  <SharedModalsProvider>
-                    <TaskContextProvider>
-                      <ExtensionHostContextProvider>
-                        <AgentChatContextProvider>
-                          <GlobalEventHandler>
-                            <ToolCallProvider>
-                              <MainLayout>
-                                <Fade
-                                  key={router.pathname.split("/")[1] || ""}
-                                  in
-                                >
-                                  <SpecLayout>
-                                    <Component {...pageProps} />
-                                  </SpecLayout>
-                                </Fade>
-                              </MainLayout>
-                            </ToolCallProvider>
-                          </GlobalEventHandler>
-                        </AgentChatContextProvider>
-                      </ExtensionHostContextProvider>
-                    </TaskContextProvider>
+                <SharedModalsProvider>
+                  <TaskContextProvider>
+                    <ExtensionHostContextProvider>
+                      <AgentChatContextProvider>
+                        <GlobalEventHandler>
+                          <ToolCallProvider>
+                            <MainLayout>
+                              <Fade
+                                key={router.pathname.split("/")[1] || ""}
+                                in
+                              >
+                                <SpecLayout>
+                                  <Component {...pageProps} />
+                                </SpecLayout>
+                              </Fade>
+                            </MainLayout>
+                          </ToolCallProvider>
+                        </GlobalEventHandler>
+                      </AgentChatContextProvider>
+                    </ExtensionHostContextProvider>
+                  </TaskContextProvider>
                 </SharedModalsProvider>
               </GuidedTourProvider>
             </GlobalDataContextProvider>

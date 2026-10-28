@@ -30,7 +30,13 @@ const ViewSkinModal: React.FC<ViewSkinModalProps> = ({
   const { t } = useTranslation();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md" {...modalProps}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      returnFocusOnClose={false}
+      {...modalProps}
+    >
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{t("ViewSkinModal.skinView")}</ModalHeader>
@@ -43,6 +49,7 @@ const ViewSkinModal: React.FC<ViewSkinModalProps> = ({
               width={416} // calculated from model content size
               height={310}
               showControlBar
+              showSaveButton={Boolean(skin && !skin.preset)}
               isCapeVisible={isCapeVisible}
               onCapeVisibilityChange={setIsCapeVisible}
             />

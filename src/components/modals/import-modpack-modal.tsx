@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { t } from "i18next";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BeatLoader } from "react-spinners";
 import {
   OptionItemGroup,
@@ -33,6 +33,7 @@ import {
 } from "@/models/resource";
 import { InstanceService } from "@/services/instance";
 import { ResourceService } from "@/services/resource";
+import { logger } from "@/utils/logging";
 import { isDirNameInvalid, sanitizeFileName } from "@/utils/string";
 
 interface ImportModpackModalProps extends Omit<ModalProps, "children"> {
@@ -47,7 +48,11 @@ const ImportModpackModal: React.FC<ImportModpackModalProps> = ({
   const router = useRouter();
   const toast = useToast();
   const primaryColor = config.appearance.theme.primaryColor;
-  const { onClose } = modalProps;
+  const { isOpen, onClose } = modalProps;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   const [modpack, setModpack] = useState<ModpackMetaInfo>();
   const [name, setName] = useState("");
@@ -127,11 +132,13 @@ const ImportModpackModal: React.FC<ImportModpackModalProps> = ({
               version: modpack.modLoader.version,
               branch: modpack.modLoader.branch,
               description: "",
-              stable: true,
             } as ModLoaderResourceInfo)
           : defaultModLoaderResourceInfo,
         undefined,
-        path
+        path,
+        undefined,
+        undefined,
+        modpack.version
       );
       if (createResp.status === "success") {
         onClose();
@@ -161,9 +168,13 @@ const ImportModpackModal: React.FC<ImportModpackModalProps> = ({
   ]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
     setIsPageLoading(true);
     InstanceService.retrieveModpackMetaInfo(path)
       .then((response) => {
+        if (cancelled) return;
         if (response.status === "success") {
           setModpack(response.data);
           setName(sanitizeFileName(response.data.name));
@@ -174,27 +185,32 @@ const ImportModpackModal: React.FC<ImportModpackModalProps> = ({
               : gameTypesToIcon["release"]
           );
         } else {
-          toast({
+          toastRef.current({
             title: response.message,
             description: response.details,
             status: "error",
           });
-          onClose();
+          onCloseRef.current();
         }
       })
       .catch((error) => {
-        logger.error("Error fetching modpack info:", error);
+        if (!cancelled) logger.error("Error fetching modpack info:", error);
       })
       .finally(() => {
-        setIsPageLoading(false);
+        if (!cancelled) setIsPageLoading(false);
       });
-  }, [path, toast, onClose]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [path, isOpen]);
 
   return (
     <Modal
       scrollBehavior="inside"
       size={{ base: "2xl", lg: "3xl", xl: "4xl" }}
       autoFocus={false}
+      returnFocusOnClose={false}
       {...modalProps}
     >
       <ModalOverlay />

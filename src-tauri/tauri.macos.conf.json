@@ -1,12 +1,13 @@
 {
   "identifier": "SJMCL",
   "bundle": {
+    "targets": ["dmg"],
     "resources": {
       "infoplist": ""
     },
     "macOS": {
       "dmg": {
-        "background": "assets/misc/dmg_bg.png",
+        "background": "assets/misc/dmg_bg_april_fool.png",
         "windowSize": {
           "width": 640,
           "height": 440
@@ -32,7 +33,7 @@
         "dragDropEnabled": true,
         "trafficLightPosition": {
           "x": 14,
-          "y": 22
+          "y": 16
         }
       },
       {
@@ -45,7 +46,14 @@
         "minWidth": 640,
         "minHeight": 440,
         "center": true,
-        "dragDropEnabled": false
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "dragDropEnabled": false,
+        "trafficLightPosition": {
+          "x": 10,
+          "y": 12
+        }
       },
       {
         "label": "game_log",
@@ -57,7 +65,14 @@
         "minWidth": 640,
         "minHeight": 440,
         "center": true,
-        "dragDropEnabled": false
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "dragDropEnabled": false,
+        "trafficLightPosition": {
+          "x": 10,
+          "y": 12
+        }
       }
     ]
   }

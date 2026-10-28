@@ -1,21 +1,19 @@
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use sjmcl_types::error::{SJMCLError, SJMCLResult};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
-
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_http::reqwest;
 use zip::ZipArchive;
 
-use crate::error::{SJMCLError, SJMCLResult};
+use crate::download::DownloadTask;
 use crate::instance::helpers::modpack::import::{ModpackManifest, ModpackMetaInfo};
 use crate::instance::models::misc::{InstanceError, ModLoader, ModLoaderType};
 use crate::resource::helpers::curseforge::misc::{CURSEFORGE_API_KEY, CurseForgeProject};
 use crate::resource::models::OtherResourceSource;
-use crate::tasks::PTaskParam;
-use crate::tasks::download::DownloadParam;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -57,6 +55,8 @@ structstruck::strike! {
     pub data: struct {
       pub download_url: Option<String>,
       pub file_name: String,
+      #[serde(default)]
+      pub file_length: u64,
       pub hashes: Option<Vec<pub struct {
         pub value: String,
         pub algo: u64,
@@ -79,7 +79,7 @@ impl ModpackManifest for CurseForgeManifest {
     let mut manifest_content = String::new();
     manifest_file.read_to_string(&mut manifest_content)?;
     let manifest: Self = serde_json::from_str(&manifest_content).inspect_err(|e| {
-      eprintln!("{:?}", e);
+      log::warn!("{:?}", e);
     })?;
 
     Ok(manifest)
@@ -138,7 +138,7 @@ impl ModpackManifest for CurseForgeManifest {
     &self,
     app: &AppHandle,
     instance_path: &Path,
-  ) -> SJMCLResult<Vec<PTaskParam>> {
+  ) -> SJMCLResult<Vec<DownloadTask>> {
     let client = app.state::<reqwest::Client>();
     let instance_path = instance_path.to_path_buf();
 
@@ -176,7 +176,7 @@ impl ModpackManifest for CurseForgeManifest {
             return Err(InstanceError::NetworkError.into());
           }
           file_resp.json().await.map_err(|e| {
-            eprintln!("{:?}", e);
+            log::warn!("{:?}", e);
             InstanceError::CurseForgeFileManifestParseError
           })?
         };
@@ -195,9 +195,12 @@ impl ModpackManifest for CurseForgeManifest {
           .and_then(|hs| hs.iter().find(|h| h.algo == 1))
           .map(|h| h.value.clone());
 
-        let task_param = PTaskParam::Download(DownloadParam {
-          src: url::Url::parse(&download_url).map_err(|_| InstanceError::InvalidSourcePath)?,
+        let task_param = DownloadTask {
+          sources: vec![
+            url::Url::parse(&download_url).map_err(|_| InstanceError::InvalidSourcePath)?,
+          ],
           sha1,
+          size: Some(file_manifest.data.file_length),
           dest: instance_path
             .join(match class_id {
               Some(12) | Some(6945) => "resourcepacks",
@@ -206,9 +209,9 @@ impl ModpackManifest for CurseForgeManifest {
             })
             .join(&file_manifest.data.file_name),
           filename: Some(file_manifest.data.file_name.clone()),
-        });
+        };
 
-        Ok::<PTaskParam, SJMCLError>(task_param)
+        Ok::<DownloadTask, SJMCLError>(task_param)
       }
     });
 

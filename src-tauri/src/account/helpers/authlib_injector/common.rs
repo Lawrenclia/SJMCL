@@ -1,3 +1,13 @@
+use base64::Engine;
+use base64::engine::general_purpose;
+use serde_json::json;
+use sjmcl_types::error::SJMCLResult;
+use std::str::FromStr;
+use strum::IntoEnumIterator;
+use tauri::{AppHandle, Manager};
+use tauri_plugin_http::reqwest;
+use uuid::Uuid;
+
 use crate::account::helpers::authlib_injector::models::{MinecraftProfile, TextureInfo};
 use crate::account::helpers::authlib_injector::{oauth, password};
 use crate::account::helpers::misc::fetch_image;
@@ -5,15 +15,6 @@ use crate::account::helpers::offline::load_preset_skin;
 use crate::account::models::{
   AccountError, AuthServer, PlayerInfo, PlayerType, PresetRole, SkinModel, Texture, TextureType,
 };
-use crate::error::SJMCLResult;
-use base64::Engine;
-use base64::engine::general_purpose;
-use serde_json::json;
-use std::str::FromStr;
-use strum::IntoEnumIterator;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_http::reqwest;
-use uuid::Uuid;
 
 pub async fn retrieve_profile(
   app: &AppHandle,
@@ -66,8 +67,15 @@ pub async fn parse_profile(
 
       for texture_type in TextureType::iter() {
         if let Some(skin) = texture_info_value.textures.get(&texture_type.to_string()) {
+          let image = match fetch_image(app, skin.url.clone()).await {
+            Ok(image) => image,
+            Err(error) => {
+              log::warn!("Failed to fetch third-party {texture_type} texture: {error:?}");
+              continue;
+            }
+          };
           textures.push(Texture {
-            image: fetch_image(app, skin.url.clone()).await?,
+            image,
             texture_type,
             model: skin
               .metadata
@@ -82,9 +90,14 @@ pub async fn parse_profile(
     }
   }
 
-  if textures.is_empty() {
-    // this player didn't have a texture, use preset Steve skin instead
-    textures = load_preset_skin(app, PresetRole::Steve)?;
+  if !textures
+    .iter()
+    .any(|texture| texture.texture_type == TextureType::Skin)
+  {
+    // Keep a skin first for avatar rendering, even when only a cape was downloaded.
+    let mut preset_textures = load_preset_skin(app, PresetRole::Steve)?;
+    preset_textures.append(&mut textures);
+    textures = preset_textures;
   }
 
   Ok(

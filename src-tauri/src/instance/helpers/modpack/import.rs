@@ -1,18 +1,19 @@
-use crate::error::SJMCLResult;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use sjmcl_types::error::SJMCLResult;
+use std::fs;
+use std::fs::File;
+use std::path::Path;
+use tauri::AppHandle;
+use zip::ZipArchive;
+
+use crate::download::DownloadTask;
 use crate::instance::helpers::modpack::curseforge::CurseForgeManifest;
 use crate::instance::helpers::modpack::modrinth::ModrinthManifest;
 use crate::instance::helpers::modpack::multimc::MultiMcManifest;
 use crate::instance::models::misc::{InstanceError, ModLoader, ModLoaderType};
 use crate::resource::commands::fetch_mod_loader_version_list;
 use crate::resource::models::OtherResourceSource;
-use crate::tasks::PTaskParam;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::fs::File;
-use std::path::Path;
-use tauri::AppHandle;
-use zip::ZipArchive;
 
 #[async_trait]
 pub trait ModpackManifest {
@@ -26,7 +27,7 @@ pub trait ModpackManifest {
     &self,
     app: &AppHandle,
     instance_path: &Path,
-  ) -> SJMCLResult<Vec<PTaskParam>>;
+  ) -> SJMCLResult<Vec<DownloadTask>>;
   fn get_overrides_path(&self) -> String;
 }
 
@@ -57,16 +58,40 @@ fn get_parsers() -> Vec<Parser> {
 }
 
 impl ModLoader {
+  /// Resolve the optional loader branch (e.g. `latest` / `recommended`) from
+  /// the remote loader version list.
+  ///
+  /// Only Forge uses the branch (to build the installer URL); other loaders do
+  /// not, so they skip the network round-trip entirely. The branch is also just
+  /// extra metadata: a network failure must not abort importing a modpack, so
+  /// the loader version from the modpack manifest is kept in that case.
   pub async fn with_branch(&self, app: &AppHandle, mc_version: String) -> SJMCLResult<Self> {
-    let version_list =
-      fetch_mod_loader_version_list(app.clone(), mc_version, self.loader_type).await?;
-    if let Some(version) = version_list.iter().find(|v| v.version == self.version) {
-      return Ok(Self {
-        branch: version.branch.clone(),
-        ..self.clone()
-      });
+    if !matches!(
+      self.loader_type,
+      ModLoaderType::Forge | ModLoaderType::LegacyForge
+    ) {
+      return Ok(self.clone());
     }
-    Err(InstanceError::ModLoaderVersionParseError.into())
+
+    match fetch_mod_loader_version_list(app.clone(), mc_version, self.loader_type).await {
+      Ok(version_list) => match version_list.iter().find(|v| v.version == self.version) {
+        Some(version) => Ok(Self {
+          branch: version.branch.clone(),
+          ..self.clone()
+        }),
+        None => {
+          log::warn!(
+            "mod loader version {} is not in the remote version list, importing without branch",
+            self.version
+          );
+          Ok(self.clone())
+        }
+      },
+      Err(error) => {
+        log::warn!("failed to fetch mod loader version list, importing without branch: {error:?}");
+        Ok(self.clone())
+      }
+    }
   }
 }
 
@@ -98,7 +123,7 @@ pub async fn get_download_params(
   app: &AppHandle,
   file: &File,
   instance_path: &Path,
-) -> SJMCLResult<Vec<PTaskParam>> {
+) -> SJMCLResult<Vec<DownloadTask>> {
   for parser in get_parsers() {
     if let Ok(manifest) = parser(file) {
       return manifest.get_download_params(app, instance_path).await;
@@ -121,7 +146,7 @@ pub fn extract_overrides(file: &File, instance_path: &Path) -> SJMCLResult<()> {
   let mut archive = ZipArchive::new(file)?;
   for i in 0..archive.len() {
     let mut file = archive.by_index(i)?;
-    let path = file.mangled_name();
+    let path = file.mangled_name()?;
     let outpath = if path.starts_with(format!("{}/", overrides_path)) {
       // Remove "{overrides}/" prefix and join with instance path
       let relative_path = path.strip_prefix(format!("{}/", overrides_path)).unwrap();

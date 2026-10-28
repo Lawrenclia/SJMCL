@@ -223,6 +223,8 @@ const HeadNavBar: React.FC<Omit<FlexProps, "children">> = ({ ...props }) => {
                   type="button"
                   role="tab"
                   aria-selected={isSelected}
+                  aria-label={t(`HeadNavBar.navList.${item.label}`)}
+                  data-titlebar-control
                   onClick={() => handleTabChange(index)}
                   fontWeight={isSelected ? "600" : "normal"}
                   color={isSelected ? selectedTextColor : unselectTabColor}

@@ -5,6 +5,7 @@ import { ChatMessage } from "@/models/intelligence/chat";
 import { ToolCallMatch } from "@/models/intelligence/tool-call";
 import { TOOL_DEFINITIONS } from "@/prompts/tool";
 import { IntelligenceService } from "@/services/intelligence";
+import { createChatStream } from "@/utils/chat-stream";
 import { formatPrintable } from "@/utils/string";
 import {
   commitToolCall,
@@ -128,6 +129,37 @@ export function useAgentLoop(deps: AgentLoopDeps) {
 
       let messages = [...initialMessages];
 
+      const fetchStreamingResponse = async (history: ChatMessage[]) => {
+        const stream = createChatStream((content) => {
+          if (requestIdRef.current !== currentRequestId) return;
+          const renderContent = options?.skipThinking
+            ? stripThinkTags(content)
+            : content;
+          React.startTransition(() => {
+            setMessages((prev) => {
+              if (requestIdRef.current !== currentRequestId) return prev;
+              const updated = [...prev];
+              if (updated.length > 0) {
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  content: renderContent,
+                };
+              }
+              return updated;
+            });
+          });
+        });
+        let response = "";
+        try {
+          await IntelligenceService.fetchLLMChatResponse(history, (chunk) => {
+            if (requestIdRef.current === currentRequestId) stream.append(chunk);
+          });
+        } finally {
+          response = stream.finish();
+        }
+        return response;
+      };
+
       // ── Handle pending confirmation ──────────────────────────────
       if (pendingRef.current) {
         const lastMsg = messages[messages.length - 1];
@@ -205,27 +237,7 @@ export function useAgentLoop(deps: AgentLoopDeps) {
           setMessages([...messages]);
 
           // Stream LLM response
-          let currentResponse = "";
-          await IntelligenceService.fetchLLMChatResponse(
-            historyForLLM,
-            (chunk) => {
-              if (requestIdRef.current !== currentRequestId) return;
-              currentResponse += chunk;
-              const renderResponse = options?.skipThinking
-                ? stripThinkTags(currentResponse)
-                : currentResponse;
-              setMessages((prev) => {
-                const updated = [...prev];
-                if (updated.length > 0) {
-                  updated[updated.length - 1] = {
-                    ...updated[updated.length - 1],
-                    content: renderResponse,
-                  };
-                }
-                return updated;
-              });
-            }
-          );
+          let currentResponse = await fetchStreamingResponse(historyForLLM);
 
           // Fallback for non-streaming providers
           if (!currentResponse.trim()) {
@@ -342,27 +354,8 @@ export function useAgentLoop(deps: AgentLoopDeps) {
             ];
             setMessages([...messages]);
 
-            let previewResponse = "";
-            await IntelligenceService.fetchLLMChatResponse(
-              previewHistoryForLLM,
-              (chunk) => {
-                if (requestIdRef.current !== currentRequestId) return;
-                previewResponse += chunk;
-                const renderPreview = options?.skipThinking
-                  ? stripThinkTags(previewResponse)
-                  : previewResponse;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  if (updated.length > 0) {
-                    updated[updated.length - 1] = {
-                      ...updated[updated.length - 1],
-                      content: renderPreview,
-                    };
-                  }
-                  return updated;
-                });
-              }
-            );
+            let previewResponse =
+              await fetchStreamingResponse(previewHistoryForLLM);
 
             if (!previewResponse.trim()) {
               const fallbackResp =

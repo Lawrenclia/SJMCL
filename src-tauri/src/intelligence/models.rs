@@ -1,6 +1,6 @@
-use crate::storage::Storage;
 use crate::{APP_DATA_DIR, EXE_DIR, IS_PORTABLE};
 use serde::{Deserialize, Serialize};
+use sjmcl_types::storage::Storage;
 use smart_default::SmartDefault;
 use std::path::PathBuf;
 use strum_macros::Display;

@@ -1,16 +1,17 @@
+use sjmcl_types::error::SJMCLResult;
+use sjmcl_types::storage::Storage;
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager};
+use tauri_plugin_http::reqwest::{self, RequestBuilder};
+
 use crate::account::constants::DEFAULT_POLLING_INTERVAL;
 use crate::account::models::{
   AccountError, AccountInfo, DeviceAuthResponseInfo, OAuthErrorResponse, OAuthTokens, PlayerInfo,
   PlayerType,
 };
-use crate::error::SJMCLResult;
 use crate::launcher_config::models::LauncherConfig;
-use crate::storage::Storage;
 use crate::utils::image::{ImageWrapper, decode_image};
 use crate::utils::web::is_china_mainland_ip;
-use std::sync::Mutex;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_http::reqwest::{self, RequestBuilder};
 
 pub async fn fetch_image(app: &AppHandle, url: String) -> SJMCLResult<ImageWrapper> {
   let client = app.state::<reqwest::Client>();
@@ -19,6 +20,8 @@ pub async fn fetch_image(app: &AppHandle, url: String) -> SJMCLResult<ImageWrapp
     .get(url)
     .send()
     .await
+    .map_err(|_| AccountError::NetworkError)?
+    .error_for_status()
     .map_err(|_| AccountError::NetworkError)?;
 
   let img_bytes = response
@@ -169,7 +172,7 @@ pub async fn oauth_polling(
     {
       let account_state = account_binding.lock()?;
       if !account_state.is_oauth_processing {
-        return Err(AccountError::Cancelled)?;
+        return Err(AccountError::Cancelled.into());
       }
     }
 
@@ -189,7 +192,7 @@ pub async fn oauth_polling(
       );
     } else {
       if response.status().as_u16() != 400 {
-        return Err(AccountError::NetworkError)?;
+        return Err(AccountError::NetworkError.into());
       }
 
       let error_response: OAuthErrorResponse = response
@@ -205,19 +208,19 @@ pub async fn oauth_polling(
           interval += 5;
         }
         "access_denied" => {
-          return Err(AccountError::Cancelled)?;
+          return Err(AccountError::Cancelled.into());
         }
         "expired_token" => {
-          return Err(AccountError::Expired)?;
+          return Err(AccountError::Expired.into());
         }
         _ => {
-          return Err(AccountError::NetworkError)?;
+          return Err(AccountError::NetworkError.into());
         }
       }
     }
 
     if start_time.elapsed().as_secs() >= auth_info.expires_in {
-      return Err(AccountError::Expired)?;
+      return Err(AccountError::Expired.into());
     }
 
     tokio::time::sleep(std::time::Duration::from_secs(interval)).await;

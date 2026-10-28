@@ -1,27 +1,39 @@
-use crate::error::{SJMCLError, SJMCLResult};
+use futures::future::join_all;
+use futures::stream::{self, StreamExt, TryStreamExt};
+use semver::Version;
+use sjmcl_types::error::{SJMCLError, SJMCLResult};
+use sjmcl_types::storage::load_json_async;
+use std::collections::{HashMap, HashSet};
+use std::io::Cursor;
+use std::path::{Component, Path, PathBuf};
+use tauri::AppHandle;
+use tokio::fs;
+use zip::ZipArchive;
+
+#[cfg(target_os = "windows")]
+use std::sync::Mutex;
+#[cfg(target_os = "windows")]
+use tauri::Manager;
+
+use crate::download::DownloadTask;
 use crate::instance::helpers::asset_index::AssetIndex;
 use crate::instance::helpers::asset_index::load_asset_index;
 use crate::instance::helpers::client_json::{
   DownloadsArtifact, FeaturesInfo, IsAllowed, LibrariesValue, McClientInfo,
 };
-use crate::instance::models::misc::InstanceError;
+use crate::instance::models::misc::{InstanceError, ModLoaderType};
 use crate::launch::helpers::misc::get_natives_string;
 use crate::launch::models::LaunchError;
-use crate::resource::helpers::misc::{convert_url_to_target_source, get_download_api};
+use crate::resource::helpers::misc::{get_download_api, get_download_urls};
 use crate::resource::models::{ResourceType, SourceType};
-use crate::storage::load_json_async;
-use crate::tasks::PTaskParam;
-use crate::tasks::download::DownloadParam;
-use crate::utils::fs::validate_sha1;
-use futures::future::join_all;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use semver::Version;
-use std::collections::{HashMap, HashSet};
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use tauri::AppHandle;
-use tokio::fs;
-use zip::ZipArchive;
+use crate::utils::fs::{is_local_file_valid, validate_sha1};
+
+#[cfg(target_os = "windows")]
+use crate::instance::helpers::client_json::load_native_libraries_replace_map;
+#[cfg(target_os = "windows")]
+use crate::launcher_config::helpers::graphics::mesa_driver_name;
+#[cfg(target_os = "windows")]
+use crate::launcher_config::models::{GameConfig, LauncherConfig};
 
 pub fn get_nonnative_library_artifacts(client_info: &McClientInfo) -> Vec<DownloadsArtifact> {
   let mut artifacts = HashSet::new();
@@ -71,20 +83,19 @@ pub async fn get_invalid_library_files(
   library_path: &Path,
   client_info: &McClientInfo,
   check_hash: bool,
-) -> SJMCLResult<Vec<PTaskParam>> {
+) -> SJMCLResult<Vec<DownloadTask>> {
   let mut artifacts = Vec::new();
   artifacts.extend(get_native_library_artifacts(client_info));
   artifacts.extend(get_nonnative_library_artifacts(client_info));
 
   let futs = artifacts.into_iter().map(move |artifact| async move {
     let file_path = library_path.join(&artifact.path);
-    let exists = fs::try_exists(&file_path).await?;
-    if exists && (!check_hash || validate_sha1(file_path.clone(), artifact.sha1.clone()).is_ok()) {
+    if is_local_file_valid(&file_path, Some(&artifact.sha1), check_hash).await? {
       Ok(None)
     } else if artifact.url.is_empty() {
       Err(LaunchError::GameFilesIncomplete.into())
     } else {
-      let src = convert_url_to_target_source(
+      let sources = get_download_urls(
         &url::Url::parse(&artifact.url)?,
         &[
           ResourceType::Libraries,
@@ -93,18 +104,19 @@ pub async fn get_invalid_library_files(
           ResourceType::ForgeMavenNew,
           ResourceType::NeoforgeMaven,
         ],
-        &source,
+        &[source],
       )?;
-      Ok(Some(PTaskParam::Download(DownloadParam {
-        src,
+      Ok(Some(DownloadTask {
+        sources,
         dest: file_path,
         filename: None,
+        size: u64::try_from(artifact.size).ok(),
         sha1: Some(artifact.sha1.clone()),
-      })))
+      }))
     }
   });
 
-  let results: Vec<SJMCLResult<Option<PTaskParam>>> = join_all(futs).await;
+  let results: Vec<SJMCLResult<Option<DownloadTask>>> = join_all(futs).await;
 
   let mut params = Vec::new();
   for r in results {
@@ -114,6 +126,80 @@ pub async fn get_invalid_library_files(
   }
 
   Ok(params)
+}
+
+#[cfg(target_os = "windows")]
+pub fn get_windows_mesa_loader_library(app: &AppHandle) -> SJMCLResult<Option<LibrariesValue>> {
+  let all_replace_map = load_native_libraries_replace_map(app)?;
+  let (os, arch) = {
+    let launcher_config_state = app.state::<Mutex<LauncherConfig>>();
+    let cfg = launcher_config_state.lock().unwrap();
+    (cfg.basic_info.os_type.clone(), cfg.basic_info.arch.clone())
+  };
+  let platform_key = format!("{}-{}", os.to_lowercase(), arch.to_lowercase());
+  Ok(
+    all_replace_map
+      .get(platform_key.as_str())
+      .and_then(|platform_map| platform_map.get("mesa-loader"))
+      .cloned()
+      .flatten(),
+  )
+}
+
+#[cfg(target_os = "windows")]
+pub fn get_windows_mesa_loader_path(
+  app: &AppHandle,
+  library_path: &Path,
+) -> SJMCLResult<Option<PathBuf>> {
+  Ok(get_windows_mesa_loader_library(app)?.and_then(|lib| {
+    lib
+      .downloads
+      .and_then(|downloads| downloads.artifact)
+      .map(|artifact| library_path.join(artifact.path))
+  }))
+}
+
+#[cfg(target_os = "windows")]
+pub async fn get_invalid_windows_mesa_loader_file(
+  app: &AppHandle,
+  source: SourceType,
+  library_path: &Path,
+  game_config: &GameConfig,
+  check_hash: bool,
+) -> SJMCLResult<Vec<DownloadTask>> {
+  if mesa_driver_name(
+    &game_config.advanced.graphics.api,
+    &game_config.advanced.graphics.renderer,
+  )
+  .is_none()
+  {
+    return Ok(Vec::new());
+  }
+
+  let Some(lib) = get_windows_mesa_loader_library(app)? else {
+    return Ok(Vec::new());
+  };
+  let Some(artifact) = lib.downloads.and_then(|downloads| downloads.artifact) else {
+    return Ok(Vec::new());
+  };
+
+  let file_path = library_path.join(&artifact.path);
+  if is_local_file_valid(&file_path, Some(&artifact.sha1), check_hash).await? {
+    return Ok(Vec::new());
+  }
+
+  let sources = get_download_urls(
+    &url::Url::parse(&artifact.url)?,
+    &[ResourceType::Libraries],
+    &[source],
+  )?;
+  Ok(vec![DownloadTask {
+    sources,
+    dest: file_path,
+    filename: None,
+    size: u64::try_from(artifact.size).ok(),
+    sha1: Some(artifact.sha1),
+  }])
 }
 
 pub struct LibraryParts {
@@ -233,9 +319,23 @@ pub fn convert_library_name_to_path(name: &str, native: Option<String>) -> SJMCL
   Ok(format!("{path}/{pack_name}/{pack_version}/{file_name}"))
 }
 
+pub fn get_library_artifact_path(library: &LibrariesValue) -> SJMCLResult<String> {
+  // Cleanroom library names may not encode the artifact's actual Maven path.
+  if let Some(artifact) = library
+    .downloads
+    .as_ref()
+    .and_then(|downloads| downloads.artifact.as_ref())
+    .filter(|artifact| !artifact.path.is_empty())
+  {
+    return Ok(artifact.path.clone());
+  }
+  convert_library_name_to_path(&library.name, None)
+}
+
 pub fn get_nonnative_library_paths(
   client_info: &McClientInfo,
   library_path: &Path,
+  mod_loader_type: ModLoaderType,
 ) -> SJMCLResult<Vec<PathBuf>> {
   let mut libraries = Vec::new();
   let feature = FeaturesInfo::default();
@@ -246,12 +346,32 @@ pub fn get_nonnative_library_paths(
     if library.natives.is_some() {
       continue;
     }
+
+    if mod_loader_type == ModLoaderType::Cleanroom {
+      // Cleanroom replaces legacy LWJGL 2 libraries, whose versions vary by platform.
+      if library.name.starts_with("org.lwjgl.lwjgl:lwjgl:")
+        || library.name.starts_with("org.lwjgl.lwjgl:lwjgl_util:")
+        || matches!(
+          library.name.as_str(),
+          "net.java.dev.jna:platform:3.4.0" | "com.ibm.icu:icu4j-core-mojang:51.2"
+        )
+      {
+        continue;
+      }
+    }
+
     libraries.push(library.clone());
   }
+
   libraries = merge_library_lists(&libraries, &[]); // remove duplicates to prevent launch errors
   let mut result = Vec::new();
   for library in libraries {
-    result.push(library_path.join(convert_library_name_to_path(&library.name, None)?));
+    let path = if mod_loader_type == ModLoaderType::Cleanroom {
+      get_library_artifact_path(&library)?
+    } else {
+      convert_library_name_to_path(&library.name, None)?
+    };
+    result.push(library_path.join(path));
   }
   Ok(result)
 }
@@ -259,8 +379,8 @@ pub fn get_nonnative_library_paths(
 pub fn get_native_library_paths(
   client_info: &McClientInfo,
   library_path: &Path,
-  use_native_glfw: bool,
-  use_native_openal: bool,
+  #[cfg_attr(not(target_os = "linux"), allow(unused_variables))] use_native_glfw: bool,
+  #[cfg_attr(not(target_os = "linux"), allow(unused_variables))] use_native_openal: bool,
 ) -> SJMCLResult<Vec<PathBuf>> {
   let mut result = Vec::new();
   let feature = FeaturesInfo::default();
@@ -289,10 +409,54 @@ pub fn get_native_library_paths(
   Ok(result)
 }
 
+fn get_native_library_extract_dir(client_info: &McClientInfo, natives_dir: &Path) -> PathBuf {
+  const JAVA_LIBRARY_PATH_PREFIX: &str = "-Djava.library.path=";
+  const NATIVES_SUBDIR_PREFIX: &str = "${natives_directory}/";
+
+  let Some(arguments) = &client_info.arguments else {
+    return natives_dir.to_path_buf();
+  };
+
+  for argument in &arguments.jvm {
+    if !argument.rules.is_empty() {
+      continue;
+    }
+
+    for value in &argument.value {
+      let Some(path) = value.strip_prefix(JAVA_LIBRARY_PATH_PREFIX) else {
+        continue;
+      };
+
+      // Minecraft versions before 26.2-snapshot-1 use ${natives_directory} directly.
+      if path == "${natives_directory}" {
+        return natives_dir.to_path_buf();
+      }
+
+      // Minecraft 26.2-snapshot-1+ may use a subdirectory such as ${natives_directory}/java.
+      let Some(relative_path) = path.strip_prefix(NATIVES_SUBDIR_PREFIX) else {
+        return natives_dir.to_path_buf();
+      };
+      let relative_path = Path::new(relative_path);
+
+      if relative_path.as_os_str().is_empty()
+        || !relative_path
+          .components()
+          .all(|component| matches!(component, Component::Normal(_)))
+      {
+        return natives_dir.to_path_buf();
+      }
+
+      return natives_dir.join(relative_path);
+    }
+  }
+
+  natives_dir.to_path_buf()
+}
+
 pub async fn extract_native_libraries(
   client_info: &McClientInfo,
   library_path: &Path,
-  natives_dir: &PathBuf,
+  natives_dir: &Path,
   use_native_glfw: bool,
   use_native_openal: bool,
 ) -> SJMCLResult<()> {
@@ -301,7 +465,8 @@ pub async fn extract_native_libraries(
     fs::remove_dir_all(natives_dir).await?;
   }
 
-  fs::create_dir_all(natives_dir).await?;
+  let extract_dir = get_native_library_extract_dir(client_info, natives_dir);
+  fs::create_dir_all(&extract_dir).await?;
 
   let native_libraries = get_native_library_paths(
     client_info,
@@ -312,11 +477,11 @@ pub async fn extract_native_libraries(
   let tasks: Vec<tokio::task::JoinHandle<SJMCLResult<()>>> = native_libraries
     .into_iter()
     .map(|library_path| {
-      let patches_dir_clone = natives_dir.clone();
+      let extract_dir = extract_dir.clone();
       tokio::spawn(async move {
         let file = Cursor::new(fs::read(library_path).await?);
         let mut jar = ZipArchive::new(file)?;
-        jar.extract(&patches_dir_clone)?;
+        jar.extract(&extract_dir)?;
         Ok(())
       })
     })
@@ -327,7 +492,7 @@ pub async fn extract_native_libraries(
   for result in results {
     if let Err(e) = result {
       println!("Error handling artifact: {:?}", e);
-      return Err(crate::error::SJMCLError::from(e));
+      return Err(sjmcl_types::error::SJMCLError::from(e));
     }
   }
 
@@ -340,7 +505,7 @@ pub async fn get_invalid_assets(
   source: SourceType,
   asset_path: &Path,
   check_hash: bool,
-) -> SJMCLResult<Vec<PTaskParam>> {
+) -> SJMCLResult<Vec<DownloadTask>> {
   let assets_download_api = get_download_api(source, ResourceType::Assets)?;
 
   let asset_index_path = asset_path.join(format!("indexes/{}.json", client_info.asset_index.id));
@@ -356,22 +521,23 @@ pub async fn get_invalid_assets(
       let exists = fs::try_exists(&dest).await?;
 
       if exists && (!check_hash || validate_sha1(dest.clone(), item.hash.clone()).is_ok()) {
-        Ok::<Option<PTaskParam>, crate::error::SJMCLError>(None)
+        Ok::<Option<DownloadTask>, sjmcl_types::error::SJMCLError>(None)
       } else {
         let src = assets_download_api
           .join(&path_in_repo)
-          .map_err(crate::error::SJMCLError::from)?;
-        Ok(Some(PTaskParam::Download(DownloadParam {
-          src,
+          .map_err(sjmcl_types::error::SJMCLError::from)?;
+        Ok(Some(DownloadTask {
+          sources: get_download_urls(&src, &[ResourceType::Assets], &[source])?,
           dest,
           filename: None,
+          size: u64::try_from(item.size).ok(),
           sha1: Some(item.hash.clone()),
-        })))
+        }))
       }
     }
   });
 
-  let results: Vec<SJMCLResult<Option<PTaskParam>>> = join_all(futs).await;
+  let results: Vec<SJMCLResult<Option<DownloadTask>>> = join_all(futs).await;
 
   let mut params = Vec::new();
   for r in results {

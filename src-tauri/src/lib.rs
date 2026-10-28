@@ -1,51 +1,52 @@
 mod account;
 mod discover;
-mod error;
+mod download;
 mod extension;
 mod instance;
 mod intelligence;
 mod launch;
 mod launcher_config;
-mod partial;
 mod resource;
-mod storage;
-mod tasks;
 mod utils;
 
 use account::helpers::authlib_injector::info::refresh_and_update_auth_servers;
 use account::helpers::offline::yggdrasil_server::YggdrasilServer;
 use account::models::AccountInfo;
-use instance::helpers::misc::refresh_and_update_instances;
-use instance::helpers::mods::translation::LocalModTranslationsCache;
+use instance::helpers::misc::{InstanceRefreshLock, refresh_and_update_instances};
 use instance::models::misc::Instance;
-use intelligence::models::ChatHistory;
 use intelligence::azalea_bot::models::AgentState;
+use intelligence::models::ChatHistory;
 use launch::models::LaunchingState;
-use launcher_config::helpers::java::refresh_and_update_javas;
+use launcher_config::helpers::java::{JavaDiscovery, ensure_java_discovery};
+use launcher_config::helpers::misc::auto_clear_download_cache;
 use launcher_config::models::{JavaInfo, LauncherConfig};
 use resource::helpers::mod_db::{ModDataBase, initialize_mod_db};
+use resource::helpers::translation::LocalModTranslationsCache;
+use resource::helpers::translation::cache::ResourceTranslationsCache;
+use sjmcl_types::storage::Storage;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex, OnceLock};
-use storage::Storage;
-use tasks::monitor::TaskMonitor;
-use utils::portable::is_portable;
-use utils::web::build_sjmcl_client;
-
 use tauri::Manager;
+use utils::portable::is_portable;
+use utils::web::{build_sjmcl_download_client, build_sjmcl_general_client};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 use tauri::path::BaseDirectory;
+use tauri_plugin_opener::OpenerExt;
 
 #[cfg(target_os = "windows")]
 use tauri_plugin_decorum::WebviewWindowExt;
 
 static EXE_PATH: LazyLock<PathBuf> = LazyLock::new(|| std::env::current_exe().unwrap());
-
 static EXE_DIR: LazyLock<PathBuf> = LazyLock::new(|| EXE_PATH.parent().unwrap().to_path_buf());
-
 static IS_PORTABLE: LazyLock<bool> = LazyLock::new(|| is_portable().unwrap_or(false));
-
 static APP_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+fn open_modpack_deeplink(handle: &tauri::AppHandle, path: &str) {
+  let deep_link = format!("sjmcl://import-modpack?path={}", urlencoding::encode(path));
+  let _ = handle.opener().open_url(&deep_link, None::<&str>);
+}
 
 pub async fn run() {
   let exit_code = {
@@ -57,12 +58,18 @@ pub async fn run() {
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_opener::init())
       .plugin(tauri_plugin_os::init())
-      .plugin(tauri_plugin_process::init())
-      .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+      .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
         let main_window = app.get_webview_window("main").expect("no main window");
         let _ = main_window.show(); // may hide by launcher_visibility settings
         // FIXME: this show() seems no use in macOS build mode (ref: https://github.com/tauri-apps/tauri/issues/13400#issuecomment-2866462355).
         let _ = main_window.set_focus();
+
+        // .mrpack file association (warm start)
+        for arg in &args {
+          if arg.ends_with(".mrpack") && !arg.starts_with("sjmcl://") {
+            open_modpack_deeplink(app, arg);
+          }
+        }
       }))
       .plugin(
         tauri_plugin_window_state::Builder::new()
@@ -82,7 +89,7 @@ pub async fn run() {
       .invoke_handler(tauri::generate_handler![
         launcher_config::commands::retrieve_launcher_config,
         launcher_config::commands::update_launcher_config,
-        launcher_config::commands::restore_launcher_config,
+        launcher_config::commands::reset_launcher_config,
         launcher_config::commands::export_launcher_config,
         launcher_config::commands::import_launcher_config,
         launcher_config::commands::reveal_launcher_config,
@@ -92,6 +99,7 @@ pub async fn run() {
         launcher_config::commands::retrieve_java_list,
         launcher_config::commands::validate_java,
         launcher_config::commands::download_mojang_java,
+        launcher_config::commands::retrieve_supported_graphics_renderers,
         launcher_config::commands::check_game_directory,
         launcher_config::commands::clear_download_cache,
         launcher_config::commands::check_launcher_update,
@@ -133,7 +141,7 @@ pub async fn run() {
         instance::commands::create_instance,
         instance::commands::update_instance_config,
         instance::commands::retrieve_instance_game_config,
-        instance::commands::restore_instance_game_config,
+        instance::commands::reset_instance_game_config,
         instance::commands::retrieve_instance_subdir_path,
         instance::commands::read_instance_file,
         instance::commands::delete_instance,
@@ -153,10 +161,11 @@ pub async fn run() {
         instance::commands::retrieve_screenshot_list,
         instance::commands::toggle_mod_by_extension,
         instance::commands::create_launch_desktop_shortcut,
-        instance::commands::finish_mod_loader_install,
-        instance::commands::finish_optifine_loader_install,
         instance::commands::check_change_mod_loader_availablity,
         instance::commands::change_mod_loader,
+        instance::commands::change_optifine,
+        instance::commands::remove_mod_loader,
+        instance::commands::remove_optifine,
         instance::commands::retrieve_modpack_meta_info,
         instance::commands::add_custom_instance_icon,
         instance::commands::retrieve_exportable_file_list,
@@ -185,23 +194,12 @@ pub async fn run() {
         extension::commands::retrieve_extension_list,
         extension::commands::add_extension,
         extension::commands::delete_extension,
-        tasks::commands::schedule_progressive_task_group,
-        tasks::commands::cancel_progressive_task,
-        tasks::commands::resume_progressive_task,
-        tasks::commands::stop_progressive_task,
-        tasks::commands::retrieve_progressive_task_list,
-        tasks::commands::create_transient_task,
-        tasks::commands::get_transient_task,
-        tasks::commands::set_transient_task_state,
-        tasks::commands::cancel_transient_task,
-        tasks::commands::cancel_progressive_task_group,
-        tasks::commands::stop_progressive_task_group,
-        tasks::commands::resume_progressive_task_group,
-        tasks::commands::delete_progressive_task_group,
         utils::commands::retrieve_memory_info,
+        utils::commands::retrieve_resolution_upbound,
         utils::commands::retrieve_truetype_font_list,
         utils::commands::check_service_availability,
         utils::commands::extract_filename,
+        utils::commands::create_window,
         utils::commands::delete_file,
         utils::commands::delete_directory,
         utils::commands::read_file,
@@ -221,9 +219,6 @@ pub async fn run() {
         let mut launcher_config: LauncherConfig = LauncherConfig::load().unwrap_or_default();
         launcher_config.setup_with_app(app.handle()).unwrap();
         launcher_config.save().unwrap();
-        let version = launcher_config.basic_info.launcher_version.clone();
-        let os = launcher_config.basic_info.platform.clone();
-        let exe_sha256 = launcher_config.basic_info.exe_sha256.clone();
         let auto_purge_launcher_logs = launcher_config.general.advanced.auto_purge_launcher_logs;
         let launcher_mcp_config = launcher_config.intelligence.mcp_server.launcher.clone();
         app.manage(Mutex::new(launcher_config));
@@ -237,23 +232,31 @@ pub async fn run() {
 
         let instances: HashMap<String, Instance> = HashMap::new();
         app.manage(Mutex::new(instances));
+        app.manage(InstanceRefreshLock::default());
 
         let chat_history = ChatHistory::load().unwrap_or_default();
         app.manage(Mutex::new(chat_history));
 
         let javas: Vec<JavaInfo> = vec![];
         app.manage(Mutex::new(javas));
+        app.manage(JavaDiscovery::default());
 
         let mod_database = ModDataBase::new();
         app.manage(Mutex::new(mod_database));
 
-        app.manage(Box::pin(TaskMonitor::new(app.handle().clone())));
-
         let local_mod_translations = LocalModTranslationsCache::load().unwrap_or_default();
         app.manage(Mutex::new(local_mod_translations));
 
-        let client = build_sjmcl_client(app.handle(), true);
+        let resource_translations = ResourceTranslationsCache::load().unwrap_or_default();
+        app.manage(Mutex::new(resource_translations));
+
+        let client = build_sjmcl_general_client(app.handle(), true);
         app.manage(client);
+
+        let download_client = build_sjmcl_download_client(app.handle(), true);
+        app
+          .handle()
+          .plugin(download::init_plugin(download_client))?;
 
         let launching_queue = Vec::<LaunchingState>::new();
         app.manage(Mutex::new(launching_queue));
@@ -286,13 +289,15 @@ pub async fn run() {
         // Refresh all instances
         let app_handle = app.handle().clone();
         tauri::async_runtime::spawn(async move {
-          refresh_and_update_instances(&app_handle, true).await;
+          refresh_and_update_instances(&app_handle).await;
         });
 
         // Refresh all javas
         let app_handle = app.handle().clone();
         tauri::async_runtime::spawn(async move {
-          refresh_and_update_javas(&app_handle).await;
+          if let Err(error) = ensure_java_discovery(&app_handle).await {
+            log::warn!("Java discovery failed: {:?}", error);
+          }
         });
 
         // Initialize mod database
@@ -301,23 +306,17 @@ pub async fn run() {
           initialize_mod_db(&app_handle).await.unwrap_or_default();
         });
 
-        let app_handle = app.handle().clone();
-        tauri::async_runtime::spawn(async move {
-          tasks::background::monitor_background_process(app_handle).await;
-        });
-
-        // Send statistics
-        tokio::spawn(async move {
-          utils::sys_info::send_statistics(version, os, exe_sha256).await;
-        });
-
-        // Auto purge launcher logs older than 30 days if enabled
         if auto_purge_launcher_logs {
           let app_handle = app.handle().clone();
           tauri::async_runtime::spawn(async move {
             let _ = utils::logging::purge_old_launcher_logs(app_handle, 30).await;
           });
         }
+
+        let app_handle = app.handle().clone();
+        tauri::async_runtime::spawn(async move {
+          let _ = auto_clear_download_cache(&app_handle).await;
+        });
 
         // On platforms other than macOS, set the menu to empty to hide the default menu.
         // On macOS, some shortcuts depend on default menu: https://github.com/tauri-apps/tauri/issues/12458
@@ -370,13 +369,40 @@ pub async fn run() {
           .ok();
         std::process::exit(1);
       })
-      .run_return(|_, event| {
-        if let tauri::RunEvent::Exit = event {
-          log::info!("Launcher exited normally.");
-          let _ = LauncherConfig::load().map(|mut config| {
-            config.last_run_exited_normally = true;
-            let _ = config.save();
-          });
+      .run_return(|app_handle, event| {
+        match event {
+          // .mrpack file association (cold start, reopen with deeplink)
+          tauri::RunEvent::Ready => {
+            #[cfg(not(target_os = "macos"))]
+            {
+              for arg in std::env::args() {
+                if arg.ends_with(".mrpack") && !arg.starts_with("sjmcl://") {
+                  open_modpack_deeplink(app_handle, &arg);
+                  break;
+                }
+              }
+            }
+          }
+          #[cfg(target_os = "macos")]
+          tauri::RunEvent::Opened { urls } => {
+            for url in urls {
+              if let Ok(path) = url.to_file_path()
+                && path.extension().is_some_and(|ext| ext == "mrpack")
+                && let Some(path_str) = path.to_str()
+              {
+                open_modpack_deeplink(app_handle, path_str);
+              }
+            }
+          }
+          // set normal exit flag.
+          tauri::RunEvent::Exit => {
+            log::info!("Launcher exited normally.");
+            let _ = LauncherConfig::load().map(|mut config| {
+              config.last_run_exited_normally = true;
+              let _ = config.save();
+            });
+          }
+          _ => {}
         }
       })
   };

@@ -1,36 +1,16 @@
-use crate::error::{SJMCLError, SJMCLResult};
-use crate::launcher_config::models::MemoryInfo;
-use serde_json::json;
+use sjmcl_types::error::{SJMCLError, SJMCLResult};
 use std::net::{SocketAddr, TcpListener};
 use systemstat::{Platform, saturating_sub_bytes};
-use tauri_plugin_http::reqwest;
 use tauri_plugin_os::locale;
 
-/// Sends app version, OS type and self SHA-256 as statistic data to SJMC asynchronously.
-///
-/// # Examples
-///
-/// ```rust
-/// send_statistics("1.0.0".to_string(), "windows".to_string(), "sha256".to_string()).await;
-/// ```
-pub async fn send_statistics(version: String, os: String, sha256: String) {
-  _ = reqwest::Client::new()
-    .post("https://mc.sjtu.cn/api-sjmcl/statistics")
-    .json(&json!({
-      "version": version,
-      "os": os,
-      "exe_sha256": sha256,
-    }))
-    .send()
-    .await;
-}
+use crate::launcher_config::models::MemoryInfo;
 
 /// Returns a locale identifier standardized for frontend usage
 /// by mapping OS-specific locale strings. Defaults to "en" if no match is found.
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let locale = get_mapped_locale();
 /// println!("Locale: {}", locale);
 /// ```
@@ -43,6 +23,7 @@ pub fn get_mapped_locale() -> String {
   #[cfg(target_os = "macos")]
   {
     let language_map = [
+      ("es", vec!["es"]),
       ("fr", vec!["fr"]),
       ("ja", vec!["ja"]),
       ("zh-Hans", vec!["zh-Hans", "wuu-Hans", "yue-Hans"]),
@@ -58,6 +39,7 @@ pub fn get_mapped_locale() -> String {
   #[cfg(not(target_os = "macos"))]
   {
     let language_map = [
+      ("es", vec!["es"]),
       ("fr", vec!["fr"]),
       ("ja", vec!["ja"]),
       ("zh-Hans", vec!["zh-CN", "zh-SG"]),
@@ -77,7 +59,7 @@ pub fn get_mapped_locale() -> String {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let memory_info = get_memory_info();
 /// ```
 pub fn get_memory_info() -> MemoryInfo {
@@ -135,7 +117,7 @@ pub fn get_all_drive_mount_points() -> Vec<std::path::PathBuf> {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let available_port = find_free_port(None).unwrap();
 /// println!("Found free port: {}", available_port);
 /// ```

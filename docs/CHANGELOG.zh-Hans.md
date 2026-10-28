@@ -2,6 +2,150 @@
 
 SJMCL 遵循 [语义化版本规范 2.0.0](https://semver.org/lang/zh-CN/)。
 
+## 1.4.0
+
+`2026-10-25`
+
+- **🔥 下载系统重构：**
+   - **修复下载超时机制的缺陷与异常占用 CPU 的问题。#1952 #2065** @NTS-Official @UNIkeEN
+   - **支持任务持久化，现在启动器重启后可以继续下载未完成的任务。#1952** @ToolmanP
+   - **优化断点续传、自动重试、备用源切换与任务依赖机制。#1952 #2023 #2072** @ToolmanP @xunying123 @UNIkeEN
+- **🔥 焕新的液态玻璃效果，带来更清透的视觉体验。#2022 @UNIkeEN @baiyuansjtu @Stya-hr**
+- 🌟 支持读取 Minecraft 26.x 格式的世界基础数据。#1893 @icgnos @UNIkeEN
+- 🌟 新增用于提交下载与管理任务的 MCP 接口。#1952 @ToolmanP @UNIkeEN
+- 🌟 支持游戏崩溃窗口在指定延迟后自动关闭。#1976 @Dainsleif233 @UNIkeEN
+- 🌟 社区新闻新增 MUA 联合源与小站高校社区源（由 JSUMC 提供 API 服务）。#2025 #2031 @Dainsleif233 @zaixiZaixiSJTU
+- 🌟 优化各处卡片列表的用户体验。#2070 #2095 @NoirHare @muqi132
+- 🐛 修复安装失败后的加载器状态同步问题，修正 Cleanroom 依赖库路径不一致的问题。#2023 @xunying123
+- 🐛 修复社区新闻源列表页面的显示对齐与加载问题。#2037 #2074 @zaixiZaixiSJTU
+- 🐛 修复 Linux 平台下中文更新页面的跳转链接错误。#2057 @xunying123
+- 🐛 修复部分场景下，前置依赖资源无法下载的问题。#2081 @66CF @UNIkeEN
+- 🐛 修复第三方皮肤或披风下载失败导致角色信息无法加载的问题，必要时使用默认皮肤。#2092 @xunying123
+- 🐛 修复加载版本列表时无法切换模组加载器类型的问题。#2094 @NoirHare
+- 🛠 禁用 Linux 平台的窗口透明效果。#1952 @ToolmanP
+- 🛠 更新鸣谢页面中的 SCL 官网链接。#2063 @suhang12332
+- 📦 更新多项依赖至补丁版本。#2017 #2020 #2021 #2024 #2064 #2066 #2084 @dependabot[bot] @UNIkeEN
+- 📦 将 AUR 软件包的 `libsoup` 依赖修正为 `libsoup3`。#2035 @KodateMitsuru
+- 工作流：
+   - 修复缺少商店图标导致 Snap 发布失败的问题。#2027 @pangbo13
+   - 新增组件前端预览 Skill，更新 `AGENTS.md` 中的项目结构说明。@UNIkeEN
+- 文档：
+   - 新增简体中文贡献指南与安全指南。#1964 @VhahahaV
+
+## 1.3.2
+
+`2026-10-08`
+
+- 🐛 修复玩家名称过长时，首页头像被挤压的显示问题。#1978 @LuLu-ling
+- 🛠 对于不支持 Cleanroom 的实例，不再显示其安装卡片。#1967 @VhahahaV
+- 🛠 更换游戏服务器的状态查询库，移除已停止维护的依赖。#1972 @tangge233 @UNIkeEN
+- 🛠 更新 Cleanroom 模组加载器的镜像下载源。#2016 @CiiLu
+- 📦 更新启动器与 CLI 的 MCP 相关依赖。#1979 #2005 @xunying123
+- 📦 更新部分 Rust 依赖，修复安全审计发现的若干问题。#2003 @tangge233 @UNIkeEN @w1049
+- 📦 更新前端依赖 `next` 至补丁版本。#2012 @dependabot[bot]
+- 工作流：
+   - 为 Rust 后端新增安全审计工作流。#1975 #2003 @tangge233 @UNIkeEN @w1049
+
+## 1.3.1
+
+`2026-09-16`
+
+- 🌟 支持管理子文件夹中的模组，以适配部分模组加载器。#1960 #1962 @xunying123 @w1049 @UNIkeEN
+- 🌟 支持在皮肤预览时将皮肤保存至本地。#1961 @UNIkeEN
+- 🐛 修复获取存档列表失败时错误清空资源包信息的问题。#1945 @VhahahaV
+- 🐛 修复下载 Quilt 时元数据解析失败的问题。#1946 @VhahahaV @xunying123 @UNIkeEN
+- 🐛 修复导入 Modrinth 整合包时无法识别 Quilt 加载器的问题。#1947 @w1049
+- 🐛 修复启动器启动过程中对话框显示顺序错误的问题。#1949 @UNIkeEN
+- 🐛 修复模组更新对话框的若干逻辑与文案显示问题。#1968 @UNIkeEN
+- ⚡️ 精简配置解析与 Deeplink 的相关依赖，降低构建开销。#1943 #1944 @VhahahaV
+- 💄 重构部分代码以提升代码风格与可维护性。
+- 📦 更新前端依赖 `next` 至补丁版本。#1955 @dependabot[bot]
+- 📦 将本项目最低 Rust 版本更新至 1.98.1。#1958 @ToolmanP @UNIkeEN @w1049
+
+## 1.3.0
+
+`2026-09-07`
+
+- **🔥 支持 Cleanroom 模组加载器。#1909 #1926** @CiiLu @UNIkeEN @xunying123
+- 🌟 支持部分特殊情况下，已安装模组的潜在不兼容提示。#1870 @UNIkeEN @xunying123
+- 🌟 支持 Minecraft 26.2 所需的原生库。#1874 @xunying123
+- 🌟 支持查看子文件夹中的投影原理图。#1880 @UNIkeEN
+- 🌟 记录并显示导入整合包实例的版本。#1886 @CiiLu
+- 🌟 在游戏日志、游戏崩溃窗口使用自定义标题栏，统一视觉样式。#1888 @UNIkeEN @3gf8jv4dv
+- 🌟 启动时自动清理过期的下载缓存。#1892 @icgnos @UNIkeEN
+- 🐛 修复微软账户会话过期导致游戏无法启动的问题。#1868 @xunying123
+- 🐛 修复与优化一系列界面显示问题。#1889 #1899 #1903 #1913 @icgnos @UNIkeEN @3gf8jv4dv @CiiLu
+- 🐛 修复旧版 Forge 实例中游戏参数重复的问题。#1897 @xunying123
+- 🐛 修复 NeoForge 实例中离线账户自定义皮肤失效的问题。#1906 @xunying123
+- ⚡️ 通过本地筛选提升资源版本的加载性能。#1869 @xunying123
+- ⚡️ 提升资源下载-版本选择弹窗的前端页面性能。#1908 @Okabe-Rintarou-0
+- 🛠 启动游戏时，若未选择账户则跳转至账户页面。#1921 @CiiLu
+- 🌐 更新资源分类的相关翻译，同步上游网站。#1902 @3gf8jv4dv
+- 📦 更新多项依赖至补丁版本。#1860 #1871 #1872 #1904 @dependabot[bot] @UNIkeEN
+- 工作流：
+   - 将 Homebrew 分发从自托管 Tap 切换至 Homebrew Cask。#1923 @wu21-web
+
+## 1.2.0
+
+`2026-07-13`
+
+- 🌟 支持使用预设组合快速设置游戏分辨率。#1751 #1759 @UNIkeEN @3gf8jv4dv
+- 🌟 支持为新建实例自动设置启动器支持的所有语言。#1755 @HsxMark @3gf8jv4dv
+- 🌟 支持自定义游戏日志窗口的字体。#1770 @UNIkeEN @3gf8jv4dv
+- 🌟 支持从 HMCL 新版本（3.16+）导入角色与认证服务器信息。#1781 @CiiLu
+- 🌟 支持为游戏进程配置网络代理。#1808 @xunying123 @UNIkeEN @3gf8jv4dv
+- 🌟 支持为游戏进程选择不同的图形渲染器。#1809 @xunying123 @UNIkeEN
+- 🌟 支持为实例移除已安装的模组加载器。#1821 #1844 @xunying123 @UNIkeEN @zaixiZaixiSJTU
+- 🌟 支持通过系统右键菜单快速导入 `.mrpack` 格式的整合包。#1824 @zaixiZaixiSJTU @UNIkeEN
+- 🐛 修复更换模组加载器后无法启动游戏的问题。#1670 @xunying123
+- 🐛 修复与优化一系列界面显示问题。#1691 #1723 #1756 #1778 #1801 #1850 @UNIkeEN @renvlers @HsxMark @3gf8jv4dv @zaixiZaixiSJTU
+- 🐛 修复启动参数中启动器元信息格式不规范的问题。#1724 @xunying123
+- 🐛 修复在部分 Linux 发行版下，从移动存储介质运行启动器时错误显示警告的问题。#1727 @xunying123 @UNIkeEN
+- 🐛 修复 NeoForge 与 OptiFine 版本列表的排序与显示问题。#1728 #1813 @xunying123
+- 🐛 修复早期 macOS 平台下启动器白屏的问题。#1799 @UNIkeEN @hans362 @1357310795
+- 🐛 修复 Windows 非便携版本无法自动更新的问题。#1810 @pangbo13
+- 🐛 修复启动参数中自定义信息对 1.13+ 版本游戏无效的问题。#1811 @xunying123
+- 🐛 修复 Modrinth 整合包资源版本显示重复的问题。#1812 @xunying123
+- 🐛 修复部分 Fabric 模组元信息因格式不规范而无法显示的问题。#1823 @pangbo13
+- 🐛 修复通过 MCP 服务创建新实例时，无法修改实例图标的问题。#1846 #1848 @xunying123
+- ⚡️ 优化资源搜索体验。#1589 #1853 @xunying123 @UNIkeEN
+- ⚡️ 提升外观设置页面的加载性能。#1786 @HsxMark @UNIkeEN
+- ⚡️ 提升游戏日志窗口的深色模式显示效果。#1793 @zaixiZaixiSJTU @funkthesky-ops @RobertZhang0901
+- 🛠 调整部分设置项的显示样式与描述。#1694 #1710 #1750 @UNIkeEN @baiyuansjtu @3gf8jv4dv
+- 🛠 调整帮助、关于页面的部分条目与链接。#1717 #1746 @3gf8jv4dv @xunying123 @UNIkeEN
+- 🛠 根据 CurseForge 要求，为指向其的资源下载请求添加 API Key。#1725 @xunying123
+- 🛠 更换内置实例图标中 NeoForge 与 Forge 的图标资源与默认设置。#1748 #1841 @HsxMark @UNIkeEN
+- 🛠 移除 Forge 和 Fabric 版本列表的发行类别显示。#1795 @UNIkeEN @3gf8jv4dv
+- 🛠 当选中实例启用了特定游戏设置时，在全局游戏设置页面进行提示。#1835 @baiyuansjtu
+- 💄 重构部分后端代码以提升构建速度、代码风格与可维护性。#1776 #1777 #1780 #1782 #1822 @ToolmanP @UNIkeEN
+- 🌐 更新启动器界面文本的多语言翻译。#1718 #1719 #1720 #1745 #1768 #1819 #1829 #1837 #1849 @3gf8jv4dv @xunying123 @w1049 @UNIkeEN
+- 🇪🇸 启动器界面支持西班牙语。#1722 #1749 @UNIkeEN @HsxMark
+- 📦 使用 `pnpm` 替换 `npm`。#1700 @pangbo13 @1357310795 @UNIkeEN
+- 📦 为 Windows 平台的非便携版本安装程序更新版权信息。#1721 @3gf8jv4dv
+- 📦 为 Windows 平台的非便携版本安装程序提供多语言支持。#1731 #1760 @3gf8jv4dv
+- 📦 更新多项依赖至补丁版本。#1753 @dependabot[bot] @claude
+- 扩展：
+   - 为扩展提供自定义的 `toast` 方法，与启动器默认样式保持一致。 @UNIkeEN
+   - 新增 `ExtensionUISlotKey.GameErrorWindowOperations` 方法，支持扩展在游戏崩溃窗口提供自定义功能。#1800 @UNIkeEN
+- 工作流：
+   - 版本发布后自动更新仓库中的更新日志文件。#1711 @pangbo13
+   - 支持下载测试工作流中的构建产物。#1715 #1744 #1772 #1820 @pangbo13
+   - 新增 AGENTS.md 与部分仓库级 Skills。#1726 @UNIkeEN @ToolmanP @1357310795
+- 网页与文档：
+   - 更新面向 Snap 与 Winget 安装方式的风险提示。#1729 @pangbo13
+
+## 1.1.3
+
+`2026-06-11`
+
+- 🌟 支持将游戏资源快捷安装到任意实例、快捷安装整合包，优化资源下载的交互体验。#1659 #1677 @UNIkeEN
+- 🌟 支持使用自定义 Authlib Injector 启动游戏。#1664 @UNIkeEN
+- 🐛 修复实例资源包页面前端状态无法更新的问题。#1673 @baiyuansjtu
+- 🛠 调整前端页面折叠面板的响应区域。#1672 @1357310795 @UNIkeEN
+- 📦 终止启动器对 Windows 7 的支持。#1680 @3gf8jv4dv @xunying123
+- 工作流：
+   - 修复 Winget 发版工作流。#1667 #1668 @pangbo13
+
 ## 1.1.2
 
 `2026-06-04`

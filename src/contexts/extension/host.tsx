@@ -48,9 +48,8 @@ import {
   ExtensionSlotItemMap,
   ExtensionSlotRegistry,
 } from "@/models/extension";
-import { TaskTypeEnums } from "@/models/task";
+import { DownloadService } from "@/services/download";
 import { ExtensionService } from "@/services/extension";
-import { TaskService } from "@/services/task";
 import { UtilsService } from "@/services/utils";
 import { logger } from "@/utils/logging";
 import { sanitizeFileName } from "@/utils/string";
@@ -350,10 +349,7 @@ export const ExtensionHostContextProvider: React.FC<{
 }> = ({ children }) => {
   const router = useRouter();
 
-  if (
-    router.pathname === "/standalone/game-log" ||
-    router.pathname === "/standalone/game-error"
-  ) {
+  if (router.pathname === "/standalone/game-log") {
     return <>{children}</>;
   }
 
@@ -450,13 +446,26 @@ const ActiveExtensionHostContextProvider: React.FC<{
           "delete_directory",
           "read_file",
           "write_file",
-          "schedule_progressive_task_group",
+          "plugin:sjmcl-downloader|submit_group",
+          "plugin:sjmcl-downloader|pause_group",
+          "plugin:sjmcl-downloader|resume_group",
+          "plugin:sjmcl-downloader|cancel_group",
+          "plugin:sjmcl-downloader|retry_group",
+          "plugin:sjmcl-downloader|remove_group",
+          "plugin:sjmcl-downloader|acknowledge_completion",
           "add_extension",
           "delete_extension",
         ].includes(command)
       ) {
         throw new Error(`Direct invoke is not allowed for ${command}`);
       }
+
+      // Compatibility aliases for command changes introduced in #1952.
+      const aliases = new Map([
+        ["retrieve_download_groups", "plugin:sjmcl-downloader|snapshot"],
+        ["retrieve_download_tasks", "plugin:sjmcl-downloader|list_tasks"],
+      ]);
+      command = aliases.get(command) ?? command;
 
       return await tauriInvoke<T>(command, payload);
     },
@@ -557,21 +566,18 @@ const ActiveExtensionHostContextProvider: React.FC<{
       const filename = sanitizeFileName(
         `${extension.identifier}_${normalizedVersion}.sjmclx`
       );
-      const response = await TaskService.scheduleProgressiveTaskGroup(
-        `extension-update?${extension.identifier}&${normalizedVersion}`,
-        [
+      await DownloadService.submitGroup({
+        name: `extension-update?${extension.identifier}&${normalizedVersion}`,
+        autoResume: true,
+        tasks: [
           {
-            taskType: TaskTypeEnums.Download,
-            src: normalizedSrc,
+            name: filename,
+            executor: "download",
+            spec: { url: normalizedSrc },
             dest: await join(cacheDir, filename),
-            filename,
           },
-        ]
-      );
-
-      if (response.status !== "success") {
-        throw response.raw_error || response.details || response.message;
-      }
+        ],
+      });
     },
     [config.download.cache.directory]
   );
@@ -1095,12 +1101,14 @@ const ActiveExtensionHostContextProvider: React.FC<{
           UtilsService.deleteDirectory
         );
       },
+      toast,
       logger,
       reloadSelf: () => reloadExtension(extension.identifier),
       updateSelf: async (src: string, newVersion: string) =>
         await scheduleExtensionUpdate(extension, src, newVersion),
     }),
     [
+      toast,
       invoke,
       navigate,
       openExternalLink,
@@ -1255,6 +1263,12 @@ const ActiveExtensionHostContextProvider: React.FC<{
     [getScriptUrl]
   );
 
+  // Skip home widget and settings page registration in standalone windows,
+  // since neither is rendered outside the main window.
+  const isStandalonePageRef = useRef(
+    router.pathname.startsWith("/standalone/")
+  );
+
   const activateExtension = useCallback(
     async (extension: ExtensionInfo, signature: string) => {
       const { factory, scriptElement } = await loadExtensionFactory(
@@ -1292,7 +1306,7 @@ const ActiveExtensionHostContextProvider: React.FC<{
         ...(registration.homeWidgets || []),
       ];
 
-      if (homeWidgetDefinitions.length > 0) {
+      if (!isStandalonePageRef.current && homeWidgetDefinitions.length > 0) {
         setHomeWidgetMap((prev) => ({
           ...prev,
           [extension.identifier]: homeWidgetDefinitions.map(
@@ -1316,7 +1330,7 @@ const ActiveExtensionHostContextProvider: React.FC<{
       }
 
       // ------- settings-page -------
-      if (registration.settingsPage) {
+      if (!isStandalonePageRef.current && registration.settingsPage) {
         setSettingsPageMap((prev) => ({
           ...prev,
           [extension.identifier]: {

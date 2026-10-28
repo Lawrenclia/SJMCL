@@ -12,7 +12,7 @@ import {
   ModalProps,
   Text,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BeatLoader } from "react-spinners";
 import Empty from "@/components/common/empty";
@@ -21,7 +21,7 @@ import TreeView, {
   buildStructTreeNodes,
 } from "@/components/common/tree-view";
 import { useToast } from "@/contexts/toast";
-import { LevelData } from "@/models/instance/world";
+import { WorldDetails } from "@/models/instance/world";
 import { InstanceService } from "@/services/instance";
 
 interface WorldLevelDataModalProps extends Omit<ModalProps, "children"> {
@@ -36,14 +36,19 @@ const WorldLevelDataModal: React.FC<WorldLevelDataModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
-  const [levelData, setLevelData] = useState<LevelData>();
+  const [levelData, setLevelData] = useState<WorldDetails>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isOpen, onClose } = props;
+  // The shared-modal provider recreates onClose on every render; keep the
+  // effect depending on the request inputs only.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  const treeNodes = useMemo(
-    () => (levelData ? buildStructTreeNodes(levelData) : []),
-    [levelData]
-  );
+  const treeNodes = useMemo(() => {
+    if (!levelData) return [];
+    const { "level.dat": level, ...otherFiles } = levelData;
+    return buildStructTreeNodes({ "level.dat": level, ...otherFiles });
+  }, [levelData]);
 
   const handleRetrieveWorldDetails = useCallback(
     async (instanceId: string, worldName: string) => {
@@ -72,17 +77,18 @@ const WorldLevelDataModal: React.FC<WorldLevelDataModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      if (!worldName) onClose();
+      if (!worldName) onCloseRef.current();
       else if (instanceId !== undefined)
         handleRetrieveWorldDetails(instanceId, worldName);
     }
-  }, [handleRetrieveWorldDetails, instanceId, worldName, isOpen, onClose]);
+  }, [handleRetrieveWorldDetails, instanceId, worldName, isOpen]);
 
   return (
     <Modal
       autoFocus={false}
       size={{ base: "md", lg: "lg", xl: "xl" }}
       scrollBehavior="inside"
+      returnFocusOnClose={false}
       {...props}
     >
       <ModalOverlay />
@@ -99,7 +105,7 @@ const WorldLevelDataModal: React.FC<WorldLevelDataModalProps> = ({
           {levelData && (
             <TreeView
               nodes={treeNodes}
-              defaultExpandedDepth={1}
+              defaultExpandedDepth={2}
               renderNode={({ node }) => {
                 const { key, value } = node.data as StructTreeNodeData;
                 const isPrimitive = typeof value !== "object" || value === null;

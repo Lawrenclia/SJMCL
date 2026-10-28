@@ -38,6 +38,7 @@ export interface InstanceSummary {
   supportQuickPlay: boolean;
   useSpecGameConfig: boolean;
   isVersionIsolated: boolean;
+  modpackVersion?: string;
 }
 
 export interface ModpackMetaInfo {
@@ -82,12 +83,14 @@ export interface GameServerInfo {
 export interface LocalModInfo {
   iconSrc: string;
   enabled: boolean;
+  modId: string;
   name: string;
   translatedName?: string;
   version: string;
   loaderType: ModLoaderType;
   fileName: string;
   filePath: string;
+  relativePath: string;
   description?: string;
   translatedDescription?: string;
   potentialIncompatibility: boolean;
@@ -103,6 +106,7 @@ export interface ResourcePackInfo {
 export interface SchematicInfo {
   name: string;
   filePath: string;
+  relativePath: string;
 }
 
 export interface ShaderPackInfo {

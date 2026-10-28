@@ -13,6 +13,7 @@ import {
   OtherResourceVersionPack,
 } from "@/models/resource";
 import { InvokeResponse } from "@/models/response";
+import { getResourceCompatibleModLoader } from "@/utils/resource";
 import { responseHandler } from "@/utils/response";
 
 export const RESOURCE_REFRESH_EVENT = "instance:refresh-resource-list";
@@ -111,14 +112,16 @@ export class ResourceService {
     resourceId: string,
     modLoader: ModLoaderType | "All",
     gameVersions: string[],
-    downloadSource: OtherResourceSource
+    downloadSource: OtherResourceSource,
+    resourceType?: OtherResourceType
   ): Promise<InvokeResponse<OtherResourceVersionPack[]>> {
     return await invoke("fetch_resource_version_packs", {
       downloadSource,
       query: {
         resourceId,
-        modLoader,
+        modLoader: getResourceCompatibleModLoader(modLoader),
         gameVersions,
+        resourceType,
       },
     });
   }

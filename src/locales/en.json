@@ -39,6 +39,10 @@
           "title": "LittleSkin",
           "description": "Thanks to LittleSkin and @tnqzh123 for their help with the login process design"
         },
+        "mcim": {
+          "title": "mcmod-info-mirror",
+          "description": "Provides Simplified Chinese translations for mod information"
+        },
         "scl": {
           "title": "Swift Craft Launcher",
           "description": "Thanks to the SCL developers for the ongoing communication and mutual inspiration with us"
@@ -69,10 +73,7 @@
           "description": "Licensed under the GNU General Public License v3.0, with additional terms."
         }
       }
-    },
-    "bottomWarning": "By AI assistant, for reference only.",
-    "noHistory": "No chat history yet.",
-    "untitledSession": "Untitled Session"
+    }
   },
   "AccountsPage": {
     "button": {
@@ -115,12 +116,6 @@
         "title": "Download Game Server",
         "description": "Download game server files for different versions"
       }
-    }
-  },
-  "MainLayout": {
-    "fileDnD": {
-      "title": "Import Modpack",
-      "desc": "Import modpack file {{fileName}} to SJMCL"
     }
   },
   "AddAuthServerModal": {
@@ -237,16 +232,38 @@
     "joinGameConfirm": "Join Miuxi"
   },
   "AgentChatPage": {
+    "bottomWarning": "By AI assistant, for reference only.",
+    "noHistory": "No chat history yet.",
+    "untitledSession": "Untitled Session",
     "description": "Start your first conversation with Miuxi!",
     "placeholder": "Ask Miuxi anything, press Enter to send~",
     "suggestions": {
-      "items": ["Download the latest Minecraft", "Launch the game", "Check SJMC news"]
+      "items": [
+        "Download the latest Minecraft",
+        "Launch the game",
+        "Check SJMC news",
+        "What can you help me with?",
+        "Check my Java setup",
+        "Create a Fabric instance",
+        "Choose memory settings for an instance",
+        "List installed mods",
+        "Help troubleshoot mod conflicts",
+        "Help analyze a crash log",
+        "Show an instance’s worlds",
+        "Change the game window size"
+      ]
     },
     "thinking": "Thinking",
     "thinkingFinished": "Thinking Finished",
     "skipThinking": "Skip thinking",
     "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
+    "resizePanel": "Resize MiuChat panel",
     "toolCall": {
+      "params": "Parameters / script",
+      "running": "Running",
+      "pending": "Awaiting confirmation",
+      "cancelled": "Cancelled",
+      "waiting": "Awaiting execution",
       "title": "Call Magic",
       "confirm": "Confirm",
       "cancel": "Cancel",
@@ -373,6 +390,9 @@
           "title": "Font Family",
           "default": "Default"
         },
+        "logFontFamily": {
+          "title": "Log Font"
+        },
         "fontSize": {
           "title": "Font Size",
           "small": "T",
@@ -438,7 +458,8 @@
     "footer": {
       "installFabricApi": "Install Fabric API Mod",
       "installQFAPI": "Install QFAPI / QSL Mod (if available)",
-      "reinstall": "Reinstall"
+      "reinstall": "Reinstall",
+      "removeCurrentInstallation": "Remove Installation"
     }
   },
   "CheckModUpdateModal": {
@@ -534,8 +555,8 @@
       "title": "Delete Game Instance",
       "content": "Confirm delete the game instance \"{{instanceName}}\" ? It will be lost forever! (A long time!)",
       "warning": {
-        "withVerIso": "Please note that since version isolation is enabled for this instance, deleting it will also remove saves and other associated files. If you wish to retain this data, please migrate it first.",
-        "woVerIso": "Please note that if version isolation was previously enabled for this instance, any un-migrated saves and other files will also be deleted."
+        "withVerIso": "Please note that since instance isolation is enabled for this instance, deleting it will also remove saves and other associated files. If you wish to retain this data, please migrate it first.",
+        "woVerIso": "Please note that if instance isolation was previously enabled for this instance, any un-migrated saves and other files will also be deleted."
       }
     }
   },
@@ -667,16 +688,8 @@
       "headExtra": "Restart Required",
       "settings": {
         "enabled": {
-          "title": "Enable Proxy"
-        },
-        "type": {
-          "title": "Proxy Type"
-        },
-        "host": {
-          "title": "Host"
-        },
-        "port": {
-          "title": "Port"
+          "title": "Enable Proxy for Downloads",
+          "description": "When disabled, the launcher will use the system proxy to download resources automatically"
         }
       }
     }
@@ -712,6 +725,7 @@
     },
     "label": {
       "paused": "Paused",
+      "finalizing": "Finishing installation",
       "completed": "Completed",
       "error": "Failed",
       "cancelled": "Cancelled"
@@ -733,17 +747,13 @@
       "mod-update": "Update Mod",
       "retry": "Retry",
       "neoforge-libraries": "NeoForge Libraries",
+      "cleanroom-libraries": "Cleanroom Libraries",
       "forge-libraries": "Forge Libraries",
       "optifine-libraries": "OptiFine Libraries",
       "launcher-update": "Update Launcher",
       "extension-update": "Update Extension {{param1}} {{param2}}",
       "mojang-java": "Java {{param}} Runtime"
     }
-  },
-  "Editable": {
-    "edit": "Edit",
-    "save": "Save",
-    "cancel": "Cancel"
   },
   "EditGameDirectoryModal": {
     "header": {
@@ -788,6 +798,11 @@
         "invalid": "Directory path is invalid"
       }
     }
+  },
+  "Editable": {
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel"
   },
   "Empty": {
     "noData": "No Data"
@@ -859,7 +874,7 @@
       "includedFiles": "Included Files",
       "exportOptions": "Export Options",
       "packWithLauncher": "Pack With Launcher",
-      "minMemory": "Minimum Memory (MB)",
+      "minMemory": "Minimum Memory (MiB)",
       "noCreateRemoteFiles": "Disable Remote Files",
       "skipCurseForgeRemoteFiles": "Skip CurseForge Remote Files"
     },
@@ -989,13 +1004,65 @@
         },
         "javaPermanentGenerationSpace": {
           "title": "PermGen Space",
-          "placeholder": "in MB"
+          "placeholder": "in MiB"
         },
         "environmentVariable": {
           "title": "Environment Variables"
         },
         "args": {
           "title": "Other JVM Arguments"
+        }
+      }
+    },
+    "graphics": {
+      "title": "Graphics",
+      "settings": {
+        "api": {
+          "title": "Graphics API",
+          "default": {
+            "label": "Default",
+            "desc": "Use Minecraft and the driver default."
+          },
+          "opengl": {
+            "label": "OpenGL",
+            "desc": "Use OpenGL rendering."
+          },
+          "vulkan": {
+            "label": "Vulkan",
+            "desc": "Use Vulkan rendering."
+          }
+        },
+        "renderer": {
+          "title": "Renderer / Driver",
+          "default": "Default",
+          "llvmpipe": "LLVMpipe",
+          "zink": "Zink",
+          "d3d12": "D3D12",
+          "lavapipe": "Lavapipe",
+          "dozen": "Dozen",
+          "nvidia_vulkan": "NVIDIA Vulkan",
+          "nvidia_nvk": "NVK",
+          "amdvlk": "AMDVLK",
+          "amd_radv": "RADV",
+          "intel_vulkan": "Intel Vulkan",
+          "intel_anv": "ANV",
+          "intel_hasvk": "HASVK",
+          "qualcomm": "Qualcomm Vulkan",
+          "turnip": "Turnip",
+          "moltenvk": "MoltenVK",
+          "kosmickrisp": "KosmicKrisp",
+          "powervr": "PowerVR",
+          "panvk": "PanVK",
+          "v3dv": "V3DV"
+        }
+      }
+    },
+    "proxy": {
+      "title": "Proxy",
+      "settings": {
+        "enabled": {
+          "title": "Enable Proxy for Game Process",
+          "description": "When disabled, the game will use the system proxy automatically"
         }
       }
     },
@@ -1007,7 +1074,10 @@
           "title": "Game File Validation Policy",
           "disable": "Disable Check",
           "normal": "Normal Check",
-          "full": "Full Check"
+          "full": "Full Check",
+          "disableDesc": "",
+          "normalDesc": "Check if files exist, auto-download missing ones",
+          "fullDesc": "Check file SHA1 integrity, auto-download missing ones (takes longer)"
         },
         "dontCheckJvmValidity": {
           "title": "Do not check Java VM compatibility"
@@ -1031,6 +1101,12 @@
         },
         "useNativeOpenal": {
           "title": "Use System OpenAL(Linux Only)"
+        },
+        "autoCloseGameCrashWindow": {
+          "title": "Automatically close the crash notification window",
+          "disabled": "Do not auto-close",
+          "tenSeconds": "Close after 10 seconds",
+          "thirtySeconds": "Close after 30 seconds"
         }
       }
     }
@@ -1048,6 +1124,15 @@
     "javaInfo": {
       "javaVersion": "Java Version"
     },
+    "button": {
+      "aiAnalysis": "AI Analysis",
+      "exportGameInfo": "Export Crash Report",
+      "gameLogs": "Game Logs",
+      "help": "Help"
+    },
+    "autoCloseCountdown": "This window will close automatically in {{seconds}} seconds (click anywhere in the window to cancel)",
+    "bottomAlert": "Export and send the crash report instead of a screenshot of this page for help.",
+    "helpUrl": "https://mc.sjtu.cn/sjmcl/en/docs/user-group.html",
     "crashDetails": {
       "title": "Crash Details",
       "OPENJ9": "OpenJ9 JVM is not supported. Please use HotSpot JVM.",
@@ -1116,13 +1201,6 @@
       "FORGE_LITELOADER_CONFLICT": "The instance cannot continue due to Forge and LiteLoader conflict. Please try removing LiteLoader or changing Forge version.",
       "UNKNOWN": "Cannot determine the cause of the crash. You can use AI analysis, or check the logs for more details and export the crash report."
     },
-    "button": {
-      "aiAnalysis": "AI Analysis",
-      "exportGameInfo": "Export Crash Report",
-      "gameLogs": "Game Logs",
-      "help": "Help"
-    },
-    "bottomAlert": "Export and send the crash report instead of a screenshot of this page for help.",
     "aiAnalysis": "AI Analysis"
   },
   "GameLogPage": {
@@ -1201,7 +1279,8 @@
     "version": {
       "dev": "development version",
       "nightly": "nightly build",
-      "beta": "beta version"
+      "beta": "beta version",
+      "test-build": "test build"
     },
     "viewOnWiki": "View on Minecraft Wiki"
   },
@@ -1222,8 +1301,8 @@
           "description": "%only available in zh-Hans"
         },
         "skipFirstScreenOptions": {
-          "title": "Skip First Launch Screen Options",
-          "description": "%only available in zh-Hans"
+          "title": "Automatically Set Instance Language",
+          "description": "When enabled, new instances will follow the launcher language and skip the in-game accessibility setup screen."
         }
       }
     },
@@ -1283,10 +1362,10 @@
           "title": "Auto Purge Launcher Logs",
           "description": "Automatically purge launcher log files older than 30 days"
         },
-        "restoreAll": {
-          "title": "Restore All Settings",
-          "description": "Restore all launcher settings to their default values",
-          "restore": "Restore"
+        "resetAll": {
+          "title": "Reset All Settings",
+          "description": "Reset all launcher settings to their default values",
+          "reset": "Reset"
         }
       }
     }
@@ -1325,14 +1404,16 @@
       "settings": {
         "resolution": {
           "title": "Game Resolution",
-          "switch": "Fullscreen"
+          "preset": "Preset",
+          "switch": "Fullscreen",
+          "warning": "Resolution may exceed monitor limit"
         },
         "customTitle": {
           "title": "Custom Window Title"
         },
         "customInfo": {
           "title": "Custom Information",
-          "description": "It is displayed in the bottom left corner of the game's main screen and the top left corner of the F3 debugging page."
+          "description": "It is displayed in the bottom left corner of the game's main screen and the top left corner of the F3 debugging page (only effective for Minecraft versions before 26.1)."
         }
       }
     },
@@ -1347,7 +1428,7 @@
         },
         "memoryUsage": {
           "title": "Memory Usage",
-          "description": "Used memory {{usedMemory}}GB; Game allocated {{allocatedMemory}}GB; Total memory {{totalMemory}}GB"
+          "description": "Used memory {{usedMemory}}GiB; Game allocated {{allocatedMemory}}GiB; Total memory {{totalMemory}}GiB"
         },
         "processPriority": {
           "title": "Process Priority",
@@ -1361,7 +1442,7 @@
     },
     "versionIsolation": {
       "settings": {
-        "title": "Enable Version Isolation"
+        "title": "Enable Instance Isolation"
       }
     },
     "moreOptions": {
@@ -1387,6 +1468,10 @@
           "button": "Edit Advanced Options"
         }
       }
+    },
+    "topWarning": {
+      "specGameConfigWarning": "The current instance \"{{instance}}\" has specific game Settings enabled, so the options on this page will not affect this instance. ",
+      "editInstanceSettings": "Edit instance specific game settings"
     }
   },
   "GuidedTourProvider": {
@@ -1447,6 +1532,10 @@
         "curseforge": {
           "title": "CurseForge",
           "description": "Discover the world's largest Minecraft mod repository"
+        },
+        "modrinth": {
+          "title": "Modrinth",
+          "description": "An open-source, modern Minecraft resource platform"
         }
       }
     },
@@ -1458,7 +1547,7 @@
         },
         "UserGroup": {
           "title": "User Community",
-          "description": "Join the QQ group or Discord server to report issues, request features, or get help",
+          "description": "Join the QQ group or GitHub Discussions to report issues, request features, or get help",
           "url": "https://mc.sjtu.cn/sjmcl/en/docs/user-group"
         }
       }
@@ -1476,8 +1565,14 @@
     "header": {
       "title": "Import Players and Auth Servers"
     },
+    "launcherName": {
+      "HMCL": "HMCL (3.16+)",
+      "LegacyHMCL": "HMCL (< 3.16)",
+      "MultiMC": "MultiMC"
+    },
     "launcherDesc": {
       "HMCL": "Hello Minecraft! Launcher",
+      "LegacyHMCL": "Hello Minecraft! Launcher",
       "MultiMC": "MultiMC"
     },
     "body": {
@@ -1583,27 +1678,22 @@
       "title": "Schematics"
     }
   },
-  "InstanceScreenshotsPage": {
-    "button": {
-      "details": "Details"
-    }
-  },
   "InstanceSettingsPage": {
     "name": "Instance Name",
     "description": "Instance Description",
     "colorTag": "Color Tag",
     "icon": "Instance Icon",
     "applySettings": "Apply the following specific settings",
-    "restoreSettings": "Restore specific settings",
-    "restoreSettingsDesc": "Restore the following specific settings to the global game settings.",
-    "restore": "Restore",
+    "resetSettings": "Reset specific settings",
+    "resetSettingsDesc": "Reset the following specific settings to the global game settings.",
+    "reset": "Reset",
     "errorMessage": {
       "error-1": "Instance name cannot be empty",
       "error-2": "Instance name is invalid",
       "error-3": "Instance name is too long"
     },
     "tipsToGlobal": {
-      "content": "This instance is not using specific settings. <terms>Go to Global Game Settings</terms>"
+      "content": "This instance is not using specific settings. <toGlobal>Go to Global Game Settings</toGlobal>"
     }
   },
   "InstanceShaderPacksPage": {
@@ -1739,56 +1829,6 @@
       "description": "Confirm the removal of this Java? (SJMCL will no longer scan this directory, but your files remain on the disk.)"
     }
   },
-  "LastExitedAbnormallyDialog": {
-    "dialog": {
-      "title": "Previous Run Exited Abnormally",
-      "content": "SJMCL exited abnormally during the last run. You can send the logs to the <community>community</community>, or open an issue on <github>GitHub</github> for help.",
-      "viewLog": "View Logs"
-    }
-  },
-  "LaunchPage": {
-    "button": {
-      "launch": "Launch Game",
-      "instanceSettings": "Instance Settings"
-    },
-    "SwitchButton": {
-      "tooltip": {
-        "switchPlayer": "Switch Player",
-        "addPlayer": "Add Player",
-        "switchInstance": "Switch Game Instance",
-        "addInstance": "Add Game Instance"
-      }
-    },
-    "Text": {
-      "noSelectedPlayer": "No player selected",
-      "noSelectedGame": "No game instance selected"
-    }
-  },
-  "LaunchProcessModal": {
-    "header": {
-      "title": "Launch Game - {{name}}"
-    },
-    "step": {
-      "selectSuitableJRE": "Select Suitable Java Runtime",
-      "validateGameFiles": "Validate Game and Dependency Files",
-      "validateSelectedPlayer": "Validate Player's Credentials",
-      "launchGame": "Waiting for Game to Launch"
-    },
-    "toast": {
-      "noSelectedPlayer": "Please add and select a player first",
-      "noSelectedInstance": "Please add and select a game instance first"
-    }
-  },
-  "LoaderSelector": {
-    "stable": "Stable",
-    "beta": "Beta",
-    "releaseDate": "Released at {{date}}",
-    "notCompatibleWith": "Not compatible with {{item}}",
-    "noVersionSelected": "No version selected"
-  },
-  "MainWindowTitlebar": {
-    "extensionProvidedPage": "This page is provided by extension {{name}}"
-  },
   "LLMProviderSettingsModal": {
     "header": {
       "title": {
@@ -1858,12 +1898,81 @@
       }
     }
   },
+  "LanguageMenu": {
+    "localeName": {
+      "en": "",
+      "es": "Spanish",
+      "fr": "French",
+      "ja": "Japanese",
+      "lzh": "Literary Chinese",
+      "zh-Hans": "Simplified Chinese",
+      "zh-Hant": "Traditional Chinese"
+    }
+  },
+  "LastExitedAbnormallyDialog": {
+    "dialog": {
+      "title": "Previous Run Exited Abnormally",
+      "content": "SJMCL exited abnormally during the last run. You can send the logs to the <community>community</community>, or open an issue on <github>GitHub</github> for help.",
+      "viewLog": "View Logs"
+    }
+  },
+  "LaunchPage": {
+    "button": {
+      "launch": "Launch Game",
+      "instanceSettings": "Instance Settings"
+    },
+    "SwitchButton": {
+      "tooltip": {
+        "switchPlayer": "Switch Player",
+        "addPlayer": "Add Player",
+        "switchInstance": "Switch Game Instance",
+        "addInstance": "Add Game Instance"
+      }
+    },
+    "Text": {
+      "noSelectedPlayer": "No player selected",
+      "noSelectedGame": "No game instance selected"
+    }
+  },
+  "LaunchProcessModal": {
+    "header": {
+      "title": "Launch Game - {{name}}"
+    },
+    "step": {
+      "selectSuitableJRE": "Select Suitable Java Runtime",
+      "validateGameFiles": "Validate Game and Dependency Files",
+      "validateSelectedPlayer": "Validate Player's Credentials",
+      "launchGame": "Waiting for Game to Launch"
+    },
+    "toast": {
+      "noSelectedPlayer": "Please add and select a player first",
+      "noSelectedInstance": "Please add and select a game instance first"
+    }
+  },
+  "LoaderSelector": {
+    "stable": "Stable",
+    "beta": "Beta",
+    "releaseDate": "Released at {{date}}",
+    "notCompatibleWith": "Not compatible with {{item}}",
+    "noVersionSelected": "No version selected"
+  },
+  "MCVersionNumberHelper": {
+    "content": "Starting in 2026, Minecraft adopts a new version numbering system. The version numbers will begin with the release year (e.g., 26.1), replacing the previous 1.x versioning scheme.",
+    "linkText": "Read the official article",
+    "url": "https://www.minecraft.net/en-us/article/minecraft-new-version-numbering-system"
+  },
+  "MainLayout": {
+    "fileDnD": {
+      "title": "Import Modpack",
+      "desc": "Import modpack file {{fileName}} to SJMCL"
+    }
+  },
   "ManageSkinModal": {
     "skinManage": "Manage Skin",
     "default": "Default",
     "steve": "Steve",
     "alex": "Alex",
-    "upload": "Upload",
+    "upload": "Choose Local Skin",
     "skin": "Skin",
     "cape": "Cape",
     "model": {
@@ -1883,14 +1992,9 @@
       "javaPath": "Please enter or select the Java executable file path"
     }
   },
-  "MCVersionNumberHelper": {
-    "content": "Starting in 2026, Minecraft adopts a new version numbering system. The version numbers will begin with the release year (e.g., 26.1), replacing the previous 1.x versioning scheme.",
-    "linkText": "Read the official article",
-    "url": "https://www.minecraft.net/en-us/article/minecraft-new-version-numbering-system"
-  },
   "MemoryStatusProgress": {
     "title": "Memory Status",
-    "info": "{{used}} / {{total}} GB used",
+    "info": "{{used}} / {{total}} GiB used",
     "label": {
       "now": "In use",
       "maxAllocation": "Maximum allocated for Minecraft"
@@ -1946,6 +2050,7 @@
   },
   "OptionItemGroup": {
     "button": {
+      "loadMore": "Load More (+{{left}})",
       "showAll": "Show All (+{{left}})"
     }
   },
@@ -1978,6 +2083,17 @@
       "deleting": "Deleting player"
     }
   },
+  "ProxySettingsGroup": {
+    "type": {
+      "title": "Proxy Type"
+    },
+    "host": {
+      "title": "Host"
+    },
+    "port": {
+      "title": "Port"
+    }
+  },
   "ReLoginPlayerModal": {
     "modal": {
       "title": "Re-login"
@@ -1992,6 +2108,26 @@
     "button": {
       "login": "Login"
     }
+  },
+  "RemoveModLoaderDialog": {
+    "dialog": {
+      "title": "Remove Mod Loader",
+      "content": "Are you sure you want to remove {{type}} {{version}} installed for {{instanceName}}? Your mods may stop working."
+    }
+  },
+  "RemoveOptifineDialog": {
+    "dialog": {
+      "title": "Remove OptiFine",
+      "content": "Are you sure you want to remove OptiFine {{version}} installed for {{instanceName}}? Your shader packs may stop working."
+    }
+  },
+  "ResetConfigConfirmDialog": {
+    "title": "Reset Launcher Settings",
+    "body": "This action will reset all launcher settings to their default values. Are you sure you want to proceed?"
+  },
+  "ResetInstanceConfigConfirmDialog": {
+    "title": "Reset Instance Settings",
+    "body": "This action will reset this instance's specific game settings to the current global settings. Are you sure you want to proceed?"
   },
   "ResourceDownloader": {
     "label": {
@@ -2008,10 +2144,10 @@
       "CurseForge": {
         "All": "All",
         "Addons": "Addons",
-        "Adventure and RPG": "Adventure RPG",
-        "API and Library": "API Library",
+        "Adventure and RPG": "Adventure and RPG",
+        "API and Library": "API and Library",
         "Applied Energistics 2": "Applied Energistics 2",
-        "Armor, Tools, and Weapons": "Armor Tools Weapons",
+        "Armor, Tools, and Weapons": "Armor, Tools, and Weapons",
         "Automation": "Automation",
         "Biomes": "Biomes",
         "Blood Magic": "Blood Magic",
@@ -2023,7 +2159,7 @@
         "Dimensions": "Dimensions",
         "Education": "Education",
         "Energy": "Energy",
-        "Energy, Fluid, and Item Transport": "Energy Fluid Item Transport",
+        "Energy, Fluid, and Item Transport": "Energy, Fluid, and Item Transport",
         "Farming": "Farming",
         "Food": "Food",
         "Forestry": "Forestry",
@@ -2035,7 +2171,7 @@
         "Magic": "Magic",
         "Map and Information": "Map Information",
         "MCreator": "MCreator",
-        "Miscellaneous": "Misc.",
+        "Miscellaneous": "Miscellaneous",
         "Mobs": "Mobs",
         "Ores and Resources": "Ores Resources",
         "Performance": "Performance",
@@ -2051,8 +2187,8 @@
         "Thermal Expansion": "Thermal Expansion",
         "Tinker's Construct": "Tinker's Construct",
         "Twilight Forest": "Twilight Forest",
-        "Twitch Integration": "Twitch",
-        "Utility & QoL": "Utility QoL",
+        "Twitch Integration": "Twitch Integration",
+        "Utility & QoL": "Utility & QoL",
         "World Gen": "World Gen",
         "Auxiliary": "Auxiliary",
         "World": "World"
@@ -2109,7 +2245,7 @@
         "Data Packs": "Data Packs",
         "Font Packs": "Font Packs",
         "Medieval": "Medieval",
-        "Miscellaneous": "Misc.",
+        "Miscellaneous": "Miscellaneous",
         "Mod Support": "Mod Support",
         "Modern": "Modern",
         "Photo Realistic": "Photo Realistic",
@@ -2119,13 +2255,13 @@
       "Modrinth": {
         "All": "All",
         "Resolution": "Resolution",
-        "8x-": "8x or Lower",
+        "8x-": "8x or lower",
         "16x": "16x",
         "32x": "32x",
         "64x": "64x",
         "128x": "128x",
         "256x": "256x",
-        "512x+": "512x or Higher",
+        "512x+": "512x or higher",
         "Styles": "Styles",
         "audio": "Audio",
         "blocks": "Blocks",
@@ -2147,7 +2283,7 @@
         "themed": "Themed",
         "tweaks": "Tweaks",
         "utility": "Utility",
-        "vanilla-like": "Vanilla-like"
+        "vanilla-like": "Vanilla Like"
       }
     },
     "shaderTagList": {
@@ -2165,8 +2301,8 @@
         "cursed": "Cursed",
         "fantasy": "Fantasy",
         "realistic": "Realistic",
-        "semi-realistic": "Semi-Realistic",
-        "vanilla-like": "Vanilla-like",
+        "semi-realistic": "Semi Realistic",
+        "vanilla-like": "Vanilla Like",
         "atmosphere": "Atmosphere",
         "bloom": "Bloom",
         "colored-lighting": "Colored Lighting",
@@ -2176,7 +2312,7 @@
         "reflections": "Reflections",
         "shadows": "Shadows",
         "potato": "Potato",
-        "performance": "Performance",
+        "performance": "Performance impact",
         "low": "Low",
         "medium": "Medium",
         "high": "High",
@@ -2187,11 +2323,11 @@
       "CurseForge": {
         "All": "All",
         "Styles": "Styles",
-        "Adventure and RPG": "Adventure RPG",
-        "Combat / PvP": "Combat PvP",
+        "Adventure and RPG": "Adventure and RPG",
+        "Combat / PvP": "Combat / PvP",
         "Exploration": "Exploration",
         "Extra Large": "Extra Large",
-        "FTB Official Pack": "FTB",
+        "FTB Official Pack": "FTB Official Pack",
         "Hardcore": "Hardcore",
         "Horror": "Horror",
         "Magic": "Magic",
@@ -2201,7 +2337,7 @@
         "Quests": "Quests",
         "Sci-Fi": "Sci-Fi",
         "Skyblock": "Skyblock",
-        "Small / Light": "Small Light",
+        "Small / Light": "Small / Light",
         "Tech": "Tech",
         "Vanilla+": "Vanilla+"
       },
@@ -2225,7 +2361,7 @@
         "All": "All",
         "Styles": "Styles",
         "Magic": "Magic",
-        "Miscellaneous": "Misc.",
+        "Miscellaneous": "Miscellaneous",
         "Fantasy": "Fantasy",
         "Mod Support": "Mod Support",
         "Tech": "Tech",
@@ -2280,20 +2416,12 @@
   "RestartForUpdateConfirmDialog": {
     "title": "Launcher Update",
     "body": "The new version has been downloaded. Restart SJMCL to complete the update.",
-    "bodyMSI": "The new version has been downloaded. Clicking Install will close SJMCL and run the installer.",
+    "bodyWinInstaller": "The new version has been downloaded. Clicking Install will close SJMCL and run the installer.",
     "button": {
       "restart": "Restart",
       "install": "Install",
       "later": "Later"
     }
-  },
-  "RestoreConfigConfirmDialog": {
-    "title": "Restore Launcher Settings",
-    "body": "This action will restore all launcher settings to their default values. Are you sure you want to proceed?"
-  },
-  "RestoreInstanceConfigConfirmDialog": {
-    "title": "Restore Instance Settings",
-    "body": "This action will restore this instance's specific game settings to the current global settings. Are you sure you want to proceed?"
   },
   "RevealConfigJsonConfirmDialog": {
     "body": "Please be cautious when editing the raw launcher settings file. Incorrect formatting may lead to the loss of original settings or prevent the launcher from working properly."
@@ -2328,10 +2456,10 @@
           "title": "Failed to update launcher settings"
         }
       },
-      "restoreLauncherConfig": {
-        "success": "Successfully restored launcher settings",
+      "resetLauncherConfig": {
+        "success": "Successfully reset launcher settings",
         "error": {
-          "title": "Failed to restore launcher settings"
+          "title": "Failed to reset launcher settings"
         }
       },
       "exportLauncherConfig": {
@@ -2388,7 +2516,10 @@
       },
       "downloadMojangJava": {
         "error": {
-          "title": "Failed to download Mojang Java runtime"
+          "title": "Failed to download Mojang Java runtime",
+          "description": {
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
+          }
         }
       },
       "checkGameDirectory": {
@@ -2406,7 +2537,16 @@
           "title": "Failed to clear download cache",
           "description": {
             "HAS_ACTIVE_DOWNLOAD_TASKS": "There are active download tasks in progress.",
-            "FILE_DELETION_FAILED": "Failed to delete files, they may be in use."
+            "FILE_DELETION_FAILED": "Failed to delete files, they may be in use.",
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
+          }
+        }
+      },
+      "downloadLauncherUpdate": {
+        "error": {
+          "title": "Failed to download launcher update",
+          "description": {
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
           }
         }
       }
@@ -2671,9 +2811,11 @@
           "title": "Failed to validate game files",
           "description": {
             "MOD_LOADER_NOT_INSTALLED": "Mod loader installation not completed",
+            "OPTIFINE_NOT_INSTALLED": "OptiFine installation not completed",
             "INSTANCE_NOT_FOUND_BY_ID": "Instance ID does not exist",
             "GAME_FILES_INCOMPLETE": "Game files are incomplete",
-            "LAUNCHING_STATE_NOT_FOUND": "Launching state not found"
+            "LAUNCHING_STATE_NOT_FOUND": "Launching state not found",
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
           }
         }
       },
@@ -2764,7 +2906,8 @@
           "title": "Failed to download game server",
           "description": {
             "PARSE_ERROR": "The server returned data in an incorrect format",
-            "NETWORK_ERROR": "Failed to connect to the server"
+            "NETWORK_ERROR": "Failed to connect to the server",
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
           }
         }
       },
@@ -2778,13 +2921,14 @@
           }
         }
       },
-      "updateMod": {
+      "updateMods": {
         "error": {
           "title": "Failed to download latest mod",
           "description": {
             "PARSE_ERROR": "The server returned data in an incorrect format",
             "NETWORK_ERROR": "Failed to connect to the server",
-            "FILE_OPERATION_ERROR": "Failed to rename old mod file"
+            "FILE_OPERATION_ERROR": "Failed to rename old mod file",
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
           }
         }
       }
@@ -2810,7 +2954,8 @@
             "FILE_CREATION_FAILED": "Failed to create target file",
             "NETWORK_ERROR": "Failed to connect to the server",
             "CLIENT_JSON_PARSE_ERROR": "Failed to parse instance version info",
-            "ASSET_INDEX_PARSE_ERROR": "Failed to parse asset index"
+            "ASSET_INDEX_PARSE_ERROR": "Failed to parse asset index",
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
           }
         }
       },
@@ -2831,10 +2976,10 @@
           }
         }
       },
-      "restoreInstanceGameConfig": {
-        "success": "Successfully restored instance game settings",
+      "resetInstanceGameConfig": {
+        "success": "Successfully reset instance game settings",
         "error": {
-          "title": "Failed to restore instance game settings",
+          "title": "Failed to reset instance game settings",
           "description": {
             "INSTANCE_NOT_FOUND_BY_ID": "Instance ID does not exist",
             "SAVE_ERROR": "Failed to save instance settings"
@@ -2991,37 +3136,6 @@
           }
         }
       },
-      "finishModLoaderInstall": {
-        "loading": "Installing mod loader for {{instanceName}}",
-        "success": "Mod loader installed successfully",
-        "error": {
-          "title": "Failed to install mod loader",
-          "description": {
-            "INSTANCE_NOT_FOUND_BY_ID": "Instance ID does not exist",
-            "INSTALLATION_DUPLICATED": "Another installation process is already in progress",
-            "MAIN_CLASS_NOT_FOUND": "Main class not found in the mod loader version",
-            "PROCESSOR_EXECUTION_FAILED": "Failed to execute the install process",
-            "LOADER_INSTALLER_NOT_FOUND": "Mod loader installer file not found"
-          }
-        }
-      },
-      "finishOptiFineLoaderInstall": {
-        "loading": "Installing OptiFine for {{instanceName}}",
-        "success": "OptiFine installed successfully",
-        "error": {
-          "title": "Failed to install OptiFine",
-          "description": {
-            "INSTANCE_NOT_FOUND_BY_ID": "Instance ID does not exist",
-            "INSTALLATION_DUPLICATED": "Another installation process is already in progress",
-            "PROCESSOR_EXECUTION_FAILED": "Failed to execute the install process",
-            "LOADER_INSTALLER_NOT_FOUND": "OptiFine installer file not found",
-            "MOD_LOADER_VERSION_PARSE_ERROR": "Failed to parse OptiFine version information",
-            "INVALID_SOURCE_PATH": "Invalid source path",
-            "NO_SUITABLE_JAVA": "No suitable Java runtime found",
-            "SELECTED_JAVA_UNAVAILABLE": "The selected Java runtime is unavailable"
-          }
-        }
-      },
       "checkChangeModLoaderAvailablity": {
         "error": {
           "title": "Unable to Change Mod Loader",
@@ -3034,7 +3148,36 @@
         "error": {
           "title": "Failed to Change Mod Loader",
           "description": {
-            "NOT_SUPPORT_CHANGE_MOD_LOADER": "Installed by external process, which cannot be configured"
+            "NOT_SUPPORT_CHANGE_MOD_LOADER": "Installed by external process, which cannot be configured",
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
+          }
+        }
+      },
+      "changeOptiFine": {
+        "error": {
+          "title": "Failed to Change OptiFine",
+          "description": {
+            "DOWNLOAD_ENGINE_ERROR": "The download engine could not complete the operation"
+          }
+        }
+      },
+      "removeModLoader": {
+        "success": "Mod loader removed successfully",
+        "error": {
+          "title": "Failed to remove mod loader",
+          "description": {
+            "INSTANCE_NOT_FOUND_BY_ID": "Instance ID does not exist",
+            "FILE_CREATION_FAILED": "Failed to save instance configuration"
+          }
+        }
+      },
+      "removeOptifine": {
+        "success": "OptiFine removed successfully",
+        "error": {
+          "title": "Failed to remove OptiFine",
+          "description": {
+            "INSTANCE_NOT_FOUND_BY_ID": "Instance ID does not exist",
+            "FILE_CREATION_FAILED": "Failed to save instance configuration"
           }
         }
       },
@@ -3125,10 +3268,32 @@
       }
     },
     "task": {
-      "scheduleProgressiveTaskGroup": {
-        "error": "Failed to create task"
+      "common": {
+        "title": "Download operation failed",
+        "description": {
+          "NETWORK_ERROR": "Network error: {{details}}",
+          "HTTP_ERROR": "HTTP error: {{status}}",
+          "IO_ERROR": "File operation failed: {{details}}",
+          "CHECKSUM_MISMATCH": "File checksum mismatch: expected {{expected}}, got {{actual}}",
+          "CORRUPT_FILES": "Corrupt files: {{paths, list}}",
+          "MISSING_FIELD": "Missing task field: {{field}}",
+          "UNKNOWN_EXECUTOR": "Unknown task executor: {{executor}}",
+          "INVALID_CONTENT_RANGE": "The server returned an invalid Content-Range",
+          "RESUME_OFFSET_MISMATCH": "Resume offset mismatch: expected {{expected}}, got {{actual}}",
+          "OTHER_ERROR": "Task failed: {{details}}",
+          "EMPTY_GROUP": "A task group must contain at least one task",
+          "CHANNEL_CLOSED": "The download engine connection was closed",
+          "UNKNOWN_GROUP": "Task group {{groupId}} was not found",
+          "INVALID_STATE": "Task group {{groupId}} cannot perform this operation in its current state",
+          "STORAGE_ERROR": "Failed to save download state: {{details}}",
+          "ENGINE_NOT_INITIALIZED": "The download engine is not initialized",
+          "INSTALLATION_INSTANCE_MISMATCH": "The installation instance does not match the task",
+          "MOD_LOADER_CHANGED": "The mod loader changed during installation",
+          "OPTIFINE_MISSING": "OptiFine is missing",
+          "OPTIFINE_CHANGED": "OptiFine changed during installation"
+        }
       },
-      "onTaskGroupUpdate": {
+      "onDownloadGroupUpdate": {
         "status": {
           "Started": "{{param}} download has started",
           "Failed": "{{param}} download partially failed, please retry",
@@ -3169,6 +3334,7 @@
       "wave": "Wave"
     },
     "button": {
+      "saveToLocal": "Save Locally",
       "enableRotation": "Enable Rotation",
       "disableRotation": "Disable Rotation",
       "play": "Play",
@@ -3176,6 +3342,10 @@
     },
     "error": {
       "loadSkin": "Failed to load skin"
+    },
+    "toast": {
+      "error": "Failed to save skin locally",
+      "success": "Skin saved locally"
     }
   },
   "SpotlightSearchModal": {
@@ -3246,6 +3416,12 @@
     }
   },
   "Utils": {
+    "byteSize": {
+      "b": "B",
+      "kib": "KiB",
+      "mib": "MiB",
+      "gib": "GiB"
+    },
     "datetime": {
       "formatRelativeTime": {
         "now": "now",
@@ -3287,6 +3463,9 @@
     "button": {
       "agree": "Agree"
     }
+  },
+  "WindowTitlebar": {
+    "extensionProvidedPage": "This page is provided by extension {{name}}"
   },
   "WorldLevelDataModal": {
     "header": {

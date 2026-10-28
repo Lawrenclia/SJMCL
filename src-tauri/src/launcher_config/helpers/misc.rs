@@ -1,25 +1,38 @@
-use crate::error::SJMCLResult;
-use crate::launcher_config::commands::retrieve_custom_background_list;
-use crate::launcher_config::models::{BasicInfo, GameConfig, GameDirectory, LauncherConfig};
-use crate::partial::{PartialAccess, PartialUpdate};
-use crate::utils::fs::calculate_sha256;
-use crate::utils::portable::extract_assets;
-use crate::{APP_DATA_DIR, EXE_PATH, IS_PORTABLE};
 use rand::Rng;
+use sjmcl_downloader::storage::DOWNLOAD_HISTORY_RETENTION;
+use sjmcl_types::error::SJMCLResult;
+use sjmcl_types::partial::{PartialAccess, PartialUpdate};
 use std::fs;
 use std::path::{MAIN_SEPARATOR, PathBuf};
 use std::sync::Mutex;
+use std::time::SystemTime;
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 
+use crate::launcher_config::commands::retrieve_custom_background_list;
+use crate::launcher_config::models::{
+  BasicInfo, BuildType, GameConfig, GameDirectory, LauncherConfig,
+};
+use crate::utils::fs::calculate_sha256;
+use crate::utils::portable::extract_assets;
+use crate::{APP_DATA_DIR, EXE_PATH, IS_PORTABLE};
+
 impl LauncherConfig {
   pub fn setup_with_app(&mut self, app: &AppHandle) -> SJMCLResult<()> {
-    // same as lib.rs
+    // Resolve build_type and displayed version string.
     let is_dev = cfg!(debug_assertions);
-    let version = match (is_dev, app.package_info().version.to_string().as_str()) {
-      (true, _) => "dev".to_string(),
-      (false, "0.0.0") => "nightly".to_string(),
-      (false, v) => v.to_string(),
+    let pkg_version = app.package_info().version.to_string();
+    let build_type = option_env!("SJMCL_BUILD_TYPE")
+      .map(|s| s.parse().unwrap_or(BuildType::Dev))
+      .unwrap_or(match (is_dev, pkg_version.as_str()) {
+        (true, _) => BuildType::Dev,
+        (false, "0.0.0") => BuildType::Nightly,
+        (false, "0.0.1") => BuildType::TestBuild,
+        _ => BuildType::Release,
+      });
+    let version = match build_type {
+      BuildType::Release => pkg_version,
+      _ => build_type.to_string(),
     };
 
     // Set the default download cache directory if unset or not writable, and create it
@@ -109,6 +122,9 @@ impl LauncherConfig {
       // below set to default, will be updated later in first time calling `check_full_login_availability`
       is_china_mainland_ip: false,
       allow_full_login_feature: false,
+      // build metadata: compile-time constants may be injected by build.rs
+      build_type,
+      build_commit_sha: option_env!("SJMCL_COMMIT_SHA").unwrap_or("").to_string(),
     };
 
     log::info!(
@@ -217,7 +233,8 @@ pub fn check_exe_path_availability(app: &AppHandle) -> bool {
       || exe_str.starts_with("/var/tmp/")
       || exe_str.starts_with("/var/cache/")
       || exe_str.starts_with("/dev/shm/")
-      || exe_str.starts_with("/run/")
+      // /run is tmpfs, while /run/media is a common mount point on some Linux distributions.
+      || (exe_str.starts_with("/run/") && !exe_str.starts_with("/run/media/"))
       || exe_str.contains("/Trash/"))
   }
 
@@ -231,4 +248,44 @@ pub fn check_exe_path_availability(app: &AppHandle) -> bool {
       || exe_str.starts_with("/private/var/tmp/")
       || exe_str.contains("/.Trash/"))
   }
+}
+
+pub async fn auto_clear_download_cache(app: &AppHandle) -> SJMCLResult<()> {
+  let cache_dir = {
+    let config = app.state::<Mutex<LauncherConfig>>();
+    let config = config.lock()?;
+    config.download.cache.directory.clone()
+  };
+
+  let now = SystemTime::now();
+  let retention = DOWNLOAD_HISTORY_RETENTION;
+
+  let mut entries = match tokio::fs::read_dir(&cache_dir).await {
+    Ok(entries) => entries,
+    Err(_) => return Ok(()),
+  };
+  while let Some(entry) = entries.next_entry().await? {
+    let metadata = match entry.metadata().await {
+      Ok(metadata) => metadata,
+      Err(_) => continue,
+    };
+    if !metadata.is_file() {
+      continue;
+    }
+    if metadata
+      .modified()
+      .ok()
+      .and_then(|modified| now.duration_since(modified).ok())
+      .is_some_and(|age| age > retention)
+      && let Err(e) = tokio::fs::remove_file(entry.path()).await
+    {
+      log::warn!(
+        "Failed to remove stale download cache entry {:?}: {}",
+        entry.path(),
+        e
+      );
+    }
+  }
+
+  Ok(())
 }

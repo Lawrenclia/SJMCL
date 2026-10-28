@@ -1,22 +1,24 @@
-use crate::IS_PORTABLE;
-use crate::error::{SJMCLError, SJMCLResult};
 use regex::Regex;
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
+use sjmcl_types::error::{SJMCLError, SJMCLResult};
 use std::ffi::OsStr;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::{fs, io};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
+use walkdir::WalkDir;
 use zip::write::{ExtendedFileOptions, FileOptions};
 use zip::{CompressionMethod, ZipWriter};
+
+use crate::IS_PORTABLE;
 
 /// Recursively copies the contents of a source directory to a destination directory.
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// copy_whole_dir(src_path, &dest_path).map_err(|_| InstanceError::FileCopyFailed)?;
 /// ```
 pub fn copy_whole_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -45,7 +47,7 @@ pub fn copy_whole_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let dest_path = generate_unique_filename(&tgt_path, base_name);
 /// ```
 pub fn generate_unique_filename(base_path: &Path, filename: &OsStr) -> PathBuf {
@@ -81,7 +83,7 @@ pub fn generate_unique_filename(base_path: &Path, filename: &OsStr) -> PathBuf {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let (name, extension) = split_filename(filename);
 /// ```
 pub fn split_filename(filename: &OsStr) -> (String, String) {
@@ -131,7 +133,7 @@ pub fn extract_filename(path_str: &str, with_ext: bool) -> String {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let path = normalize_relative_path(Path::new("./config/options.txt"))?;
 /// assert_eq!(path, PathBuf::from("config/options.txt"));
 /// ```
@@ -157,7 +159,7 @@ pub fn normalize_relative_path(path: &Path) -> SJMCLResult<PathBuf> {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let sub_dirs = get_subdirectories(&directory).unwrap_or_default();
 /// ```
 pub fn get_subdirectories<P: AsRef<Path>>(path: P) -> SJMCLResult<Vec<PathBuf>> {
@@ -180,33 +182,43 @@ pub fn get_subdirectories<P: AsRef<Path>>(path: P) -> SJMCLResult<Vec<PathBuf>> 
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// let mod_paths = get_files_with_regex(&mods_dir, &valid_extensions).unwrap_or_default();
 /// ```
 pub fn get_files_with_regex<P: AsRef<Path>>(path: P, pattern: &Regex) -> SJMCLResult<Vec<PathBuf>> {
-  let dir_entries = fs::read_dir(&path).map_err(|e| {
-    let error_message = match e.kind() {
-      io::ErrorKind::NotFound => "Path does not exist".to_string(),
-      _ => format!("IO Error: {}", e),
-    };
-    SJMCLError(error_message)
-  })?;
+  get_files_with_regex_recursive(path, pattern, Some(0))
+}
 
-  let mut matching_files = Vec::new();
-
-  for entry in dir_entries {
-    let entry = entry.map_err(|e| SJMCLError(format!("Read Entry Error: {}", e)))?;
-    let path = entry.path();
-
-    if let Some(file_name) = path.file_name()
-      && let Some(file_name_str) = file_name.to_str()
-      && pattern.is_match(file_name_str)
-    {
-      matching_files.push(path);
-    }
+/// Recursively retrieves files that match a specified regular expression.
+///
+/// `max_depth` limits the number of subdirectory levels to traverse. `None` traverses all levels.
+pub fn get_files_with_regex_recursive<P: AsRef<Path>>(
+  path: P,
+  pattern: &Regex,
+  max_depth: Option<usize>,
+) -> SJMCLResult<Vec<PathBuf>> {
+  let mut walker = WalkDir::new(path).min_depth(1);
+  if let Some(max_depth) = max_depth {
+    walker = walker.max_depth(max_depth + 1);
   }
 
-  Ok(matching_files)
+  walker
+    .into_iter()
+    .filter_map(|entry| match entry {
+      Ok(entry)
+        if (entry.file_type().is_file()
+          || (entry.file_type().is_symlink() && entry.path().is_file()))
+          && entry
+            .file_name()
+            .to_str()
+            .is_some_and(|name| pattern.is_match(name)) =>
+      {
+        Some(Ok(entry.into_path()))
+      }
+      Ok(_) => None,
+      Err(e) => Some(Err(SJMCLError(format!("Walk Directory Error: {}", e)))),
+    })
+    .collect()
 }
 
 /// Retrieves the full filesystem path to an application resource, choosing between
@@ -220,7 +232,7 @@ pub fn get_files_with_regex<P: AsRef<Path>>(path: P, pattern: &Regex) -> SJMCLRe
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// let texture_path = get_app_resource(&app, "assets/skins/player.png")?;
 /// println!("Texture will be loaded from: {:?}", texture_path);
 /// ```
@@ -269,7 +281,7 @@ pub fn get_app_resource_filepath(
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// create_url_shortcut(
 ///     app,
 ///     "Add Auth Server".to_string(),
@@ -295,13 +307,12 @@ pub fn create_url_shortcut(
     .desktop_dir()
     .map_err(|e| SJMCLError(format!("Failed to get desktop path: {}", e)))?;
 
-  #[cfg(target_os = "windows")]
-  let shortcut_ext = "url";
-  #[cfg(target_os = "macos")]
-  let shortcut_ext = "command";
-  // let shortcut_ext = "webloc";
-  #[cfg(target_os = "linux")]
-  let shortcut_ext = "desktop";
+  let shortcut_ext = cfg_select! {
+    target_os = "windows" => "url",
+    target_os = "macos" => "command",
+    // let shortcut_ext = "webloc";
+    target_os = "linux" => "desktop",
+  };
 
   let path = desktop.join(format!("{}.{}", name, shortcut_ext));
 
@@ -315,10 +326,10 @@ pub fn create_url_shortcut(
     Some(path) => path,
     None => {
       // Use default icon from resources
-      #[cfg(target_os = "windows")]
-      let icon_name = "icon.ico";
-      #[cfg(target_os = "linux")]
-      let icon_name = "icon.png";
+      let icon_name = cfg_select! {
+        windows => "icon.ico",
+        _ => "icon.png",
+      };
 
       let resource_icon = get_app_resource_filepath(app, &format!("assets/icons/{}", icon_name))
         .map_err(|e| SJMCLError(format!("Failed to resolve resource icon: {}", e)))?;
@@ -411,6 +422,20 @@ Terminal=false
   }
 
   Ok(())
+}
+
+/// Checks existence, and verifies SHA-1 only when full validation is requested.
+pub async fn is_local_file_valid(
+  path: &Path,
+  sha1: Option<&str>,
+  check_hash: bool,
+) -> SJMCLResult<bool> {
+  let exists = tokio::fs::try_exists(path).await?;
+  Ok(
+    exists
+      && (!check_hash
+        || sha1.is_some_and(|sha1| validate_sha1(path.to_path_buf(), sha1.to_string()).is_ok())),
+  )
 }
 
 pub fn validate_sha1(dest_path: PathBuf, truth: String) -> SJMCLResult<()> {
@@ -526,7 +551,7 @@ pub enum PermissionOperation {
 ///     - `PermissionOperation::Exact` sets the permissions exactly to the specified mask.
 ///
 /// # Examples
-/// ```rust
+/// ```rust,ignore
 /// manage_permissions_unix("/path/to/your/file", 0o111, PermissionOperation::Upgrade)?;
 /// manage_permissions_unix("/path/to/your/file", 0o111, PermissionOperation::Downgrade)?;
 /// manage_permissions_unix("/path/to/your/file", 0o755, PermissionOperation::Exact)?;

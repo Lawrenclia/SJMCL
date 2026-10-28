@@ -82,6 +82,11 @@ const GlobalEventHandler: React.FC<{ children: React.ReactNode }> = ({
   );
   const launchTrigger = useMemo(() => /^launch\/?(?:\?.*)?$/, []);
 
+  const importModpackTrigger = useMemo(
+    () => /^import-modpack\/?(?:\?.*)?$/,
+    []
+  );
+
   const addAuthServerByDeeplink = useCallback(
     (path: string | URL) => {
       const url = new URL(path).searchParams.get("url") || "";
@@ -118,6 +123,19 @@ const GlobalEventHandler: React.FC<{ children: React.ReactNode }> = ({
     [isStandAlone, openSharedModal]
   );
 
+  const importModpackByDeeplink = useCallback(
+    (path: string | URL) => {
+      const url = new URL(path);
+      const filePath = url.searchParams.get("path") || "";
+      if (!isStandAlone && filePath) {
+        setTimeout(() => {
+          openSharedModal("import-modpack", { path: filePath });
+        }, 500);
+      }
+    },
+    [isStandAlone, openSharedModal]
+  );
+
   useDeepLink({
     trigger: addAuthServerTrigger,
     onCall: addAuthServerByDeeplink,
@@ -126,6 +144,11 @@ const GlobalEventHandler: React.FC<{ children: React.ReactNode }> = ({
   useDeepLink({
     trigger: launchTrigger,
     onCall: quickLaunchGame,
+  });
+
+  useDeepLink({
+    trigger: importModpackTrigger,
+    onCall: importModpackByDeeplink,
   });
 
   return <>{children}</>;

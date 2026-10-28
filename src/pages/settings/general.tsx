@@ -1,9 +1,4 @@
-import {
-  Button,
-  HStack,
-  Switch,
-  useDisclosure,
-} from "@chakra-ui/react";
+import { Button, HStack, Switch, useDisclosure } from "@chakra-ui/react";
 import { appLogDir, join } from "@tauri-apps/api/path";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useCallback } from "react";
@@ -48,8 +43,8 @@ const GeneralSettingsPage = () => {
   const instancesNavTypes = ["instance", "directory", "tag", "hidden"];
   const discoverPageModes = ["on", "search-only", "off"];
 
-  const handleRestoreLauncherConfig = useCallback(async () => {
-    ConfigService.restoreLauncherConfig().then((response) => {
+  const handleResetLauncherConfig = useCallback(async () => {
+    ConfigService.resetLauncherConfig().then((response) => {
       if (response.status === "success") {
         setConfig(response.data);
         toast({
@@ -83,10 +78,30 @@ const GeneralSettingsPage = () => {
         },
       ],
     },
-    ...(config.general.general.language == "zh-Hans"
-      ? [
-          {
-            items: [
+    {
+      items: [
+        {
+          title: t(
+            "GeneralSettingsPage.language.settings.skipFirstScreenOptions.title"
+          ),
+          description: t(
+            "GeneralSettingsPage.language.settings.skipFirstScreenOptions.description"
+          ),
+          children: (
+            <Switch
+              colorScheme={primaryColor}
+              isChecked={generalConfigs.functionality.skipFirstScreenOptions}
+              onChange={(e) => {
+                update(
+                  "general.functionality.skipFirstScreenOptions",
+                  e.target.checked
+                );
+              }}
+            />
+          ),
+        },
+        ...(config.general.general.language == "zh-Hans"
+          ? [
               {
                 title: t(
                   "GeneralSettingsPage.language.settings.resourceTranslation.title"
@@ -129,32 +144,10 @@ const GeneralSettingsPage = () => {
                   />
                 ),
               },
-              {
-                title: t(
-                  "GeneralSettingsPage.language.settings.skipFirstScreenOptions.title"
-                ),
-                description: t(
-                  "GeneralSettingsPage.language.settings.skipFirstScreenOptions.description"
-                ),
-                children: (
-                  <Switch
-                    colorScheme={primaryColor}
-                    isChecked={
-                      generalConfigs.functionality.skipFirstScreenOptions
-                    }
-                    onChange={(e) => {
-                      update(
-                        "general.functionality.skipFirstScreenOptions",
-                        e.target.checked
-                      );
-                    }}
-                  />
-                ),
-              },
-            ],
-          },
-        ]
-      : []),
+            ]
+          : []),
+      ],
+    },
     {
       title: t("GeneralSettingsPage.functions.title"),
       items: [
@@ -179,9 +172,6 @@ const GeneralSettingsPage = () => {
               placeholder={t(
                 `GeneralSettingsPage.functions.settings.discoverPage.${generalConfigs.functionality.discoverPage}`
               )}
-              buttonProps={{
-                flex: "0 0 auto",
-              }}
             />
           ),
         },
@@ -362,9 +352,9 @@ const GeneralSettingsPage = () => {
           ),
         },
         {
-          title: t("GeneralSettingsPage.advanced.settings.restoreAll.title"),
+          title: t("GeneralSettingsPage.advanced.settings.resetAll.title"),
           description: t(
-            "GeneralSettingsPage.advanced.settings.restoreAll.description"
+            "GeneralSettingsPage.advanced.settings.resetAll.description"
           ),
           children: (
             <Button
@@ -373,14 +363,14 @@ const GeneralSettingsPage = () => {
               size="xs"
               onClick={() => {
                 openGenericConfirmDialog({
-                  title: t("RestoreConfigConfirmDialog.title"),
-                  body: t("RestoreConfigConfirmDialog.body"),
+                  title: t("ResetConfigConfirmDialog.title"),
+                  body: t("ResetConfigConfirmDialog.body"),
                   isAlert: true,
-                  onOKCallback: handleRestoreLauncherConfig,
+                  onOKCallback: handleResetLauncherConfig,
                 });
               }}
             >
-              {t("GeneralSettingsPage.advanced.settings.restoreAll.restore")}
+              {t("GeneralSettingsPage.advanced.settings.resetAll.reset")}
             </Button>
           ),
         },

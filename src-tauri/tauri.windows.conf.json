@@ -1,11 +1,15 @@
 {
   "identifier": "SJMCL",
   "bundle": {
+    "targets": ["nsis"],
     "windows": {
       "nsis": {
         "installerIcon": "assets/icons/icon.ico",
         "languages": [
           "English",
+          "Spanish",
+          "French",
+          "Japanese",
           "SimpChinese",
           "TradChinese"
         ],
@@ -38,6 +42,7 @@
         "minWidth": 640,
         "minHeight": 440,
         "center": true,
+        "decorations": false,
         "dragDropEnabled": false
       },
       {
@@ -50,6 +55,7 @@
         "minWidth": 640,
         "minHeight": 440,
         "center": true,
+        "decorations": false,
         "dragDropEnabled": false
       }
     ]

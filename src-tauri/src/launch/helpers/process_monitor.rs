@@ -1,12 +1,4 @@
-use crate::error::SJMCLResult;
-use crate::instance::models::misc::Instance;
-use crate::intelligence::azalea_bot::constants::SERVER_PORT_EVENT;
-use crate::intelligence::azalea_bot::models::ServerPortPayload;
-use crate::launch::constants::*;
-use crate::launch::models::{LaunchError, LaunchingState};
-use crate::launcher_config::models::{LauncherVisiablity, ProcessPriority};
-use crate::utils::shell::execute_command_line;
-use crate::utils::window::create_webview_window;
+use sjmcl_types::error::SJMCLResult;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -22,6 +14,15 @@ use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio;
 
+use crate::instance::models::misc::Instance;
+use crate::intelligence::azalea_bot::constants::SERVER_PORT_EVENT;
+use crate::intelligence::azalea_bot::models::ServerPortPayload;
+use crate::launch::constants::*;
+use crate::launch::models::{LaunchError, LaunchingState};
+use crate::launcher_config::models::{LauncherVisiablity, ProcessPriority};
+use crate::utils::shell::execute_command_line;
+use crate::utils::window::create_webview_window;
+
 const POLLING_OPERATION_INTERVAL_MS: u64 = 2000;
 
 fn parse_server_port(line: &str) -> Option<String> {
@@ -29,11 +30,7 @@ fn parse_server_port(line: &str) -> Option<String> {
   let marker_idx = line.find(MARKER)?;
   let tail = &line[(marker_idx + MARKER.len())..];
   let port: String = tail.chars().take_while(|c| c.is_ascii_digit()).collect();
-  if port.is_empty() {
-    None
-  } else {
-    Some(port)
-  }
+  if port.is_empty() { None } else { Some(port) }
 }
 
 struct OutputPipe<T: Read + Send + 'static> {
@@ -134,7 +131,7 @@ pub async fn monitor_process(
   ));
 
   let log_window = if display_log_window {
-    create_webview_window(&app, &label, "game_log", None)
+    create_webview_window(&app, &label, "game_log", None, true)
       .await
       .ok()
   } else {
@@ -278,9 +275,10 @@ pub async fn monitor_process(
           let mut launching_queue = launching_queue_state.lock().unwrap();
           launching_queue.retain(|state| state.id != id);
         } else {
-          let _ = create_webview_window(&app, &format!("game_error_{id}"), "game_error", None)
-            .await
-            .unwrap();
+          let _ =
+            create_webview_window(&app, &format!("game_error_{id}"), "game_error", None, true)
+              .await
+              .unwrap();
         }
       }
     }

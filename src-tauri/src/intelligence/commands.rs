@@ -1,10 +1,9 @@
 use std::sync::Mutex;
 
 use serde_json::Value;
-use tauri::{ipc::Channel, AppHandle, Manager};
+use tauri::{AppHandle, Manager, ipc::Channel};
 use tauri_plugin_http::reqwest;
 
-use crate::error::SJMCLResult;
 use crate::intelligence::azalea_bot;
 use crate::intelligence::models::{
   ChatHistory, ChatMessage, ChatSession, ChatSessionSummary, IntelligenceError,
@@ -13,7 +12,8 @@ use crate::intelligence::providers::{self, StreamParseResult};
 use crate::launcher_config::models::{
   IntelligenceConfig, LLMModelConfig, LLMProviderType, LauncherConfig, ProviderConfig,
 };
-use crate::storage::Storage;
+use sjmcl_types::error::SJMCLResult;
+use sjmcl_types::storage::Storage;
 
 // TODO: migrate log analysis logic to backend (w multi-language prompt and result parsing)
 
@@ -318,7 +318,7 @@ pub fn retrieve_chat_session(app: AppHandle, session_id: String) -> SJMCLResult<
     .iter()
     .find(|s| s.id == session_id)
     .cloned()
-    .ok_or_else(|| crate::error::SJMCLError("Session not found".to_string()))
+    .ok_or_else(|| sjmcl_types::error::SJMCLError("Session not found".to_string()))
 }
 
 #[tauri::command]

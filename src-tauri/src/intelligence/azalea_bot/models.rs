@@ -1,6 +1,6 @@
 use azalea::prelude::{Client, Component};
 use serde::{Deserialize, Serialize};
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{Arc, atomic::AtomicBool};
 use std::time::{Duration, Instant};
 use strum_macros::EnumIter;
 use tauri::AppHandle;

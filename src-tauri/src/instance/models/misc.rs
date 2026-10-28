@@ -1,14 +1,15 @@
-use crate::instance::constants::INSTANCE_CFG_FILE_NAME;
-use crate::instance::helpers::game_version::{compare_game_versions, get_major_game_version};
-use crate::launcher_config::models::GameConfig;
-use crate::storage::{load_json_async, save_json_async};
-use crate::utils::image::ImageWrapper;
 use serde::{Deserialize, Serialize};
+use sjmcl_types::storage::{load_json_async, save_json_async};
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::path::PathBuf;
 use std::str::FromStr;
 use strum_macros::Display;
 use tauri::AppHandle;
+
+use crate::instance::constants::INSTANCE_CFG_FILE_NAME;
+use crate::instance::helpers::game_version::{compare_game_versions, get_major_game_version};
+use crate::launcher_config::models::GameConfig;
+use crate::utils::image::ImageWrapper;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum InstanceSubdirType {
@@ -31,6 +32,7 @@ pub enum ModLoaderType {
   Unknown,
   Fabric,
   Forge,
+  Cleanroom,
   LegacyForge,
   NeoForge,
   LiteLoader,
@@ -45,6 +47,7 @@ impl FromStr for ModLoaderType {
       "unknown" => Ok(ModLoaderType::Unknown),
       "fabric" => Ok(ModLoaderType::Fabric),
       "forge" => Ok(ModLoaderType::Forge),
+      "cleanroom" => Ok(ModLoaderType::Cleanroom),
       "legacyforge" => Ok(ModLoaderType::LegacyForge),
       "neoforge" => Ok(ModLoaderType::NeoForge),
       "liteloader" => Ok(ModLoaderType::LiteLoader),
@@ -59,7 +62,8 @@ impl ModLoaderType {
     match self {
       ModLoaderType::Unknown => "/images/icons/JEIcon_Release.png",
       ModLoaderType::Fabric => "/images/icons/Fabric.png",
-      ModLoaderType::Forge | ModLoaderType::LegacyForge => "/images/icons/Anvil.png",
+      ModLoaderType::Forge | ModLoaderType::LegacyForge => "/images/icons/Forge.png",
+      ModLoaderType::Cleanroom => "/images/icons/Cleanroom.png",
       ModLoaderType::NeoForge => "/images/icons/NeoForge.png",
       ModLoaderType::LiteLoader => "/images/icons/LiteLoader.png",
       ModLoaderType::Quilt => "/images/icons/Quilt.png",
@@ -103,6 +107,7 @@ structstruck::strike! {
     pub use_spec_game_config: bool,
     // if use_spec_game_config is false, this field is ignored
     pub spec_game_config: Option<GameConfig>,
+    pub modpack_version: Option<String>,
   }
 }
 
@@ -141,6 +146,7 @@ pub struct InstanceSummary {
   pub support_quick_play: bool,
   pub use_spec_game_config: bool,
   pub is_version_isolated: bool,
+  pub modpack_version: Option<String>,
 }
 
 impl InstanceSummary {
@@ -170,6 +176,7 @@ impl InstanceSummary {
         .is_ge(),
       use_spec_game_config: instance.use_spec_game_config,
       is_version_isolated,
+      modpack_version: instance.modpack_version.clone(),
     }
   }
 }
@@ -179,12 +186,14 @@ impl InstanceSummary {
 pub struct LocalModInfo {
   pub icon_src: ImageWrapper,
   pub enabled: bool,
+  pub mod_id: String,
   pub name: String,
   pub translated_name: Option<String>,
   pub version: String,
   pub loader_type: ModLoaderType,
   pub file_name: String,
   pub file_path: PathBuf,
+  pub relative_path: PathBuf,
   pub description: String,
   pub translated_description: Option<String>,
   pub potential_incompatibility: bool,
@@ -227,6 +236,7 @@ pub struct ResourcePackInfo {
 pub struct SchematicInfo {
   pub name: String,
   pub file_path: PathBuf,
+  pub relative_path: PathBuf,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize, Default)]
@@ -274,10 +284,13 @@ pub enum InstanceError {
   UnsupportedModLoader,
   NotSupportChangeModLoader,
   MainClassNotFound,
-  InstallationDuplicated,
   ProcessorExecutionFailed,
   SemaphoreAcquireFailed,
   LoaderInstallerNotFound,
+  InstallationInstanceMismatch,
+  ModLoaderChanged,
+  OptifineMissing,
+  OptifineChanged,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize, Default)]

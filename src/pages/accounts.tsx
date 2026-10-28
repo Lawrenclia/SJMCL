@@ -31,7 +31,6 @@ import {
 import NavMenu from "@/components/common/nav-menu";
 import { Section } from "@/components/common/section";
 import SegmentedControl from "@/components/common/segmented";
-import SelectableButton from "@/components/common/selectable-button";
 import ImportAccountInfoModal from "@/components/modals/import-account-info-modal";
 import PlayersView from "@/components/players-view";
 import { useLauncherConfig } from "@/contexts/config";
@@ -58,12 +57,6 @@ const AccountsPage = () => {
   const [authServerList, setAuthServerList] = useState<AuthServer[]>([]);
 
   const {
-    isOpen: isAddPlayerModalOpen,
-    onOpen: onAddPlayerModalOpen,
-    onClose: onAddPlayerModalClose,
-  } = useDisclosure();
-
-  const {
     isOpen: isImportAccountInfoModalOpen,
     onOpen: onImportAccountInfoModalOpen,
     onClose: onImportAccountInfoModalClose,
@@ -80,10 +73,10 @@ const AccountsPage = () => {
   useEffect(() => {
     const { add } = router.query;
     if (add) {
-      onAddPlayerModalOpen();
+      openSharedModal("add-player", {});
       router.replace("/accounts", undefined, { shallow: true });
     }
-  }, [onAddPlayerModalOpen]);
+  }, [openSharedModal]);
 
   const playerTypeList = [
     {
@@ -114,6 +107,19 @@ const AccountsPage = () => {
       key: "list",
       icon: LuLayoutList,
       tooltip: t("AccountsPage.viewTypeList.list"),
+    },
+  ];
+
+  const bottomNavMenuItems = [
+    {
+      icon: LuImport,
+      key: "importFromOtherLaunchers",
+      onClick: onImportAccountInfoModalOpen,
+    },
+    {
+      icon: LuCirclePlus,
+      key: "add3rdPartyServer",
+      onClick: () => openSharedModal("add-auth-server", {}),
     },
   ];
 
@@ -186,35 +192,29 @@ const AccountsPage = () => {
                     </HStack>
                   ),
                   value: item.key,
+                  tooltip: item.label,
                 }))}
               />
             </Box>
-            <VStack mt="auto" align="stretch" spacing={0.5}>
-              <SelectableButton
-                size="sm"
-                onClick={onImportAccountInfoModalOpen}
-              >
-                <HStack spacing={2} overflow="hidden">
-                  <Icon as={LuImport} />
-                  <Text fontSize="sm" className="ellipsis-text">
-                    {t("AccountsPage.button.importFromOtherLaunchers")}
-                  </Text>
-                </HStack>
-              </SelectableButton>
-              <SelectableButton
-                size="sm"
-                onClick={() => {
-                  openSharedModal("add-auth-server", {});
-                }}
-              >
-                <HStack spacing={2} overflow="hidden">
-                  <Icon as={LuCirclePlus} />
-                  <Text fontSize="sm" className="ellipsis-text">
-                    {t("AccountsPage.button.add3rdPartyServer")}
-                  </Text>
-                </HStack>
-              </SelectableButton>
-            </VStack>
+            <NavMenu
+              mt="auto"
+              items={bottomNavMenuItems.map((item) => ({
+                label: (
+                  <HStack spacing={2} overflow="hidden">
+                    <Icon as={item.icon} />
+                    <Text fontSize="sm" className="ellipsis-text">
+                      {t(`AccountsPage.button.${item.key}`)}
+                    </Text>
+                  </HStack>
+                ),
+                value: item.key,
+                tooltip: t(`AccountsPage.button.${item.key}`),
+              }))}
+              onClick={(value) => {
+                const item = bottomNavMenuItems.find((i) => i.key === value);
+                item?.onClick();
+              }}
+            />
           </VStack>
         </GridItem>
         <GridItem className="content-full-y">
@@ -259,7 +259,7 @@ const AccountsPage = () => {
                 ) && (
                   <Tooltip label={t("AccountsPage.button.deleteServer")}>
                     <IconButton
-                      aria-label="home"
+                      aria-label="deleteServer"
                       size="xs"
                       fontSize="sm"
                       colorScheme="red"

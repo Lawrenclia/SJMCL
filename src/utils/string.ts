@@ -1,3 +1,6 @@
+import { t } from "i18next";
+import { BuildType } from "@/enums/misc";
+
 export const base64ImgSrc = (base64: string): string => {
   return `data:image/png;base64,${base64}`;
 };
@@ -21,14 +24,14 @@ export const removeFileExt = (filename: string): string => {
 };
 
 export const formatByteSize = (bytes: number) => {
-  bytes = Math.max(0, bytes);
-  const sizes = ["B", "KB", "MB", "GB"];
+  bytes = Number.isFinite(bytes) ? Math.max(0, bytes) : 0;
+  const units = ["b", "kib", "mib", "gib"];
 
   if (bytes >= 1024) {
     let i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), 3);
-    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${t(`Utils.byteSize.${units[i]}`)}`;
   } else {
-    return `${bytes} B`;
+    return `${Math.round(bytes)} ${t(`Utils.byteSize.${units[0]}`)}`;
   }
 };
 
@@ -124,6 +127,24 @@ export const isPathSanitized = (path: string, maxLength = 255): boolean => {
 
 export const isValidSemanticVersion = (version: string) =>
   /^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$/.test(version);
+
+export const displayLauncherVersion = (info: {
+  launcherVersion: string;
+  buildType: BuildType;
+  buildCommitSha: string;
+  isPortable: boolean;
+}): string => {
+  if (info.buildType !== BuildType.Release) {
+    // non-release builds: show the commit short hash in parentheses when
+    // available; local dev builds have no injected SHA, so no suffix then.
+    const shortSha = info.buildCommitSha.slice(0, 7);
+    return shortSha
+      ? `${info.launcherVersion} (${shortSha})`
+      : info.launcherVersion;
+  }
+  // release builds: keep the existing format, distinguishing portable.
+  return `${info.launcherVersion}${info.isPortable ? " (Portable)" : ""}`;
+};
 
 export const formatPrintable = (value: any): string => {
   if (typeof value === "string") return value;

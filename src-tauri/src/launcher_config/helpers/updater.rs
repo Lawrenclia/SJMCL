@@ -1,9 +1,5 @@
-use crate::error::{SJMCLError, SJMCLResult};
-use crate::launcher_config::models::{LauncherConfig, LauncherConfigError};
-use crate::tasks::PTaskParam;
-use crate::tasks::commands::schedule_progressive_task_group;
-use crate::tasks::download::DownloadParam;
 use serde_json::Value;
+use sjmcl_types::error::{SJMCLError, SJMCLResult};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -11,6 +7,10 @@ use std::sync::Mutex;
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_http::reqwest;
+
+use crate::download::DownloadTask;
+use crate::download::submit_download_group;
+use crate::launcher_config::models::{LauncherConfig, LauncherConfigError};
 
 type SourceTuple = (&'static str, &'static str, fn(&str, &str) -> String);
 const SOURCES: [SourceTuple; 2] = [
@@ -127,37 +127,31 @@ pub async fn download_target_version(
     )
   };
 
-  let client = app.state::<reqwest::Client>();
-
   let mut sources = SOURCES;
   if !is_china_mainland_ip {
     sources.reverse();
   }
 
-  for (endpoint, _, mk_url) in sources {
-    if let Ok(resp) = client.get(endpoint).send().await
-      && resp.status().is_success()
-    {
-      let url = mk_url(&version, &fname);
-
-      schedule_progressive_task_group(
-        app.clone(),
-        format!("launcher-update?{}", fname),
-        vec![PTaskParam::Download(DownloadParam {
-          src: url::Url::parse(&url).map_err(|_| LauncherConfigError::FetchError)?,
-          dest: download_cache_dir.join(&fname),
-          filename: Some(fname),
-          sha1: None,
-        })],
-        true,
-      )
-      .await?;
-
-      return Ok(());
-    }
-  }
-
-  Err(LauncherConfigError::FetchError.into())
+  let sources = sources
+    .into_iter()
+    .map(|(_, _, mk_url)| {
+      url::Url::parse(&mk_url(&version, &fname)).map_err(|_| LauncherConfigError::FetchError.into())
+    })
+    .collect::<SJMCLResult<Vec<_>>>()?;
+  submit_download_group(
+    app.clone(),
+    format!("launcher-update?{}", fname),
+    vec![DownloadTask {
+      sources,
+      dest: download_cache_dir.join(&fname),
+      filename: Some(fname),
+      size: None,
+      sha1: None,
+    }],
+    true,
+  )
+  .await?;
+  Ok(())
 }
 
 #[cfg(target_os = "windows")]
@@ -255,10 +249,10 @@ try {
     }
     Ok(())
   } else {
-    // MSI: run installer in passive mode.
+    // Installed (NSIS): run the downloaded installer directly.
     if restart {
-      let _ = Command::new("msiexec.exe")
-        .args(["/i", &downloaded_path.to_string_lossy(), "/passive"])
+      let _ = Command::new(&downloaded_path)
+        .args(["/UPDATE", "/P"])
         .creation_flags(0x08000000)
         .spawn()?;
       app.exit(0);

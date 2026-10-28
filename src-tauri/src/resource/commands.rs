@@ -1,4 +1,10 @@
-use crate::error::SJMCLResult;
+use sjmcl_types::error::SJMCLResult;
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_http::reqwest;
+
+use crate::download::DownloadTask;
+use crate::download::submit_download_group;
 use crate::instance::helpers::client_json::McClientInfo;
 use crate::instance::helpers::misc::get_instance_subdir_path_by_id;
 use crate::instance::models::misc::{InstanceSubdirType, ModLoaderType};
@@ -7,12 +13,15 @@ use crate::resource::helpers::curseforge::{
   fetch_remote_resource_by_id_curseforge, fetch_remote_resource_by_local_curseforge,
   fetch_resource_list_by_name_curseforge, fetch_resource_version_packs_curseforge,
 };
+use crate::resource::helpers::loader_meta::cleanroom::get_cleanroom_meta_by_game_version;
 use crate::resource::helpers::loader_meta::fabric::get_fabric_meta_by_game_version;
 use crate::resource::helpers::loader_meta::forge::get_forge_meta_by_game_version;
 use crate::resource::helpers::loader_meta::neoforge::get_neoforge_meta_by_game_version;
 use crate::resource::helpers::loader_meta::optifine::get_optifine_meta_by_game_version;
 use crate::resource::helpers::loader_meta::quilt::get_quilt_meta_by_game_version;
-use crate::resource::helpers::misc::get_source_priority_list;
+use crate::resource::helpers::misc::{
+  get_download_urls, get_source_priority_list, resolve_mod_update_paths,
+};
 use crate::resource::helpers::modrinth::{
   fetch_remote_resource_by_id_modrinth, fetch_remote_resource_by_local_modrinth,
   fetch_resource_list_by_name_modrinth, fetch_resource_version_packs_modrinth,
@@ -22,13 +31,8 @@ use crate::resource::models::{
   GameClientResourceInfo, ModLoaderResourceInfo, ModUpdateQuery, OptiFineResourceInfo,
   OtherResourceFileInfo, OtherResourceInfo, OtherResourceSearchQuery, OtherResourceSearchRes,
   OtherResourceSource, OtherResourceVersionPack, OtherResourceVersionPackQuery, ResourceError,
+  ResourceType,
 };
-use crate::tasks::PTaskParam;
-use crate::tasks::commands::schedule_progressive_task_group;
-use crate::tasks::download::DownloadParam;
-use std::sync::Mutex;
-use tauri::{AppHandle, Manager, State};
-use tauri_plugin_http::reqwest;
 
 #[tauri::command]
 pub async fn fetch_game_version_list(app: AppHandle) -> SJMCLResult<Vec<GameClientResourceInfo>> {
@@ -68,6 +72,7 @@ pub async fn fetch_mod_loader_version_list(
     ModLoaderType::Forge | ModLoaderType::LegacyForge => {
       Ok(get_forge_meta_by_game_version(&app, &priority_list, &game_version).await?)
     }
+    ModLoaderType::Cleanroom => Ok(get_cleanroom_meta_by_game_version(&app, &game_version).await?),
     ModLoaderType::Fabric => {
       Ok(get_fabric_meta_by_game_version(&app, &priority_list, &game_version).await?)
     }
@@ -145,16 +150,26 @@ pub async fn download_game_server(
     .downloads
     .get("server")
     .ok_or(ResourceError::ParseError)?;
+  let priority_list = {
+    let binding = app.state::<Mutex<LauncherConfig>>();
+    let config = binding.lock()?;
+    get_source_priority_list(&config)
+  };
 
-  schedule_progressive_task_group(
+  submit_download_group(
     app,
     format!("game-server?{}", resource_info.id),
-    vec![PTaskParam::Download(DownloadParam {
-      src: url::Url::parse(&download_info.url.clone()).map_err(|_| ResourceError::ParseError)?,
+    vec![DownloadTask {
+      sources: get_download_urls(
+        &url::Url::parse(&download_info.url).map_err(|_| ResourceError::ParseError)?,
+        &[ResourceType::Launcher],
+        &priority_list,
+      )?,
       dest: dest.clone().into(),
       filename: None,
+      size: u64::try_from(download_info.size).ok(),
       sha1: Some(download_info.sha1.clone()),
-    })],
+    }],
     true,
   )
   .await?;
@@ -195,27 +210,26 @@ pub async fn update_mods(
     None => return Ok(()),
   };
 
+  let update_paths = resolve_mod_update_paths(&mods_dir, &queries)?;
+
   let mut download_tasks = Vec::new();
-  for query in &queries {
-    let file_path = mods_dir.join(&query.file_name);
-    let download_param = DownloadParam {
-      src: url::Url::parse(&query.url).map_err(|_| ResourceError::ParseError)?,
-      dest: file_path,
+  for (query, (_, new_file_path)) in queries.iter().zip(&update_paths) {
+    let download_param = DownloadTask {
+      sources: vec![url::Url::parse(&query.url).map_err(|_| ResourceError::ParseError)?],
+      dest: new_file_path.clone(),
       filename: None,
+      size: None,
       sha1: Some(query.sha1.clone()),
     };
-    download_tasks.push(PTaskParam::Download(download_param));
+    download_tasks.push(download_param);
   }
 
-  schedule_progressive_task_group(app, "mod-update".to_string(), download_tasks, true).await?;
+  submit_download_group(app, "mod-update".to_string(), download_tasks, true).await?;
 
-  for query in &queries {
-    let old_file_path = &query.old_file_path;
-    let new_file_path = mods_dir.join(&query.file_name);
-
-    if old_file_path != &new_file_path.to_string_lossy().to_string() {
-      let old_backup_path = format!("{}.old", old_file_path);
-      if let Err(e) = std::fs::rename(old_file_path, &old_backup_path) {
+  for (old_file_path, new_file_path) in update_paths {
+    if old_file_path != new_file_path {
+      let old_backup_path = format!("{}.old", old_file_path.display());
+      if let Err(e) = std::fs::rename(&old_file_path, old_backup_path) {
         log::error!("Failed to rename old mod file: {}", e);
         return Err(ResourceError::FileOperationError.into());
       }

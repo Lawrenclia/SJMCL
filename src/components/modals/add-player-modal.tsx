@@ -309,6 +309,7 @@ const AddPlayerModal: React.FC<AddPlayerModalProps> = ({
     <Modal
       size={{ base: "md", lg: "lg", xl: "xl" }}
       initialFocusRef={initialRef}
+      returnFocusOnClose={false}
       {...modalProps}
     >
       <ModalOverlay />
@@ -463,7 +464,7 @@ const AddPlayerModal: React.FC<AddPlayerModalProps> = ({
                                 "AddPlayerModal.3rdparty.authServer.selectSource"
                               )}
                           </MenuButton>
-                          <MenuList>
+                          <MenuList maxH="40vh" overflowY="auto">
                             {authServerList.map((server: AuthServer) => (
                               <MenuItem
                                 key={server.authUrl}

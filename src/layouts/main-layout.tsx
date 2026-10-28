@@ -7,14 +7,13 @@ import {
   Icon,
   Link,
   Text,
-  useColorMode,
   useColorModeValue,
   useDisclosure,
+  usePrefersReducedMotion,
 } from "@chakra-ui/react";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { appDataDir, appLogDir, join } from "@tauri-apps/api/path";
+import { exit } from "@tauri-apps/api/app";
+import { appLogDir, join } from "@tauri-apps/api/path";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
-import { exit } from "@tauri-apps/plugin-process";
 import { t } from "i18next";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -32,13 +31,13 @@ import AgentHostess from "@/components/agent-hostess";
 import AdvancedCard from "@/components/common/advanced-card";
 import DevToolbar from "@/components/dev/dev-toolbar";
 import LanguageMenu from "@/components/language-menu";
-import MainWindowTitlebar from "@/components/main-window-titlebar";
 import StarUsModal from "@/components/modals/star-us-modal";
 import WelcomeAndTermsModal from "@/components/modals/welcome-and-terms-modal";
 import {
   FileDnDProvider,
   useFileDnD,
 } from "@/components/special/file-dnd-overlay";
+import WindowTitlebar from "@/components/window-titlebar";
 import { useAgentChat } from "@/contexts/agent-chat";
 import { useLauncherConfig } from "@/contexts/config";
 import { useExtensionHost } from "@/contexts/extension/host";
@@ -52,14 +51,11 @@ interface MainLayoutProps {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const router = useRouter();
   const isStandAlone = router.pathname.startsWith("/standalone");
-  const { config, update } = useLauncherConfig();
+  const { config, update, bgImageSrc, isBgDarken } = useLauncherConfig();
   const primaryColor = config.appearance.theme.primaryColor;
-  const { colorMode } = useColorMode();
-  const isDarkenBg =
-    colorMode === "dark" && config.appearance.background.autoDarken;
   const { openGenericConfirmDialog } = useSharedModals();
 
-  const [bgImgSrc, setBgImgSrc] = useState<string>("");
+  const isStartupFlowStarted = useRef(false);
   const {
     isOpen: isAgentChatOpen,
     open: openAgentChat,
@@ -67,48 +63,57 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   } = useAgentChat();
   const [panelWidth, setPanelWidth] = useState(300);
   const [isDragging, setIsDragging] = useState(false);
-  const originalHeadNavStyle = useRef(config.appearance.theme.headNavStyle);
-  const isCheckedRunCount = useRef(false);
-  const isCheckedLastRunStatus = useRef(false);
+  const resizeStartRef = useRef({ x: 0, width: panelWidth });
+  const [hasOpenedAgentChat, setHasOpenedAgentChat] = useState(isAgentChatOpen);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const isLaunchPage = router.pathname === "/launch";
   const agentChatPanelWidth = `${panelWidth}px`;
-  const agentChatPanelTransform = isAgentChatOpen
-    ? "translateX(0)"
-    : "translateX(-100%)";
   const agentChatPanelOffset = isAgentChatOpen ? agentChatPanelWidth : "0px";
 
   useEffect(() => {
-    update(
-      "appearance.theme.headNavStyle",
-      isAgentChatOpen ? "simplified" : originalHeadNavStyle.current
-    );
-  }, [isAgentChatOpen, update]);
+    if (isAgentChatOpen) setHasOpenedAgentChat(true);
+  }, [isAgentChatOpen]);
 
   useEffect(() => {
+    const previousCursor = document.body.style.cursor;
+    if (isDragging) document.body.style.cursor = "col-resize";
+
     const handleMouseMove = (event: MouseEvent) => {
       if (!isDragging) return;
       const maxWidth = Math.max(250, window.innerWidth - 450);
-      setPanelWidth(Math.min(Math.max(event.clientX, 250), maxWidth));
+      const width =
+        resizeStartRef.current.width + event.clientX - resizeStartRef.current.x;
+      setPanelWidth(Math.min(Math.max(width, 250), maxWidth));
     };
 
     const handleMouseUp = () => {
       if (!isDragging) return;
       setIsDragging(false);
-      document.body.style.cursor = "default";
     };
 
+    const handleWindowResize = () => {
+      setPanelWidth((width) =>
+        Math.min(width, Math.max(250, window.innerWidth - 450))
+      );
+    };
+
+    handleWindowResize();
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("resize", handleWindowResize);
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("resize", handleWindowResize);
+      if (isDragging) document.body.style.cursor = previousCursor;
     };
   }, [isDragging]);
 
   const startResize = (event: React.MouseEvent) => {
+    if (event.button !== 0) return;
     event.preventDefault();
+    resizeStartRef.current = { x: event.clientX, width: panelWidth };
     setIsDragging(true);
-    document.body.style.cursor = "col-resize";
   };
 
   const {
@@ -123,95 +128,106 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     onClose: onStarUsModalClose,
   } = useDisclosure();
 
-  const openUnavailableExePathDialog = useCallback(() => {
-    openGenericConfirmDialog({
-      title: t("UnavailableExePathAlertDialog.dialog.title"),
-      body: t("UnavailableExePathAlertDialog.dialog.content"),
-      btnCancel: t("UnavailableExePathAlertDialog.dialog.btnContinue"),
-      onCancelCallback: () => update("runCount", config.runCount + 1), // because this dialog will skip the run count check
-      btnOK: t("General.exit"),
-      onOKCallback: () => exit(0),
-      footerLeft: (
-        <HStack spacing={2}>
-          <LuLanguages />
-          <LanguageMenu placement="top" />
-        </HStack>
-      ),
-      isAlert: true,
-      closeOnEsc: false,
-      closeOnOverlayClick: false,
-      showCloseBtn: false,
-    });
-  }, [config.runCount, openGenericConfirmDialog, update]);
+  const openUnavailableExePathDialog = useCallback(
+    (onContinue: () => void) => {
+      openGenericConfirmDialog({
+        title: t("UnavailableExePathAlertDialog.dialog.title"),
+        body: t("UnavailableExePathAlertDialog.dialog.content"),
+        btnCancel: t("UnavailableExePathAlertDialog.dialog.btnContinue"),
+        onCancelCallback: onContinue,
+        btnOK: t("General.exit"),
+        onOKCallback: () => exit(0),
+        footerLeft: (
+          <HStack spacing={2}>
+            <LuLanguages />
+            <LanguageMenu placement="top" />
+          </HStack>
+        ),
+        isAlert: true,
+        closeOnEsc: false,
+        closeOnOverlayClick: false,
+        showCloseBtn: false,
+      });
+    },
+    [openGenericConfirmDialog]
+  );
 
-  const openLastExitedAbnormallyDialog = useCallback(() => {
-    openGenericConfirmDialog({
-      title: t("LastExitedAbnormallyDialog.dialog.title"),
-      btnCancel: "",
-      showSuppressBtn: true,
-      suppressKey: "lastExitedAbnormally",
-      body: (
-        <Text color="gray.500">
-          <Trans
-            i18nKey="LastExitedAbnormallyDialog.dialog.content"
-            components={{
-              community: (
-                <Link
-                  color={`${primaryColor}.500`}
-                  onClick={() =>
-                    openUrl(t("HelpSettingsPage.top.settings.UserGroup.url"))
-                  }
-                />
-              ),
-              github: (
-                <Link
-                  color={`${primaryColor}.500`}
-                  onClick={() =>
-                    openUrl("https://github.com/UNIkeEN/SJMCL/issues")
-                  }
-                />
-              ),
-            }}
-          />
-        </Text>
-      ),
-      footerLeft: (
-        <HStack>
-          <LuScrollText />
-          <Button
-            variant="link"
-            colorScheme={primaryColor}
-            onClick={async () => {
-              const _appLogDir = await appLogDir();
-              const launcherLogDir = await join(_appLogDir, "launcher");
-              await openPath(launcherLogDir);
-            }}
-          >
-            {t("LastExitedAbnormallyDialog.dialog.viewLog")}
-          </Button>
-        </HStack>
-      ),
-    });
-  }, [openGenericConfirmDialog, primaryColor]);
+  const openLastExitedAbnormallyDialog = useCallback(
+    (onContinue: () => void) => {
+      openGenericConfirmDialog({
+        title: t("LastExitedAbnormallyDialog.dialog.title"),
+        btnCancel: "",
+        showSuppressBtn: true,
+        suppressKey: "lastExitedAbnormally",
+        onOKCallback: onContinue,
+        onCancelCallback: onContinue,
+        body: (
+          <Text color="gray.500">
+            <Trans
+              i18nKey="LastExitedAbnormallyDialog.dialog.content"
+              components={{
+                community: (
+                  <Link
+                    color={`${primaryColor}.500`}
+                    onClick={() =>
+                      openUrl(t("HelpSettingsPage.top.settings.UserGroup.url"))
+                    }
+                  />
+                ),
+                github: (
+                  <Link
+                    color={`${primaryColor}.500`}
+                    onClick={() =>
+                      openUrl("https://github.com/UNIkeEN/SJMCL/issues")
+                    }
+                  />
+                ),
+              }}
+            />
+          </Text>
+        ),
+        footerLeft: (
+          <HStack>
+            <LuScrollText />
+            <Button
+              variant="link"
+              colorScheme={primaryColor}
+              onClick={async () => {
+                const _appLogDir = await appLogDir();
+                const launcherLogDir = await join(_appLogDir, "launcher");
+                await openPath(launcherLogDir);
+              }}
+            >
+              {t("LastExitedAbnormallyDialog.dialog.viewLog")}
+            </Button>
+          </HStack>
+        ),
+      });
+    },
+    [openGenericConfirmDialog, primaryColor]
+  );
 
   useEffect(() => {
-    // running in unavailable path, show alert dialog.
-    if (!config.mocked && !config.basicInfo.isExePathAvailable) {
-      openUnavailableExePathDialog();
-      isCheckedRunCount.current = true; // skip run count check below
-    }
+    if (config.mocked || isStandAlone || isStartupFlowStarted.current) return;
+    isStartupFlowStarted.current = true;
 
     // update `last_run_exited_normally` to false, will be updated when this run ends with normal exit.
-    if (!config.mocked && !isCheckedLastRunStatus.current && !isStandAlone) {
-      if (!config.lastRunExitedNormally) {
-        openLastExitedAbnormallyDialog();
-      }
-      update("lastRunExitedNormally", false);
-      isCheckedLastRunStatus.current = true;
-    }
+    update("lastRunExitedNormally", false);
 
-    // update run count, conditionally show some modals.
-    if (!config.mocked && !isCheckedRunCount.current && !isStandAlone) {
+    const handleStartup = async () => {
+      if (!config.basicInfo.isExePathAvailable) {
+        await new Promise<void>((resolve) => {
+          openUnavailableExePathDialog(resolve);
+        });
+      }
+
+      if (!config.lastRunExitedNormally) {
+        await new Promise<void>((resolve) => {
+          openLastExitedAbnormallyDialog(resolve);
+        });
+      }
+
+      // update run count, conditionally show some modals.
       if (!config.runCount) {
         setTimeout(() => {
           onWelcomeAndTermsModalOpen();
@@ -225,8 +241,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         }
         update("runCount", newCount);
       }
-      isCheckedRunCount.current = true;
-    }
+    };
+
+    handleStartup();
   }, [
     config.mocked,
     config.runCount,
@@ -239,25 +256,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     onStarUsModalOpen,
     update,
   ]);
-
-  // construct background img src url from config.
-  useEffect(() => {
-    const constructBgImgSrc = async () => {
-      const bgKey = config.appearance.background.choice;
-      if (bgKey.startsWith("%built-in:")) {
-        const builtInKey = bgKey.replace("%built-in:", "");
-        setBgImgSrc(`/images/backgrounds/${builtInKey}-${colorMode}.jpg`);
-      } else {
-        const _appDataDir = await appDataDir();
-        setBgImgSrc(
-          convertFileSrc(`${_appDataDir}/UserContent/Backgrounds/${bgKey}`) +
-            `?t=${Date.now()}`
-        );
-      }
-    };
-
-    constructBgImgSrc();
-  }, [colorMode, config.appearance.background.choice]);
 
   // update font family to body CSS by config.
   useEffect(() => {
@@ -320,17 +318,30 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     "blackAlpha.800"
   );
 
+  const linuxBorderStyle = {
+    border: "0.5px solid",
+    borderColor: "gray.500",
+    borderRadius: "lg",
+  };
+
   if (isStandAlone) {
     return (
-      <div
+      <Flex
+        direction="column"
+        h="100vh"
+        overflow="hidden"
+        {...(config.basicInfo.osType === "linux" && linuxBorderStyle)}
         style={{
           ...getGlobalExtraStyle(config),
           backgroundColor: standaloneBgColor,
         }}
       >
-        {children}
+        <WindowTitlebar />
+        <Box flex="1" minH={0} overflow="auto">
+          {children}
+        </Box>
         {isDev && <DevToolbar />}
-      </div>
+      </Flex>
     );
   }
 
@@ -353,21 +364,17 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     <Flex
       direction="column"
       h="100vh"
-      bgImg={`url('${bgImgSrc}')`}
+      bgImg={`url('${bgImageSrc}')`}
       bgSize="cover"
       bgPosition="center"
       bgRepeat="no-repeat"
-      bgColor={isDarkenBg ? "rgba(0,0,0,0.45)" : "transparent"}
-      bgBlendMode={isDarkenBg ? "darken" : "normal"}
-      {...(config.basicInfo.osType === "linux" && {
-        border: "0.5px solid",
-        borderColor: "gray.500",
-        borderRadius: "lg",
-      })}
+      bgColor={isBgDarken ? "rgba(0,0,0,0.45)" : "transparent"}
+      bgBlendMode={isBgDarken ? "darken" : "normal"}
+      {...(config.basicInfo.osType === "linux" && linuxBorderStyle)}
       overflow="hidden"
       style={getGlobalExtraStyle(config)}
     >
-      <MainWindowTitlebar />
+      <WindowTitlebar />
       <Box
         position="relative"
         display="flex"
@@ -377,22 +384,48 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       >
         <FileDnDProvider>
           <MainLayoutFileDnD />
-          <Flex flex="1" minH={0} w="full" flexDir="row">
+          <Flex flex="1" minH={0} w="full" flexDir="row" p={2}>
             <Flex
               w={agentChatPanelOffset}
+              flexShrink={0}
+              minH={0}
               overflow="hidden"
-              transform={agentChatPanelTransform}
-              transition="transform 0.35s ease"
-              p={isAgentChatOpen ? 2 : 0}
-              position="relative"
+              transition={
+                isDragging || prefersReducedMotion
+                  ? "none"
+                  : `width 0.25s ease, visibility 0s linear ${isAgentChatOpen ? "0s" : "0.25s"}`
+              }
+              visibility={isAgentChatOpen ? "visible" : "hidden"}
+              pointerEvents={isAgentChatOpen ? "auto" : "none"}
+              aria-hidden={!isAgentChatOpen}
+              ref={(node) => {
+                if (node) node.inert = !isAgentChatOpen;
+              }}
             >
-              {isAgentChatOpen && (
-                <>
+              {(hasOpenedAgentChat || isAgentChatOpen) && (
+                <Flex
+                  w={agentChatPanelWidth}
+                  minW={agentChatPanelWidth}
+                  minH={0}
+                  pr={2}
+                  position="relative"
+                >
                   <AgentChat
                     onAgentChatPanelClose={() => handleAgentChatOpen(false)}
                   />
                   <Flex
-                    role="group"
+                    role="separator"
+                    data-group
+                    aria-orientation="vertical"
+                    aria-valuemin={250}
+                    aria-valuemax={
+                      typeof window === "undefined"
+                        ? panelWidth
+                        : Math.max(250, window.innerWidth - 450)
+                    }
+                    aria-valuenow={panelWidth}
+                    tabIndex={isAgentChatOpen ? 0 : -1}
+                    aria-label={t("AgentChatPage.resizePanel")}
                     position="absolute"
                     top={0}
                     right={0}
@@ -401,45 +434,70 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     borderRadius="full"
                     cursor="col-resize"
                     onMouseDown={startResize}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key !== "ArrowLeft" &&
+                        event.key !== "ArrowRight"
+                      )
+                        return;
+                      event.preventDefault();
+                      setPanelWidth((width) =>
+                        Math.min(
+                          Math.max(
+                            250,
+                            width + (event.key === "ArrowRight" ? 20 : -20)
+                          ),
+                          Math.max(250, window.innerWidth - 450)
+                        )
+                      );
+                    }}
                     zIndex={10}
-                    transition="background 0.2s"
-                    bgColor={isDragging ? resizeHoverBg : "transparent"}
-                    _hover={{ bgColor: resizeHoverBg }}
+                    _focusVisible={{ outline: "none" }}
                     alignItems="center"
                     justifyContent="center"
                   >
-                    <Icon
-                      as={LuGripVertical}
+                    <Box
+                      h={10}
+                      w="full"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      borderRadius="full"
+                      bgColor={resizeHoverBg}
                       opacity={isDragging ? 1 : 0}
-                      color={resizeHoverIconColor}
                       _groupHover={{ opacity: 1 }}
+                      _groupFocusVisible={{ opacity: 1 }}
                       transition="opacity 0.2s"
-                    />
+                    >
+                      <Icon
+                        as={LuGripVertical}
+                        color={resizeHoverIconColor}
+                        boxSize={3}
+                      />
+                    </Box>
                   </Flex>
-                </>
+                </Flex>
               )}
             </Flex>
 
-            <Flex flex={1} minW={0} minH={0} p={2} pl={0}>
-                {isLaunchPage ? (
-                  children
-                ) : (
-                  <AdvancedCard
-                    w="full"
-                    h="full"
-                    level="back"
-                    overflow="auto"
-                    borderRadius="xl"
-                  >
-                    {children}
-                  </AdvancedCard>
-                )}
+            <Flex flex={1} minW={0} minH={0}>
+              {isLaunchPage ? (
+                children
+              ) : (
+                <AdvancedCard
+                  w="full"
+                  h="full"
+                  level="back"
+                  overflow="auto"
+                  borderRadius="xl"
+                >
+                  {children}
+                </AdvancedCard>
+              )}
             </Flex>
           </Flex>
           {isLaunchPage && !isAgentChatOpen && (
-            <AgentHostess
-              onToggleAgentChat={() => handleAgentChatOpen(true)}
-            />
+            <AgentHostess onToggleAgentChat={() => handleAgentChatOpen(true)} />
           )}
           <WelcomeAndTermsModal
             isOpen={isWelcomeAndTermsModalOpen}

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { MemoryInfo, WindowConfig } from "@/models/misc";
 import { InvokeResponse } from "@/models/response";
-import { MemoryInfo } from "@/models/system-info";
 import { responseHandler } from "@/utils/response";
 
 /**
@@ -14,6 +14,17 @@ export class UtilsService {
   @responseHandler("utils")
   static async retrieveMemoryInfo(): Promise<InvokeResponse<MemoryInfo>> {
     return await invoke("retrieve_memory_info");
+  }
+
+  /**
+   * RETRIEVE the maximum monitor resolution (upbound).
+   * @returns {Promise<InvokeResponse<[number, number]>>}
+   */
+  @responseHandler("utils")
+  static async retrieveResolutionUpbound(): Promise<
+    InvokeResponse<[number, number]>
+  > {
+    return await invoke("retrieve_resolution_upbound");
   }
 
   /**
@@ -49,6 +60,20 @@ export class UtilsService {
     withExt: boolean
   ): Promise<InvokeResponse<string>> {
     return await invoke("extract_filename", { pathStr, withExt });
+  }
+
+  /**
+   * CREATE a window using the provided window configuration.
+   * @param config The window configuration passed to the backend.
+   * @param customOverlaid Whether to use the custom overlaid titlebar.
+   * @returns {Promise<InvokeResponse<void>>}
+   */
+  @responseHandler("utils")
+  static async createWindow(
+    config: WindowConfig,
+    customOverlaid: boolean
+  ): Promise<InvokeResponse<void>> {
+    return await invoke("create_window", { config, customOverlaid });
   }
 
   /**

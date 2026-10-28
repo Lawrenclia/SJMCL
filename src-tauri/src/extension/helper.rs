@@ -1,14 +1,15 @@
-use crate::error::SJMCLResult;
-use crate::extension::models::{ExtensionError, ExtensionInfo, ExtensionMetadata};
-use crate::utils::fs::get_subdirectories;
-use crate::utils::image::{ImageWrapper, load_image_from_dir};
 use image::imageops::FilterType;
+use sjmcl_types::error::SJMCLResult;
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 use zip::read::ZipArchive;
+
+use crate::extension::models::{ExtensionError, ExtensionInfo, ExtensionMetadata};
+use crate::utils::fs::get_subdirectories;
+use crate::utils::image::{ImageWrapper, load_image_from_dir};
 
 const EXTENSIONS_DIR_RELATIVE_PATH: &str = "UserContent/Extensions";
 const METADATA_FILE_NAME: &str = "sjmcl.ext.json";
@@ -76,7 +77,7 @@ pub fn extract_extension_package(package_path: &Path, target_dir: &Path) -> SJMC
     let mut zip_file = zip
       .by_index(i)
       .map_err(|_| io::Error::other(ExtensionError::InvalidPackageFormat))?;
-    let relative_path = zip_file.mangled_name();
+    let relative_path = zip_file.mangled_name()?;
     let output_path = target_dir.join(relative_path);
 
     if zip_file.is_dir() {

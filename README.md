@@ -53,6 +53,13 @@ Install the latest stable release with the Linux installer:
 curl -LsSf https://mc.sjtu.cn/sjmcl/releases/install.sh | sh -s -- --source sjmc
 ```
 
+Install the latest stable release via [Homebrew](https://brew.sh) Cask if [Homebrew](https://brew.sh) is installed:
+
+```bash
+brew install --cask sjmcl
+```
+
+
 Install the portable Linux build without root access:
 
 ```bash
@@ -79,6 +86,9 @@ Install from Snap Store:
 sudo snap install sjmcl
 ```
 
+> [!WARNING]
+> When installing via Snap, game data may be stored in a sandboxed directory by default. Before uninstalling the launcher, please back up important data such as saves, resource packs, and mods in a timely manner.
+
 </details>
 
 <details>
@@ -87,7 +97,7 @@ sudo snap install sjmcl
 Install with Homebrew:
 
 ```bash
-brew install --cask SJMC-Dev/SJMCL/sjmcl
+brew install --cask sjmcl
 ```
 
 </details>
@@ -101,6 +111,9 @@ Install with Winget:
 winget install SJMC.SJMCL
 ```
 
+> [!WARNING]
+> The Winget index is publicly maintained. Before installing, consider running `winget show SJMC.SJMCL` to inspect the installer URL, and make sure the download source is from `github.com/UNIkeEN/SJMCL` or `sjmcl.club`.
+
 </details>
 
 For more installation options and platform notes, see the [User Documentation](https://mc.sjtu.cn/sjmcl/en/docs/install).
@@ -113,13 +126,13 @@ To get started, clone the repository and install the required dependencies:
 
 ```bash
 git clone git@github.com:UNIkeEN/SJMCL.git
-npm install
+pnpm install
 ```
 
 To run the project in development mode:
 
 ```bash
-npm run tauri dev
+pnpm tauri dev
 ```
 
 We warmly invite contributions from everyone. 
@@ -132,9 +145,9 @@ We warmly invite contributions from everyone.
 
 If you want to develop extensions for SJMCL, check out the [Extension Documentation](https://mc.sjtu.cn/sjmcl/en/dev/extension/). It includes an introduction to the extension system and API references. We also provide a scaffold to help you quickly create a template project and get started.
 
-### Repo Activity
+### Contributors
 
-![Repo Activity](https://repobeats.axiom.co/api/embed/ee2f4be0fbc708179a6b40c83cd8ce80702fe6fe.svg "Repobeats analytics image")
+![Contributors](https://contrib.rocks/image?repo=UNIkeEN/SJMCL "Contributors")
 
 ## Copyright
 

@@ -186,13 +186,19 @@ const AlertResourceDependencyModal: React.FC<
         }
         isFullClickZone
         onClick={() => {
-          modalProps.onClose();
-          openSharedModal("download-specific-resource", {
-            resource,
-            curInstanceMajorVersion,
-            curInstanceVersion,
-            curInstanceModLoader,
-          });
+          if (dependencies.length < 2) {
+            modalProps.onClose();
+          }
+          openSharedModal(
+            "download-specific-resource",
+            {
+              resource,
+              curInstanceMajorVersion,
+              curInstanceVersion,
+              curInstanceModLoader,
+            },
+            { stack: true }
+          );
         }}
         fontWeight={400}
       />
@@ -203,6 +209,7 @@ const AlertResourceDependencyModal: React.FC<
     <Modal
       scrollBehavior="inside"
       size={{ base: "md", lg: "lg", xl: "xl" }}
+      returnFocusOnClose={false}
       {...modalProps}
     >
       <ModalOverlay />

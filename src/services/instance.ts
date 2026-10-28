@@ -13,7 +13,7 @@ import {
   ScreenshotInfo,
   ShaderPackInfo,
 } from "@/models/instance/misc";
-import { LevelData, WorldInfo } from "@/models/instance/world";
+import { WorldDetails, WorldInfo } from "@/models/instance/world";
 import {
   GameClientResourceInfo,
   ModLoaderResourceInfo,
@@ -49,7 +49,8 @@ export class InstanceService {
    * @param {string} [modpackPath] - Optional path to the modpack archive file.
    * @param {boolean} [isInstallFabricApi] - Optional flag to indicate whether to install Fabric API (only valid when modLoader is Fabric).
    * @param {boolean} [isInstallQfApi] - Optional flag to indicate whether to install QFAPI / QSL (only valid when modLoader is Quilt).
-   * @returns {Promise<InvokeResponse<null>>}
+   * @param {string} [modpackVersion] - Optional modpack version to use.
+   * @returns {Promise<InvokeResponse<string>>} The initial download task group ID.
    */
   @responseHandler("instance")
   static async createInstance(
@@ -62,8 +63,9 @@ export class InstanceService {
     optifine?: OptiFineResourceInfo,
     modpackPath?: string,
     isInstallFabricApi?: boolean,
-    isInstallQfApi?: boolean
-  ): Promise<InvokeResponse<null>> {
+    isInstallQfApi?: boolean,
+    modpackVersion?: string
+  ): Promise<InvokeResponse<string>> {
     return await invoke("create_instance", {
       directory,
       name,
@@ -75,6 +77,7 @@ export class InstanceService {
       modpackPath,
       isInstallFabricApi,
       isInstallQfApi,
+      modpackVersion,
     });
   }
 
@@ -114,15 +117,15 @@ export class InstanceService {
   }
 
   /**
-   * RESTORE the instance game config to use current global game config.
+   * RESET the instance game config to use current global game config.
    * @param {string} instanceId - The ID of the instance.
    * @returns {Promise<InvokeResponse<void>>}
    */
   @responseHandler("instance")
-  static async restoreInstanceGameConfig(
+  static async resetInstanceGameConfig(
     instanceId: string
   ): Promise<InvokeResponse<void>> {
-    return await invoke("restore_instance_game_config", {
+    return await invoke("reset_instance_game_config", {
       instanceId,
     });
   }
@@ -417,13 +420,13 @@ export class InstanceService {
    * RETRIEVE the level details for a specific world.
    * @param {string} instanceId - The instance ID to retrieve the level detail for.
    * @param {string} worldName - The name of the world to retrieve details for.
-   * @returns {Promise<InvokeResponse<LevelData>>}
+   * @returns {Promise<InvokeResponse<WorldDetails>>}
    */
   @responseHandler("instance")
   static async retrieveWorldDetails(
     instanceId: string,
     worldName: string
-  ): Promise<InvokeResponse<LevelData>> {
+  ): Promise<InvokeResponse<WorldDetails>> {
     return await invoke("retrieve_world_details", {
       instanceId,
       worldName,
@@ -444,34 +447,6 @@ export class InstanceService {
     return await invoke("create_launch_desktop_shortcut", {
       instanceId,
       iconSrc,
-    });
-  }
-
-  /**
-   * FINISH the mod loader installation.
-   * @param {string} instanceId - The ID of the instance to mark the mod loader as installed.
-   * @returns {Promise<InvokeResponse<void>>}
-   */
-  @responseHandler("instance")
-  static async finishModLoaderInstall(
-    instanceId: string
-  ): Promise<InvokeResponse<void>> {
-    return await invoke("finish_mod_loader_install", {
-      instanceId,
-    });
-  }
-
-  /**
-   * FINISH the OptiFine loader installation.
-   * @param {string} instanceId - The ID of the instance to mark OptiFine as installed.
-   * @returns {Promise<InvokeResponse<void>>}
-   */
-  @responseHandler("instance")
-  static async finishOptiFineLoaderInstall(
-    instanceId: string
-  ): Promise<InvokeResponse<void>> {
-    return await invoke("finish_optifine_loader_install", {
-      instanceId,
     });
   }
 
@@ -500,17 +475,60 @@ export class InstanceService {
   @responseHandler("instance")
   static async changeModLoader(
     instanceId: string,
-    newModLoader?: ModLoaderResourceInfo | null,
-    newOptifine?: OptiFineResourceInfo | null,
+    newModLoader: ModLoaderResourceInfo,
     isInstallFabricApi?: boolean,
     isInstallQfApi?: boolean
   ): Promise<InvokeResponse<void>> {
     return await invoke("change_mod_loader", {
       instanceId,
-      newModLoader: newModLoader ?? null,
-      newOptifine: newOptifine ?? null,
+      newModLoader,
       isInstallFabricApi,
       isInstallQfApi,
+    });
+  }
+
+  /**
+   * REMOVE the mod loader from a given instance.
+   * @param {string} instanceId - The ID of the instance.
+   * @returns {Promise<InvokeResponse<void>>}
+   */
+  @responseHandler("instance")
+  static async removeModLoader(
+    instanceId: string
+  ): Promise<InvokeResponse<void>> {
+    return await invoke("remove_mod_loader", {
+      instanceId,
+    });
+  }
+
+  /**
+   * CHANGE the OptiFine version for a given instance.
+   * @param {string} instanceId - The ID of the instance to update.
+   * @param {OptiFineResourceInfo} newOptifine - The new OptiFine information.
+   * @returns {Promise<InvokeResponse<void>>}
+   */
+  @responseHandler("instance")
+  static async changeOptiFine(
+    instanceId: string,
+    newOptifine: OptiFineResourceInfo
+  ): Promise<InvokeResponse<void>> {
+    return await invoke("change_optifine", {
+      instanceId,
+      newOptifine,
+    });
+  }
+
+  /**
+   * REMOVE the OptiFine from a given instance.
+   * @param {string} instanceId - The ID of the instance.
+   * @returns {Promise<InvokeResponse<void>>}
+   */
+  @responseHandler("instance")
+  static async removeOptifine(
+    instanceId: string
+  ): Promise<InvokeResponse<void>> {
+    return await invoke("remove_optifine", {
+      instanceId,
     });
   }
 

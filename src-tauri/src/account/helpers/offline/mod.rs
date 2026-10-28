@@ -1,15 +1,16 @@
 pub mod yggdrasil_server;
 
-use crate::account::models::{
-  AccountError, PlayerInfo, PlayerType, PresetRole, SkinModel, Texture, TextureType,
-};
-use crate::error::SJMCLResult;
-use crate::utils::fs::get_app_resource_filepath;
-use crate::utils::image::load_image_from_dir;
 use rand::seq::IteratorRandom;
+use sjmcl_types::error::SJMCLResult;
 use strum::IntoEnumIterator;
 use tauri::AppHandle;
 use uuid::Uuid;
+
+use crate::account::models::{
+  AccountError, PlayerInfo, PlayerType, PresetRole, SkinModel, Texture, TextureType,
+};
+use crate::utils::fs::get_app_resource_filepath;
+use crate::utils::image::load_image_from_dir;
 
 pub fn load_preset_skin(app: &AppHandle, preset_role: PresetRole) -> SJMCLResult<Vec<Texture>> {
   let texture_path = get_app_resource_filepath(app, &format!("assets/skins/{}.png", preset_role))
@@ -36,7 +37,7 @@ pub async fn login(app: &AppHandle, username: String, raw_uuid: String) -> SJMCL
   } else {
     if !raw_uuid.is_empty() {
       // user uses custom UUID, but it's invalid
-      return Err(AccountError::Invalid)?;
+      return Err(AccountError::Invalid.into());
     }
     Uuid::new_v5(&Uuid::NAMESPACE_URL, name_with_prefix.as_bytes())
   };

@@ -37,8 +37,7 @@ const NotifyNewVersionModal: React.FC<NotifyNewVersionModalProps> = ({
 
   const handleDownloadUpdate = () => {
     if (isLinux) {
-      const lang = isZh ? "zh" : "en";
-      openUrl(`https://mc.sjtu.cn/sjmcl/${lang}`);
+      openUrl(`https://mc.sjtu.cn/sjmcl${isZh ? "" : "/en"}`);
     } else {
       ConfigService.downloadLauncherUpdate(newVersion).then((response) => {
         if (response.status !== "success") {
@@ -68,7 +67,12 @@ const NotifyNewVersionModal: React.FC<NotifyNewVersionModalProps> = ({
   };
 
   return (
-    <Modal scrollBehavior="inside" size="xl" {...props}>
+    <Modal
+      scrollBehavior="inside"
+      size="xl"
+      returnFocusOnClose={false}
+      {...props}
+    >
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{`${t("NotifyNewVersionModal.title")} - ${newVersion.version}`}</ModalHeader>

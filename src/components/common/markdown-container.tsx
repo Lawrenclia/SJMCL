@@ -6,6 +6,7 @@ import {
   AccordionPanel,
   Box,
   BoxProps,
+  Card,
   Code,
   Divider,
   Heading,
@@ -33,7 +34,7 @@ import { BeatLoader } from "react-spinners";
 import remarkGfm from "remark-gfm";
 import { ToolCallWidget } from "@/components/tool-call-widget";
 import { useLauncherConfig } from "@/contexts/config";
-import { splitByToolCalls } from "@/utils/tool-call/parser";
+import { findToolCalls, splitByToolCalls } from "@/utils/tool-call/parser";
 
 type MarkdownContainerProps = BoxProps & {
   children: string;
@@ -45,6 +46,7 @@ type ThinkSegment = {
   type: "normal" | "think";
   content: string;
   isFinished?: boolean;
+  startIndex: number;
 };
 
 function splitThinkSegments(text: string): ThinkSegment[] {
@@ -54,12 +56,20 @@ function splitThinkSegments(text: string): ThinkSegment[] {
   while (cursor < text.length) {
     const openIdx = text.indexOf("<think>", cursor);
     if (openIdx === -1) {
-      segments.push({ type: "normal", content: text.slice(cursor) });
+      segments.push({
+        type: "normal",
+        content: text.slice(cursor),
+        startIndex: cursor,
+      });
       break;
     }
 
     if (openIdx > cursor) {
-      segments.push({ type: "normal", content: text.slice(cursor, openIdx) });
+      segments.push({
+        type: "normal",
+        content: text.slice(cursor, openIdx),
+        startIndex: cursor,
+      });
     }
 
     const thinkContentStart = openIdx + "<think>".length;
@@ -70,6 +80,7 @@ function splitThinkSegments(text: string): ThinkSegment[] {
         type: "think",
         content: text.slice(thinkContentStart),
         isFinished: false,
+        startIndex: thinkContentStart,
       });
       break;
     }
@@ -78,11 +89,51 @@ function splitThinkSegments(text: string): ThinkSegment[] {
       type: "think",
       content: text.slice(thinkContentStart, closeIdx),
       isFinished: true,
+      startIndex: thinkContentStart,
     });
     cursor = closeIdx + "</think>".length;
   }
 
   return segments.filter((segment) => segment.content.trim().length > 0);
+}
+
+const JsonResponseCard: React.FC<{ content: string }> = ({ content }) => (
+  <Card variant="outline" my={2} minW={0}>
+    <Accordion allowToggle>
+      <AccordionItem border="none">
+        <AccordionButton>
+          <Text flex={1} textAlign="left" fontSize="xs">
+            JSON
+          </Text>
+          <AccordionIcon />
+        </AccordionButton>
+        <AccordionPanel pt={0}>
+          <Code
+            display="block"
+            whiteSpace="pre-wrap"
+            overflowWrap="anywhere"
+            maxH="64"
+            overflow="auto"
+            p={2}
+            fontSize="xs"
+            className="allow-select"
+            tabIndex={0}
+          >
+            {content}
+          </Code>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
+  </Card>
+);
+
+function isJsonContainer(content: string): boolean {
+  try {
+    const value = JSON.parse(content);
+    return value !== null && typeof value === "object";
+  } catch {
+    return false;
+  }
 }
 
 const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
@@ -94,6 +145,15 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   const { t } = useTranslation();
   const { config } = useLauncherConfig();
   const primaryColor = config.appearance.theme.primaryColor;
+  const toolCallIndices = React.useMemo(
+    () =>
+      new Map(
+        findToolCalls(children || "")
+          .filter((call) => call.type === "success")
+          .map((call, index) => [call.startIndex, index])
+      ),
+    [children]
+  );
 
   // process GitHub-style mentions and issue / PR references
   const processGitHubMarks = React.useCallback(
@@ -136,38 +196,11 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
     [primaryColor]
   );
 
-  // Process both tool calls and GitHub marks
+  // Process GitHub marks after tool calls have been separated from Markdown.
   const processContent = React.useCallback(
     (children: React.ReactNode): React.ReactNode => {
       if (typeof children === "string") {
-        const segments = splitByToolCalls(children);
-        const result: React.ReactNode[] = [];
-
-        let toolIndex = 0;
-        segments.forEach((segment, i) => {
-          if (typeof segment === "string") {
-            result.push(processGitHubMarks(segment));
-          } else {
-            if (segment.type === "success") {
-              result.push(
-                <ToolCallWidget
-                  key={`fn-${i}`}
-                  data={{ name: segment.name, params: segment.params }}
-                  callId={messageId ? `${messageId}-${toolIndex}` : undefined}
-                  onConfirmationAction={onToolCallAction}
-                />
-              );
-              toolIndex++;
-            } else {
-              result.push(
-                <Code key={`err-${i}`} colorScheme="red" fontSize="xs">
-                  {segment.error}
-                </Code>
-              );
-            }
-          }
-        });
-        return result;
+        return processGitHubMarks(children);
       }
 
       if (Array.isArray(children)) {
@@ -186,7 +219,7 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
 
       return children;
     },
-    [processGitHubMarks, messageId, onToolCallAction]
+    [processGitHubMarks]
   );
 
   // map HTML tags to Chakra components so styles are inherited.
@@ -287,23 +320,23 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
       th: ({ node, children, ...rest }) => <Th {...rest}>{children}</Th>,
       td: ({ node, children, ...rest }) => <Td {...rest}>{children}</Td>,
       // code
-      code: ({ node, className, children, ...rest }) => {
-        // If inline code matches tool marker pattern
-        if (typeof children === "string") {
-          const funcMatch = children.match(/^::(?:tool|function)::(\{.*\})$/);
-          if (funcMatch) {
-            try {
-              const data = JSON.parse(funcMatch[1]);
-              // Inline code doesn't easily support knowing the index if multiple exist,
-              // but we can assume index 0 for simplicity or improve parse logic later.
-              // For now we skip callId for inline code blocks as they are edge cases.
-              return <ToolCallWidget data={data} />;
-            } catch (e) {
-              // ignore
-            }
-          }
+      pre: ({ node, children, ...rest }) => {
+        const child = React.Children.toArray(children)[0];
+        const content = React.isValidElement<{ children?: React.ReactNode }>(
+          child
+        )
+          ? child.props.children
+          : undefined;
+        if (typeof content === "string" && isJsonContainer(content)) {
+          return <JsonResponseCard content={content.trim()} />;
         }
-
+        return (
+          <Box as="pre" overflowX="auto" {...rest}>
+            {children}
+          </Box>
+        );
+      },
+      code: ({ node, className, children, ...rest }) => {
         return (
           <Code bg="unset" className={className} {...rest}>
             {children}
@@ -311,7 +344,7 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
         );
       },
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [processContent]
   );
 
@@ -321,16 +354,63 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   );
 
   const renderMarkdown = React.useCallback(
-    (content: string, key: string) => (
-      <ReactMarkdown
-        key={key}
-        remarkPlugins={[remarkGfm]}
-        components={components}
-      >
-        {content}
-      </ReactMarkdown>
-    ),
-    [components]
+    (content: string, key: string, startIndex = 0) => {
+      if (isJsonContainer(content)) {
+        return <JsonResponseCard key={key} content={content.trim()} />;
+      }
+      const segments = splitByToolCalls(content);
+      // A model may wrap a tool call in a Markdown code fence or inline code.
+      // Remove only the matching delimiters around that call.
+      segments.forEach((segment, index) => {
+        if (typeof segment === "string") return;
+        const before = segments[index - 1];
+        const after = segments[index + 1];
+        if (typeof before !== "string" || typeof after !== "string") return;
+        const fence = before.match(/(?:^|\n)\s*(```|~~~)[\w-]*\s*$/);
+        if (fence && after.trimStart().startsWith(fence[1])) {
+          segments[index - 1] = before.slice(0, fence.index);
+          segments[index + 1] = after.trimStart().slice(fence[1].length);
+        } else if (before.endsWith("`") && after.startsWith("`")) {
+          segments[index - 1] = before.slice(0, -1);
+          segments[index + 1] = after.slice(1);
+        }
+      });
+      return segments.map((segment, index) => {
+        if (typeof segment === "string") {
+          return (
+            <ReactMarkdown
+              key={`${key}-text-${index}`}
+              remarkPlugins={[remarkGfm]}
+              components={components}
+            >
+              {segment}
+            </ReactMarkdown>
+          );
+        }
+        if (segment.type === "error") {
+          return (
+            <JsonResponseCard
+              key={`${key}-error-${index}`}
+              content={segment.raw}
+            />
+          );
+        }
+        const toolIndex = toolCallIndices.get(startIndex + segment.startIndex);
+        return (
+          <ToolCallWidget
+            key={`${key}-tool-${segment.startIndex}`}
+            data={{ name: segment.name, params: segment.params }}
+            callId={
+              messageId && toolIndex !== undefined
+                ? `${messageId}-${toolIndex}`
+                : undefined
+            }
+            onConfirmationAction={onToolCallAction}
+          />
+        );
+      });
+    },
+    [components, messageId, onToolCallAction, toolCallIndices]
   );
 
   return (
@@ -339,7 +419,11 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
         ? renderMarkdown(children || "", "markdown-default")
         : thinkSegments.map((segment, index) => {
             if (segment.type === "normal") {
-              return renderMarkdown(segment.content, `markdown-${index}`);
+              return renderMarkdown(
+                segment.content,
+                `markdown-${index}`,
+                segment.startIndex
+              );
             }
 
             return (
@@ -365,7 +449,11 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
                     <AccordionIcon />
                   </AccordionButton>
                   <AccordionPanel px={0} pt={1} pb={3}>
-                    {renderMarkdown(segment.content, `think-markdown-${index}`)}
+                    {renderMarkdown(
+                      segment.content,
+                      `think-markdown-${index}`,
+                      segment.startIndex
+                    )}
                   </AccordionPanel>
                 </AccordionItem>
               </Accordion>
@@ -375,4 +463,4 @@ const MarkdownContainer: React.FC<MarkdownContainerProps> = ({
   );
 };
 
-export default MarkdownContainer;
+export default React.memo(MarkdownContainer);

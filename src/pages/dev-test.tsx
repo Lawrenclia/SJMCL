@@ -3,9 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import SkinPreview from "@/components/skin-preview";
-import { useSharedModals } from "@/contexts/shared-modal";
-import { DownloadTaskParam, TaskParam, TaskTypeEnums } from "@/models/task";
-import { TaskService } from "@/services/task";
+import { DownloadService } from "@/services/download";
 import { isProd } from "@/utils/env";
 import { createWindow } from "@/utils/window";
 
@@ -21,8 +19,6 @@ const DevTestPage = () => {
       router.push("/launch");
     }
   }, [router]);
-
-  const { openSharedModal } = useSharedModals();
 
   return (
     <VStack align="start" spacing={4}>
@@ -63,18 +59,23 @@ const DevTestPage = () => {
       >
         Launch Game
       </Button>
-
       <Button
         onClick={() => {
           logger.info("Download button clicked");
-          let dl: DownloadTaskParam[] = [
-            {
-              src: "https://edge.forgecdn.net/files/3045/381/%5B___MixinCompat-0.8___%5D.jar",
-              dest: "D:\\mods\\[___MixinCompat-0.8___].jar",
-              taskType: TaskTypeEnums.Download,
-            },
-          ];
-          TaskService.scheduleProgressiveTaskGroup("group1", dl as TaskParam[]);
+          DownloadService.submitGroup({
+            name: "group1",
+            autoResume: true,
+            tasks: [
+              {
+                name: "[___MixinCompat-0.8___].jar",
+                executor: "download",
+                spec: {
+                  url: "https://edge.forgecdn.net/files/3045/381/%5B___MixinCompat-0.8___%5D.jar",
+                },
+                dest: "D:\\mods\\[___MixinCompat-0.8___].jar",
+              },
+            ],
+          });
         }}
       >
         Start Downloading Task

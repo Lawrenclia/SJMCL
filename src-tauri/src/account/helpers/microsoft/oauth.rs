@@ -1,3 +1,12 @@
+use serde_json::{Value, json};
+use sjmcl_types::error::SJMCLResult;
+use std::ops::Add;
+use std::str::FromStr;
+use tauri::{AppHandle, Manager};
+use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_http::reqwest;
+use uuid::Uuid;
+
 use crate::account::helpers::microsoft::constants::{
   CLIENT_ID, DEVICE_AUTH_ENDPOINT, MINECRAFT_TOKEN_ENDPOINT, OAUTH_TOKEN_ENDPOINT,
   PROFILE_ENDPOINT, SCOPE, XSTS_AUTH_ENDPOINT,
@@ -11,14 +20,6 @@ use crate::account::models::{
   AccountError, DeviceAuthResponse, DeviceAuthResponseInfo, OAuthTokens, PlayerInfo, PlayerType,
   PresetRole, SkinModel, Texture, TextureType,
 };
-use crate::error::SJMCLResult;
-use serde_json::{Value, json};
-use std::ops::Add;
-use std::str::FromStr;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_clipboard_manager::ClipboardExt;
-use tauri_plugin_http::reqwest;
-use uuid::Uuid;
 
 pub async fn device_authorization(app: &AppHandle) -> SJMCLResult<DeviceAuthResponseInfo> {
   let client = app.state::<reqwest::Client>();
@@ -266,7 +267,7 @@ pub async fn refresh(app: &AppHandle, player: &PlayerInfo) -> SJMCLResult<Player
     .map_err(|_| AccountError::NetworkError)?;
 
   if !token_response.status().is_success() {
-    return Err(AccountError::Expired)?;
+    return Err(AccountError::Expired.into());
   }
 
   let tokens: OAuthTokens = token_response
@@ -274,22 +275,56 @@ pub async fn refresh(app: &AppHandle, player: &PlayerInfo) -> SJMCLResult<Player
     .await
     .map_err(|_| AccountError::ParseError)?;
 
-  parse_profile(app, &tokens).await
+  let mut refreshed_player = parse_profile(app, &tokens).await?;
+  // Retain the internal player ID so a profile rename does not invalidate selected_player_id (#1350).
+  refreshed_player.id = player.id.clone();
+  Ok(refreshed_player)
 }
 
 pub async fn validate(app: &AppHandle, player: &PlayerInfo) -> SJMCLResult<bool> {
+  let access_token = match get_access_token(app, player).await {
+    Ok(access_token) => access_token,
+    Err(error) if error == AccountError::Expired.into() => return Ok(false),
+    Err(error) => return Err(error),
+  };
+  let status = validate_access_token(app, &access_token).await?;
+
+  if status == reqwest::StatusCode::UNAUTHORIZED {
+    let current_player = misc::get_player_by_id(app, &player.id)?.ok_or(AccountError::NotFound)?;
+    let refreshed_player = match refresh(app, &current_player).await {
+      Ok(refreshed_player) => refreshed_player,
+      Err(error) if error == AccountError::Expired.into() => return Ok(false),
+      Err(error) => return Err(error),
+    };
+    let access_token = refreshed_player
+      .access_token
+      .clone()
+      .ok_or(AccountError::Invalid)?;
+    misc::update_player_by_id(app, &player.id, refreshed_player)?;
+
+    return Ok(
+      validate_access_token(app, &access_token)
+        .await?
+        .is_success(),
+    );
+  }
+
+  Ok(status.is_success())
+}
+
+async fn validate_access_token(
+  app: &AppHandle,
+  access_token: &str,
+) -> SJMCLResult<reqwest::StatusCode> {
   let client = app.state::<reqwest::Client>();
   let response = client
     .get(PROFILE_ENDPOINT)
-    .header(
-      "Authorization",
-      format!("Bearer {}", get_access_token(app, player).await?),
-    )
+    .header("Authorization", format!("Bearer {access_token}"))
     .send()
     .await
     .map_err(|_| AccountError::NetworkError)?;
 
-  Ok(response.status().is_success())
+  Ok(response.status())
 }
 
 /// Returns the access token for the player, refreshing it if necessary.
@@ -305,13 +340,12 @@ pub async fn get_access_token(app: &AppHandle, player: &PlayerInfo) -> SJMCLResu
       .unwrap_or(true);
 
   if need_refresh {
-    let player_id = player.id.as_str();
     let refreshed_player = refresh(app, player).await?;
     let access_token = refreshed_player
       .access_token
       .clone()
       .ok_or(AccountError::Invalid)?;
-    misc::update_player_by_id(app, player_id, refreshed_player)?;
+    misc::update_player_by_id(app, &player.id, refreshed_player)?;
 
     Ok(access_token)
   } else {

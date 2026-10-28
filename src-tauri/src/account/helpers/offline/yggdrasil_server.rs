@@ -1,7 +1,3 @@
-use crate::account::models::{PlayerInfo, SkinModel};
-use crate::error::SJMCLResult;
-use crate::utils::image::ImageWrapper;
-use crate::utils::sys_info::find_free_port;
 use axum::{
   Json, Router,
   extract::{Path, Query, State},
@@ -21,6 +17,7 @@ use rsa::{
 use serde_json::{Map, Value, json};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
+use sjmcl_types::error::SJMCLResult;
 use std::{
   collections::HashMap,
   io::Cursor,
@@ -31,12 +28,19 @@ use std::{
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
+use crate::account::models::{PlayerInfo, SkinModel};
+use crate::utils::image::ImageWrapper;
+use crate::utils::sys_info::find_free_port;
+
 static KEY_PAIR: OnceLock<(RsaPrivateKey, RsaPublicKey)> = OnceLock::new();
 
 fn generate_key_pair() -> (RsaPrivateKey, RsaPublicKey) {
   let mut rng = rand_core::OsRng;
   // 4096-bit RSA generation is noticeably slow in unoptimized debug builds.
-  let bits = if cfg!(debug_assertions) { 2048 } else { 4096 };
+  let bits = cfg_select! {
+    debug_assertions => 2048,
+    _ => 4096,
+  };
   let private_key = RsaPrivateKey::new(&mut rng, bits).expect("Failed to generate private key");
   let public_key = RsaPublicKey::from(&private_key);
   (private_key, public_key)
@@ -129,7 +133,7 @@ impl YggdrasilServer {
     let port = find_free_port(Some(18960)).unwrap(); // 饮水思源，爱国荣校
 
     Self {
-      root_url: format!("http://localhost:{}", port),
+      root_url: format!("http://127.0.0.1:{}", port),
       port,
       players: Arc::new(Mutex::new(vec![])),
     }

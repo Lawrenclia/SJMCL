@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { LauncherConfig, VersionMetaInfo } from "@/models/config";
+import { JavaInfo } from "@/models/misc";
 import { InvokeResponse } from "@/models/response";
-import { JavaInfo } from "@/models/system-info";
 import { responseHandler } from "@/utils/response";
 
 export const CONFIG_PARTIAL_UPDATE_EVENT = "config:partial-update";
@@ -40,14 +40,12 @@ export class ConfigService {
   }
 
   /**
-   * RESTORE the launcher configs to their default state and returns the new configuration.
+   * RESET the launcher configs to their default state and returns the new configuration.
    * @returns {Promise<InvokeResponse<LauncherConfig>>}
    */
   @responseHandler("config")
-  static async restoreLauncherConfig(): Promise<
-    InvokeResponse<LauncherConfig>
-  > {
-    return await invoke("restore_launcher_config");
+  static async resetLauncherConfig(): Promise<InvokeResponse<LauncherConfig>> {
+    return await invoke("reset_launcher_config");
   }
 
   /**
@@ -143,6 +141,18 @@ export class ConfigService {
     version: string
   ): Promise<InvokeResponse<void>> {
     return await invoke("download_mojang_java", { version });
+  }
+
+  /**
+   * RETRIEVE renderers supported by the current platform for a graphics API.
+   * @param api Graphics API: default, opengl, or vulkan.
+   * @returns {Promise<InvokeResponse<string[]>>}
+   */
+  @responseHandler("config")
+  static async retrieveSupportedGraphicsRenderers(
+    api: string
+  ): Promise<InvokeResponse<string[]>> {
+    return await invoke("retrieve_supported_graphics_renderers", { api });
   }
 
   /**

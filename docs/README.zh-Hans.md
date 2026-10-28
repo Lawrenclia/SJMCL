@@ -53,6 +53,12 @@ SJMCL 目前支持以下平台：
 curl -LsSf https://mc.sjtu.cn/sjmcl/releases/install.sh | sh -s -- --source sjmc
 ```
 
+如果安装了 [Homebrew](https://brew.sh)，可以通过 [Homebrew](https://brew.sh) Cask 来安装：
+
+```bash
+brew install --cask sjmcl
+```
+
 不使用 root 权限安装 Linux 便携版：
 
 ```bash
@@ -79,6 +85,9 @@ makepkg -si
 sudo snap install sjmcl
 ```
 
+> [!WARNING]
+> 使用 Snap 安装时，游戏数据可能会默认存放在沙盒目录内。卸载启动器前，请及时备份存档、资源包、模组等重要数据。
+
 </details>
 
 <details>
@@ -87,7 +96,7 @@ sudo snap install sjmcl
 通过 Homebrew 安装：
 
 ```bash
-brew install --cask SJMC-Dev/SJMCL/sjmcl
+brew install --cask sjmcl
 ```
 
 </details>
@@ -101,6 +110,9 @@ brew install --cask SJMC-Dev/SJMCL/sjmcl
 winget install SJMC.SJMCL
 ```
 
+> [!WARNING]
+> Winget 的索引仓库是公开协作维护的。安装前建议运行 `winget show SJMC.SJMCL` 查看安装器地址，并确认下载来源来自 `github.com/UNIkeEN/SJMCL` 或 `sjmcl.club`。
+
 </details>
 
 更多安装方式与平台注意事项，请参阅 [用户文档](https://mc.sjtu.cn/sjmcl/docs/install)。
@@ -113,13 +125,13 @@ winget install SJMC.SJMCL
 
 ```bash
 git clone git@github.com:UNIkeEN/SJMCL.git
-npm install
+pnpm install
 ```
 
 使用开发模式运行：
 
 ```bash
-npm run tauri dev
+pnpm tauri dev
 ```
 
 我们热烈欢迎每一位开发者的贡献。
@@ -132,9 +144,9 @@ npm run tauri dev
 
 如果您希望为 SJMCL 开发扩展，欢迎查看 [扩展文档](https://mc.sjtu.cn/sjmcl/dev/extension/)。内含扩展系统的介绍、API 参考。我们还提供了脚手架，便于快速创建模板项目并上手。
 
-### 仓库活动
+### 贡献者
 
-![仓库活动](https://repobeats.axiom.co/api/embed/ee2f4be0fbc708179a6b40c83cd8ce80702fe6fe.svg "Repobeats analytics image")
+![贡献者](https://contrib.rocks/image?repo=UNIkeEN/SJMCL "贡献者")
 
 ## 版权声明
 

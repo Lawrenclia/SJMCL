@@ -39,6 +39,10 @@
           "title": "LittleSkin",
           "description": "感謝 LittleSkin 和 @tnqzh123 對登入流程設計的幫助"
         },
+        "mcim": {
+          "title": "mcmod-info-mirror",
+          "description": "提供模組資訊的簡體中文翻譯"
+        },
         "scl": {
           "title": "Swift Craft Launcher",
           "description": "感謝 SCL 開發團隊與我們的持續交流與相互啟發"
@@ -95,7 +99,7 @@
       },
       "modpack": {
         "title": "匯入模組包",
-        "description": "從本機檔案或網際網路匯入模組包（CurseForge, Modrinth 或 MultiMC 格式）"
+        "description": "從本機檔案或網際網路匯入模組包（CurseForge、Modrinth 或 MultiMC 格式）"
       },
       "manageDirs": {
         "title": "管理遊戲目錄",
@@ -112,12 +116,6 @@
         "title": "下載服務端",
         "description": "下載各版本原版遊戲服務端檔案"
       }
-    }
-  },
-  "MainLayout": {
-    "fileDnD": {
-      "title": "匯入模組包",
-      "desc": "將模組包檔案 {{fileName}} 匯入到 SJMCL"
     }
   },
   "AddAuthServerModal": {
@@ -225,6 +223,96 @@
       "usePasswordLogin": "帳號密碼登入"
     }
   },
+  "AgentButton": {
+    "enabled": "Glad to serve you, {{name}}!",
+    "disabled": "Please enable Intelligence functions.",
+    "turnToSettings": "Go to Settings",
+    "startChatting": "Start Chatting",
+    "joinGame": "Want to play Minecraft with me?",
+    "joinGameConfirm": "Join Miuxi"
+  },
+  "AgentChatPage": {
+    "bottomWarning": "By AI assistant, for reference only.",
+    "noHistory": "No chat history yet.",
+    "untitledSession": "Untitled Session",
+    "description": "Start your first conversation with Miuxi!",
+    "placeholder": "Ask Miuxi anything, press Enter to send~",
+    "suggestions": {
+      "items": [
+        "幫我下載最新版 Minecraft",
+        "啟動遊戲",
+        "看看 SJMC 新聞",
+        "你能幫我做什麼",
+        "幫我檢查 Java 環境",
+        "建立一個 Fabric 實例",
+        "為實例分配合適的記憶體",
+        "查看已安裝的模組",
+        "幫我排查模組衝突",
+        "幫我分析崩潰日誌",
+        "查看實例中的世界",
+        "調整遊戲視窗大小"
+      ]
+    },
+    "thinking": "Thinking",
+    "thinkingFinished": "Thinking Finished",
+    "skipThinking": "Skip thinking",
+    "skipThinkingPrompt": "Stop showing the thinking process and provide the final answer directly. Do not output any <think> tag content.",
+    "resizePanel": "調整 MiuChat 面板寬度",
+    "toolCall": {
+      "params": "參數 / 指令碼",
+      "running": "執行中",
+      "pending": "等待確認",
+      "cancelled": "已取消",
+      "waiting": "等待執行",
+      "title": "Call Magic",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "execute": "Execute",
+      "result": "Result",
+      "error": "Error",
+      "launchInstance": {
+        "success": "Successfully opened game launching panel",
+        "fail": "Failed to find the game instance"
+      }
+    }
+  },
+  "AgentJoinGameModal": {
+    "header": {
+      "title": "Invite Miuxi to Join the Game"
+    },
+    "steps": {
+      "player": {
+        "title": "Select Offline Account",
+        "noOfflineAccounts": "No offline accounts available",
+        "addOfflineAccount": "Add Offline Account"
+      },
+      "instance": {
+        "title": "Select Instance",
+        "noSupportedInstances": "No supported instances available (only supports Minecraft {{version}})",
+        "goCreateInstance": "Go to Download",
+        "launchAndNext": "Launch and Next"
+      },
+      "server": {
+        "title": "Connect to Local Network Server",
+        "description1": "Please press",
+        "description2": "in the game to open the settings panel, and select \"Open to LAN\".",
+        "port": "Port Number",
+        "portDescription": "Local game server port (auto-detected)",
+        "botName": "Bot Name",
+        "botNameDescription": "Only English letters, underscores, and numbers allowed, and cannot conflict with existing players in the game",
+        "botNameInvalid": "Invalid name",
+        "botInGame": "Running",
+        "joinServer": "Join Server",
+        "error": {
+          "not_in_game": "Not in game",
+          "connection_failed": "Bot connection to server failed",
+          "disconnected": "Bot disconnected from server",
+          "death": "Bot has died in the game",
+          "unknown": "Unknown reason"
+        }
+      }
+    }
+  },
   "AlertResourceDependencyModal": {
     "header": {
       "title": "存在前置資源"
@@ -302,6 +390,9 @@
           "title": "介面字型",
           "default": "預設"
         },
+        "logFontFamily": {
+          "title": "日誌字型"
+        },
         "fontSize": {
           "title": "字型大小",
           "small": "小",
@@ -367,7 +458,8 @@
     "footer": {
       "installFabricApi": "同時安裝 Fabric API 模組",
       "installQFAPI": "同時安裝 QFAPI / QSL 模組（如果可用）",
-      "reinstall": "重新安裝"
+      "reinstall": "重新安裝",
+      "removeCurrentInstallation": "移除安裝"
     }
   },
   "CheckModUpdateModal": {
@@ -451,7 +543,7 @@
   "DeleteGameFriendDialog": {
     "dialog": {
       "title": "刪除好友",
-      "content": "確定要刪除好友 “{{name}}” 嗎？"
+      "content": "確定要刪除好友「{{name}}」嗎？"
     }
   },
   "DeleteGameServerAlertDialog": {
@@ -492,7 +584,7 @@
   "DiscoverHomePage": {
     "minecraft-news": "Minecraft 新聞",
     "community-news": "社群新聞",
-    "hotModpacks": "來自 {{source}} 的熱門整合包"
+    "hotModpacks": "來自 {{source}} 的熱門模組包"
   },
   "DiscoverLayout": {
     "discoverDomainList": {
@@ -500,7 +592,7 @@
       "home": "首頁",
       "community-news": "社群",
       "minecraft-news": "Minecraft 新聞",
-      "modpack": "整合包",
+      "modpack": "模組包",
       "mod": "模組",
       "world": "世界",
       "resourcepack": "資源包",
@@ -596,16 +688,8 @@
       "headExtra": "需要重新啟動",
       "settings": {
         "enabled": {
-          "title": "啟用 Proxy"
-        },
-        "type": {
-          "title": "Proxy 類型"
-        },
-        "host": {
-          "title": "伺服器"
-        },
-        "port": {
-          "title": "埠"
+          "title": "為下載任務啟用代理",
+          "description": "此項關閉時，啟動器將自動使用系統代理下載資源"
         }
       }
     }
@@ -626,7 +710,7 @@
       "cancel": "取消",
       "download": "下載",
       "installToInstance": "安裝到實例",
-      "installToCurrentInstance": "安裝到當前實例",
+      "installToCurrentInstance": "安裝到目前實例",
       "install": "安裝"
     }
   },
@@ -641,6 +725,7 @@
     },
     "label": {
       "paused": "已暫停",
+      "finalizing": "正在完成安裝",
       "completed": "已完成",
       "error": "失敗",
       "cancelled": "已取消"
@@ -662,17 +747,13 @@
       "mod-update": "更新模組",
       "retry": "重試",
       "neoforge-libraries": "NeoForge 執行庫",
+      "cleanroom-libraries": "Cleanroom 執行庫",
       "forge-libraries": "Forge 執行庫",
       "optifine-libraries": "OptiFine 執行庫",
       "launcher-update": "更新啟動器",
       "extension-update": "更新擴充套件 {{param1}} {{param2}}",
       "mojang-java": "Java {{param}} 執行時"
     }
-  },
-  "Editable": {
-    "edit": "編輯",
-    "save": "儲存",
-    "cancel": "取消"
   },
   "EditGameDirectoryModal": {
     "header": {
@@ -717,6 +798,11 @@
         "invalid": "目錄路徑不合法"
       }
     }
+  },
+  "Editable": {
+    "edit": "編輯",
+    "save": "儲存",
+    "cancel": "取消"
   },
   "Empty": {
     "noData": "無資料"
@@ -788,7 +874,7 @@
       "includedFiles": "包含檔案",
       "exportOptions": "匯出選項",
       "packWithLauncher": "打包啟動器",
-      "minMemory": "最低記憶體 (MB)",
+      "minMemory": "最低記憶體 (MiB)",
       "noCreateRemoteFiles": "停用遠端檔案",
       "skipCurseForgeRemoteFiles": "略過 CurseForge 遠端檔案"
     },
@@ -798,7 +884,7 @@
     "error": {
       "invalidName": "請輸入有效的模組包名稱",
       "invalidVersion": "請輸入有效的版本號",
-      "noFileSelected": "請至少選擇一個要包含的檔案或資料夾"
+      "noFileSelected": "請至少選擇一個要包含的檔案或目錄"
     },
     "errorMessage": {
       "error-1": "名稱不能為空",
@@ -821,7 +907,7 @@
     }
   },
   "ExtensionContributionWrapper": {
-    "failedToRender": "擴充套件內容渲染失敗。"
+    "failedToRender": "擴充套件內容繪製失敗。"
   },
   "ExtensionHostContextProvider": {
     "extensionProvidedDialog": "目前對話框由擴充套件 {{name}} 提供",
@@ -918,13 +1004,65 @@
         },
         "javaPermanentGenerationSpace": {
           "title": "記憶體永久儲存區域",
-          "placeholder": "單位 MB"
+          "placeholder": "單位 MiB"
         },
         "environmentVariable": {
           "title": "環境變數"
         },
         "args": {
           "title": "Java 虛擬機器引數"
+        }
+      }
+    },
+    "graphics": {
+      "title": "圖形",
+      "settings": {
+        "api": {
+          "title": "圖形 API",
+          "default": {
+            "label": "預設",
+            "desc": "遵循 Minecraft 與顯示卡驅動程式的預設設定。"
+          },
+          "opengl": {
+            "label": "OpenGL",
+            "desc": "使用 OpenGL 渲染"
+          },
+          "vulkan": {
+            "label": "Vulkan",
+            "desc": "使用 Vulkan 渲染"
+          }
+        },
+        "renderer": {
+          "title": "算繪器 / 驅動程式",
+          "default": "預設",
+          "llvmpipe": "LLVMpipe",
+          "zink": "Zink",
+          "d3d12": "D3D12",
+          "lavapipe": "Lavapipe",
+          "dozen": "Dozen",
+          "nvidia_vulkan": "NVIDIA Vulkan",
+          "nvidia_nvk": "NVK",
+          "amdvlk": "AMDVLK",
+          "amd_radv": "RADV",
+          "intel_vulkan": "Intel Vulkan",
+          "intel_anv": "ANV",
+          "intel_hasvk": "HASVK",
+          "qualcomm": "Qualcomm Vulkan",
+          "turnip": "Turnip",
+          "moltenvk": "MoltenVK",
+          "kosmickrisp": "KosmicKrisp",
+          "powervr": "PowerVR",
+          "panvk": "PanVK",
+          "v3dv": "V3DV"
+        }
+      }
+    },
+    "proxy": {
+      "title": "代理",
+      "settings": {
+        "enabled": {
+          "title": "為遊戲處理程序啟用代理",
+          "description": "此項關閉時，遊戲將自動使用系統代理"
         }
       }
     },
@@ -936,7 +1074,10 @@
           "title": "遊戲檔案完整性檢查策略",
           "disable": "不檢查",
           "normal": "普通檢查",
-          "full": "增強檢查"
+          "full": "增強檢查",
+          "disableDesc": "",
+          "normalDesc": "檢查檔案是否存在，缺失時自動補全",
+          "fullDesc": "檢查檔案 SHA1 完整性，缺失時自動補全（耗時較長）"
         },
         "dontCheckJvmValidity": {
           "title": "不檢查 Java 虛擬機器與遊戲的相容性"
@@ -960,6 +1101,12 @@
         },
         "useNativeOpenal": {
           "title": "使用系統 OpenAL（僅 Linux）"
+        },
+        "autoCloseGameCrashWindow": {
+          "title": "自動關閉崩潰提示視窗",
+          "disabled": "不自動關閉",
+          "tenSeconds": "10 秒後自動關閉",
+          "thirtySeconds": "30 秒後自動關閉"
         }
       }
     }
@@ -977,6 +1124,15 @@
     "javaInfo": {
       "javaVersion": "Java 版本"
     },
+    "button": {
+      "exportGameInfo": "匯出遊戲崩潰報告",
+      "gameLogs": "遊戲日誌",
+      "help": "幫助",
+      "aiAnalysis": "AI Analysis"
+    },
+    "autoCloseCountdown": "視窗將在 {{seconds}} 秒後自動關閉（點擊視窗任意位置可取消）",
+    "bottomAlert": "如需尋求他人幫助，請匯出併發送崩潰報告，而非這個視窗的截圖",
+    "helpUrl": "https://mc.sjtu.cn/sjmcl/docs/user-group.html",
     "crashDetails": {
       "title": "崩潰資訊",
       "OPENJ9": "目前實例無法在 OpenJ9 JVM 上執行，請使用 HotSpot JVM。",
@@ -1045,12 +1201,7 @@
       "FORGE_LITELOADER_CONFLICT": "目前實例由於 Forge 與 LiteLoader 衝突，無法繼續執行。請嘗試刪除 LiteLoader 或更換 Forge 版本。",
       "UNKNOWN": "暫時無法分析該錯誤，請檢視遊戲日誌或匯出錯誤崩潰報告。"
     },
-    "button": {
-      "exportGameInfo": "匯出遊戲崩潰報告",
-      "gameLogs": "遊戲日誌",
-      "help": "幫助"
-    },
-    "bottomAlert": "如需尋求他人幫助，請匯出併發送崩潰報告，而非這個視窗的截圖"
+    "aiAnalysis": "AI Analysis"
   },
   "GameLogPage": {
     "placeholder": "輸入關鍵字篩選",
@@ -1127,9 +1278,11 @@
     "version": {
       "dev": "開發版本",
       "nightly": "夜間構建版本",
-      "beta": "測試版本"
+      "beta": "測試版本",
+      "test-build": "測試構建版本"
     },
-    "viewOnWiki": "在 Minecraft Wiki 中檢視"
+    "viewOnWiki": "在 Minecraft Wiki 中檢視",
+    "unknown": "Unknown"
   },
   "GeneralSettingsPage": {
     "language": {
@@ -1149,7 +1302,7 @@
         },
         "skipFirstScreenOptions": {
           "title": "自動設定實例語言",
-          "description": "啟用後，建立實例的語言將自動設定為簡體中文，這將同時跳過無障礙功能設定"
+          "description": "啟用後，建立實例的語言將自動設定為啟動器語言，這將同時跳過遊戲內無障礙功能設定"
         }
       }
     },
@@ -1177,7 +1330,11 @@
         },
         "autoDownloadJava": {
           "title": "自動下載可用版本 Java 執行時",
-          "description": "啟用後，新建實例時若不存在可用版本的 Java 執行時，將自動安裝至特定目錄"
+          "description": "啟用後，建立實例時若不存在可用版本的 Java 執行時，將自動安裝至特定目錄"
+        },
+        "enableAiProvider": {
+          "title": "Generative AI Features",
+          "description": "When enabled, AI can analyze crash causes on the game crash page."
         }
       }
     },
@@ -1205,10 +1362,10 @@
           "title": "自動清理啟動器日誌",
           "description": "自動清理 30 天及以前的啟動器日誌檔案"
         },
-        "restoreAll": {
-          "title": "還原所有設定",
-          "description": "將所有啟動器設定還原為預設值",
-          "restore": "還原"
+        "resetAll": {
+          "title": "重設所有設定",
+          "description": "將所有啟動器設定重設為預設值",
+          "reset": "重設"
         }
       }
     }
@@ -1247,14 +1404,16 @@
       "settings": {
         "resolution": {
           "title": "遊戲解析度",
-          "switch": "全螢幕"
+          "preset": "預設",
+          "switch": "全螢幕",
+          "warning": "解析度可能超出顯示器上限"
         },
         "customTitle": {
           "title": "自訂視窗標題"
         },
         "customInfo": {
           "title": "自訂資訊",
-          "description": "將顯示在遊戲主介面左下角與 F3 除錯頁面左上角"
+          "description": "將顯示在遊戲主介面左下角與 F3 除錯頁面左上角（僅在 Minecraft 26.1 之前的版本生效）"
         }
       }
     },
@@ -1269,7 +1428,7 @@
         },
         "memoryUsage": {
           "title": "記憶體佔用情況",
-          "description": "已用記憶體 {{usedMemory}} GB；遊戲分配 {{allocatedMemory}} GB；總記憶體 {{totalMemory}} GB"
+          "description": "已用記憶體 {{usedMemory}} GiB；遊戲分配 {{allocatedMemory}} GiB；總記憶體 {{totalMemory}} GiB"
         },
         "processPriority": {
           "title": "處理程式優先度",
@@ -1309,6 +1468,10 @@
           "button": "編輯高階設定"
         }
       }
+    },
+    "topWarning": {
+      "specGameConfigWarning": "目前實例「{{instance}}」已勾選「啟用特定遊戲設定」，因此本頁面選項不會套用至該實例。",
+      "editInstanceSettings": "前往編輯該實例專屬遊戲設定"
     }
   },
   "GuidedTourProvider": {
@@ -1322,7 +1485,7 @@
     },
     "step3": {
       "title": "發現頁",
-      "content": "在此處瀏覽 Minecraft 與社群新聞，發現並下載各類相關資源，如模組、地圖、整合包等。<br/>另外，您也可以透過鍵盤快捷鍵 <key>{{keyname}}</key> + <key>F</key> 快速開啟「聚合搜尋」。"
+      "content": "在此處瀏覽 Minecraft 與社群新聞，發現並下載各類相關資源，如模組、地圖、模組包等。<br/>另外，您也可以透過鍵盤快捷鍵 <key>{{keyname}}</key> + <key>F</key> 快速開啟「聚合搜尋」。"
     },
     "step4": {
       "title": "啟動 Minecraft！",
@@ -1369,6 +1532,10 @@
         "curseforge": {
           "title": "CurseForge",
           "description": "探索世界上最大的 Minecraft 模組儲存庫"
+        },
+        "modrinth": {
+          "title": "Modrinth",
+          "description": "開源、現代的 Minecraft 資源平台"
         }
       }
     },
@@ -1380,7 +1547,7 @@
         },
         "UserGroup": {
           "title": "使用者社群",
-          "description": "歡迎加入 QQ 群或 Discord 伺服器，回報問題、請求功能或取得協助",
+          "description": "歡迎加入 QQ 群或 GitHub Discussions，回報問題、請求功能或取得協助",
           "url": "https://mc.sjtu.cn/sjmcl/docs/user-group"
         }
       }
@@ -1398,8 +1565,14 @@
     "header": {
       "title": "從其他啟動器匯入帳戶資訊"
     },
+    "launcherName": {
+      "HMCL": "HMCL (3.16+)",
+      "LegacyHMCL": "HMCL (< 3.16)",
+      "MultiMC": "MultiMC"
+    },
     "launcherDesc": {
       "HMCL": "Hello Minecraft! Launcher",
+      "LegacyHMCL": "Hello Minecraft! Launcher",
       "MultiMC": "MultiMC"
     },
     "body": {
@@ -1505,27 +1678,22 @@
       "title": "原理圖"
     }
   },
-  "InstanceScreenshotsPage": {
-    "button": {
-      "details": "詳情"
-    }
-  },
   "InstanceSettingsPage": {
     "name": "實例名稱",
     "description": "實例描述",
     "colorTag": "顏色標籤",
     "icon": "實例圖示",
     "applySettings": "啟用特定遊戲設定",
-    "restoreSettings": "重設以下特定設定",
-    "restoreSettingsDesc": "將以下特定設定重設為全域性遊戲設定",
-    "restore": "重設",
+    "resetSettings": "重設以下特定設定",
+    "resetSettingsDesc": "將以下特定設定重設為全域性遊戲設定",
+    "reset": "重設",
     "errorMessage": {
       "error-1": "實例名稱不能為空",
       "error-2": "實例名稱不合法",
       "error-3": "實例名稱太長"
     },
     "tipsToGlobal": {
-      "content": "目前實例未啟用特定遊戲設定，<terms>前往全域性遊戲設定</terms>"
+      "content": "目前實例未啟用特定遊戲設定，<toGlobal>前往全域性遊戲設定</toGlobal>"
     }
   },
   "InstanceShaderPacksPage": {
@@ -1620,6 +1788,22 @@
           "description": "啟動器 MCP 服務使用的固定本機連接埠。"
         }
       }
+    },
+    "masterSwitch": {
+      "title": "Intelligent Services",
+      "description": "Enhance SJMCL with intelligent features powered by user-provided generative language models"
+    },
+    "setActive": "Set as Active",
+    "add": "Add Provider",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this provider?",
+    "failoverHint": "When the active provider fails, enabled providers will be tried in priority order.",
+    "providerType": {
+      "ollama": "Ollama",
+      "openAiCompatible": "OpenAI Compatible",
+      "anthropic": "Anthropic (Claude)",
+      "gemini": "Google Gemini"
     }
   },
   "JavaSettingsPage": {
@@ -1643,6 +1827,86 @@
     "confirmDelete": {
       "title": "移除 Java",
       "description": "確認要移除此版本 Java 嗎？（SJMCL 將無法使用此 Java 啟動遊戲，但不會刪除硬碟上的檔案）"
+    }
+  },
+  "LLMProviderSettingsModal": {
+    "header": {
+      "title": {
+        "add": "Add LLM Provider",
+        "edit": "Edit LLM Provider"
+      }
+    },
+    "content": {
+      "model": {
+        "title": "Model",
+        "settings": {
+          "name": {
+            "title": "Model Name",
+            "placeholder": "e.g., ChatGPT-4"
+          },
+          "provider": {
+            "title": "Service Provider",
+            "options": {
+              "ollama": "Ollama",
+              "openAiCompatible": "OpenAI Compatible",
+              "anthropic": "Anthropic (Claude)",
+              "gemini": "Google Gemini"
+            }
+          },
+          "baseUrl": {
+            "title": "Base URL",
+            "fullUrl": "Full URL: {{url}}"
+          },
+          "endpoint": {
+            "title": "API Endpoint"
+          },
+          "apiKey": {
+            "title": "API Key"
+          },
+          "model": {
+            "title": "Model Name"
+          },
+          "checkAvailability": {
+            "title": "Availability",
+            "available": "Available",
+            "unavailable": "Unavailable"
+          }
+        }
+      },
+      "parameters": {
+        "title": "Advanced Parameters",
+        "temperature": {
+          "title": "Temperature",
+          "description": "Controls randomness. Higher values make output more creative, lower values more deterministic."
+        },
+        "maxTokens": {
+          "title": "Max Tokens",
+          "description": "The maximum number of tokens to generate in the response."
+        },
+        "topP": {
+          "title": "Top P",
+          "description": "Nucleus sampling. Consider tokens with cumulative probability reaching top_p."
+        },
+        "frequencyPenalty": {
+          "title": "Frequency Penalty",
+          "description": "Penalizes tokens based on their frequency in the text so far. OpenAI-compatible only."
+        },
+        "presencePenalty": {
+          "title": "Presence Penalty",
+          "description": "Penalizes tokens based on their presence in the text so far. OpenAI-compatible only."
+        }
+      }
+    }
+  },
+  "LanguageMenu": {
+    "localeName": {
+      "en": "英語",
+      "es": "西班牙語",
+      "fr": "法語",
+      "ja": "日語",
+      "lzh": "",
+      "zh-Hans": "",
+      "zh-Hant": ""
     }
   },
   "LastExitedAbnormallyDialog": {
@@ -1692,15 +1956,23 @@
     "notCompatibleWith": "與 {{item}} 不相容",
     "noVersionSelected": "未選擇版本"
   },
-  "MainWindowTitlebar": {
-    "extensionProvidedPage": "此頁面由擴充套件 {{name}} 提供"
+  "MCVersionNumberHelper": {
+    "content": "自 2026 年起，Minecraft 版本號採取新的命名規則，以年份作為版本號首位（如 26.1）以取代原有的 1.x 版本號規則。",
+    "linkText": "閱讀官方文件",
+    "url": "https://www.minecraft.net/zh-hans/article/minecraft-new-version-numbering-system"
+  },
+  "MainLayout": {
+    "fileDnD": {
+      "title": "匯入模組包",
+      "desc": "將模組包檔案 {{fileName}} 匯入到 SJMCL"
+    }
   },
   "ManageSkinModal": {
     "skinManage": "管理外觀",
     "default": "預設",
     "steve": "Steve",
     "alex": "Alex",
-    "upload": "本機上傳",
+    "upload": "選擇本機外觀",
     "skin": "外觀",
     "cape": "披風",
     "model": {
@@ -1720,14 +1992,9 @@
       "javaPath": "請輸入或選擇 Java 可執行檔案路徑"
     }
   },
-  "MCVersionNumberHelper": {
-    "content": "自 2026 年起，Minecraft 版本號採取新的命名規則，以年份作為版本號首位（如 26.1）以取代原有的 1.x 版本號規則。",
-    "linkText": "閱讀官方文件",
-    "url": "https://www.minecraft.net/zh-hans/article/minecraft-new-version-numbering-system"
-  },
   "MemoryStatusProgress": {
     "title": "記憶體狀態",
-    "info": "{{used}} / {{total}} GB 已使用",
+    "info": "{{used}} / {{total}} GiB 已使用",
     "label": {
       "now": "正在使用",
       "maxAllocation": "為 Minecraft 分配的最大值"
@@ -1763,7 +2030,7 @@
     },
     "status": {
       "INVITED": "邀請你加入其世界",
-      "ONLINE": "在線",
+      "ONLINE": "上線",
       "PLAYING_OFFLINE": "單人遊戲中",
       "PLAYING_REALMS": "正在玩 Realms",
       "PLAYING_SERVER": "正在伺服器中",
@@ -1783,6 +2050,7 @@
   },
   "OptionItemGroup": {
     "button": {
+      "loadMore": "載入更多（+{{left}}）",
       "showAll": "顯示全部（+{{left}}）"
     }
   },
@@ -1815,6 +2083,17 @@
       "deleting": "正在刪除角色"
     }
   },
+  "ProxySettingsGroup": {
+    "type": {
+      "title": "代理類型"
+    },
+    "host": {
+      "title": "伺服器"
+    },
+    "port": {
+      "title": "連接埠"
+    }
+  },
   "ReLoginPlayerModal": {
     "modal": {
       "title": "重新登入"
@@ -1829,6 +2108,26 @@
     "button": {
       "login": "登入"
     }
+  },
+  "RemoveModLoaderDialog": {
+    "dialog": {
+      "title": "移除模組載入器",
+      "content": "確認要移除為 {{instanceName}} 已安裝的模組載入器 {{type}} {{version}} 嗎？您的模組可能將無法使用。"
+    }
+  },
+  "RemoveOptifineDialog": {
+    "dialog": {
+      "title": "移除 OptiFine",
+      "content": "確認要移除為 {{instanceName}} 已安裝的 OptiFine {{version}} 嗎？您的光影可能將無法使用。"
+    }
+  },
+  "ResetConfigConfirmDialog": {
+    "title": "重設啟動器設定",
+    "body": "此操作將會重設啟動器的所有設定為預設值，您確定要繼續嗎？"
+  },
+  "ResetInstanceConfigConfirmDialog": {
+    "title": "重設實例設定",
+    "body": "此操作將會重設本實例的遊戲設定為目前全域性遊戲設定，您確定要繼續嗎？"
   },
   "ResourceDownloader": {
     "label": {
@@ -1846,7 +2145,7 @@
         "All": "全部",
         "Addons": "附屬模組",
         "Adventure and RPG": "冒險 RPG",
-        "API and Library": "支援庫",
+        "API and Library": "API 與程式庫",
         "Applied Energistics 2": "應用能源 2",
         "Armor, Tools, and Weapons": "裝備 武器",
         "Automation": "自動化",
@@ -1897,22 +2196,22 @@
       "Modrinth": {
         "All": "全部",
         "adventure": "冒險",
-        "cursed": "詛咒",
+        "cursed": "邪門",
         "decoration": "裝飾",
         "economy": "經濟",
         "equipment": "裝備",
         "food": "食物",
         "game-mechanics": "遊戲機制",
-        "library": "支援庫",
+        "library": "程式庫",
         "magic": "魔法",
         "management": "管理",
         "minigame": "小遊戲",
         "mobs": "生物",
         "optimization": "最佳化",
         "social": "社交",
-        "storage": "儲存",
+        "storage": "儲物管理",
         "technology": "科技",
-        "transportation": "交通運輸",
+        "transportation": "交通",
         "utility": "實用",
         "worldgen": "世界生成"
       }
@@ -1934,12 +2233,12 @@
       "CurseForge": {
         "All": "全部",
         "Resolution": "解析度",
-        "16x": "16x",
-        "32x": "32x",
-        "64x": "64x",
-        "128x": "128x",
-        "256x": "256x",
-        "512x and Higher": "512x 及以上",
+        "16x": "16×",
+        "32x": "32×",
+        "64x": "64×",
+        "128x": "128×",
+        "256x": "256×",
+        "512x and Higher": "512× 以上",
         "Styles": "風格",
         "Animated": "動畫",
         "Special": "特殊",
@@ -1956,35 +2255,35 @@
       "Modrinth": {
         "All": "全部",
         "Resolution": "解析度",
-        "8x-": "8x 或更低",
-        "16x": "16x",
-        "32x": "32x",
-        "64x": "64x",
-        "128x": "128x",
-        "256x": "256x",
-        "512x+": "512x 或更高",
+        "8x-": "8× 以下",
+        "16x": "16×",
+        "32x": "32×",
+        "64x": "64×",
+        "128x": "128×",
+        "256x": "256×",
+        "512x+": "512× 以上",
         "Styles": "風格",
-        "audio": "音訊",
+        "audio": "音效",
         "blocks": "方塊",
         "core-shaders": "核心著色器",
         "entities": "實體",
         "environment": "環境",
         "equipment": "裝備",
         "fonts": "字型",
-        "gui": "使用者介面",
+        "gui": "GUI",
         "items": "物品",
         "locale": "在地化",
         "models": "模型",
         "combat": "戰鬥",
-        "cursed": "詛咒",
+        "cursed": "邪門",
         "decoration": "裝飾",
-        "modded": "模組",
+        "modded": "含模組",
         "realistic": "寫實",
         "simplistic": "簡約",
-        "themed": "主題",
-        "tweaks": "最佳化",
-        "utility": "實用",
-        "vanilla-like": "原版風格"
+        "themed": "特定主題",
+        "tweaks": "微調",
+        "utility": "工具",
+        "vanilla-like": "類原版"
       }
     },
     "shaderTagList": {
@@ -1999,25 +2298,25 @@
         "All": "全部",
         "Styles": "風格",
         "cartoon": "卡通",
-        "cursed": "詛咒",
+        "cursed": "邪門",
         "fantasy": "奇幻",
         "realistic": "寫實",
         "semi-realistic": "半寫實",
-        "vanilla-like": "原版風格",
-        "atmosphere": "大氣",
+        "vanilla-like": "類原版",
+        "atmosphere": "大氣效果",
         "bloom": "泛光",
         "colored-lighting": "彩色光照",
         "foliage": "植被",
-        "path-tracing": "路徑追蹤",
+        "path-tracing": "光線追蹤",
         "pbr": "PBR",
         "reflections": "反射",
         "shadows": "陰影",
-        "potato": "極低",
-        "performance": "效能",
+        "potato": "馬鈴薯",
+        "performance": "效能影響",
         "low": "低",
         "medium": "中",
         "high": "高",
-        "screenshot": "影視級"
+        "screenshot": "擷圖用"
       }
     },
     "modpackTagList": {
@@ -2049,9 +2348,9 @@
         "challenging": "挑戰",
         "combat": "戰鬥",
         "kitchen-sink": "大雜燴",
-        "lightweight": "輕量整合",
+        "lightweight": "輕量",
         "magic": "魔法",
-        "multiplayer": "多人",
+        "multiplayer": "多人遊戲",
         "optimization": "最佳化",
         "quests": "任務",
         "technology": "科技"
@@ -2074,23 +2373,23 @@
         "All": "全部",
         "styles": "風格",
         "adventure": "冒險",
-        "cursed": "詛咒",
+        "cursed": "邪門",
         "decoration": "裝飾",
         "economy": "經濟",
         "equipment": "裝備",
         "food": "食物",
         "game-mechanics": "遊戲機制",
-        "library": "支援庫",
+        "library": "程式庫",
         "magic": "魔法",
         "management": "管理",
         "minigame": "小遊戲",
         "mobs": "生物",
         "optimization": "最佳化",
         "social": "社交",
-        "storage": "儲存",
+        "storage": "儲物管理",
         "technology": "科技",
-        "transportation": "交通運輸",
-        "utility": "實用",
+        "transportation": "交通",
+        "utility": "工具",
         "worldgen": "世界生成"
       }
     },
@@ -2117,20 +2416,12 @@
   "RestartForUpdateConfirmDialog": {
     "title": "啟動器更新",
     "body": "新版本已完成下載，重新開啟 SJMCL 以完成更新",
-    "bodyMSI": "新版本已完成下載，點選安裝將關閉 SJMCL 並執行安裝程式",
+    "bodyWinInstaller": "新版本已完成下載，點選安裝將關閉 SJMCL 並執行安裝程式",
     "button": {
       "restart": "重新啟動",
       "install": "安裝",
       "later": "稍後"
     }
-  },
-  "RestoreConfigConfirmDialog": {
-    "title": "還原啟動器設定",
-    "body": "此操作將會還原啟動器的所有設定為預設值，您確定要繼續嗎？"
-  },
-  "RestoreInstanceConfigConfirmDialog": {
-    "title": "重設實例設定",
-    "body": "此操作將會重設本實例的遊戲設定為目前全域性遊戲設定，您確定要繼續嗎？"
   },
   "RevealConfigJsonConfirmDialog": {
     "body": "請謹慎編輯啟動器原始設定檔案，錯誤的格式可能導致原有設定遺失或啟動器無法正常工作"
@@ -2165,10 +2456,10 @@
           "title": "更新啟動器設定失敗"
         }
       },
-      "restoreLauncherConfig": {
-        "success": "設定已成功還原",
+      "resetLauncherConfig": {
+        "success": "設定已成功重設",
         "error": {
-          "title": "還原設定失敗，請重試"
+          "title": "重設設定失敗，請重試"
         }
       },
       "exportLauncherConfig": {
@@ -2225,7 +2516,10 @@
       },
       "downloadMojangJava": {
         "error": {
-          "title": "Mojang Java 執行時下載失敗"
+          "title": "Mojang Java 執行時下載失敗",
+          "description": {
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
+          }
         }
       },
       "checkGameDirectory": {
@@ -2243,7 +2537,16 @@
           "title": "清除下載快取失敗",
           "description": {
             "HAS_ACTIVE_DOWNLOAD_TASKS": "目前有下載任務正在進行中，請稍後再試",
-            "FILE_DELETION_FAILED": "無法刪除快取檔案，可能是檔案正在被使用"
+            "FILE_DELETION_FAILED": "無法刪除快取檔案，可能是檔案正在被使用",
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
+          }
+        }
+      },
+      "downloadLauncherUpdate": {
+        "error": {
+          "title": "下載啟動器更新失敗",
+          "description": {
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
           }
         }
       }
@@ -2268,7 +2571,7 @@
       },
       "fetchOAuthCode": {
         "error": {
-          "title": "獲取認證代碼失敗",
+          "title": "獲取認證程式碼失敗",
           "description": {
             "NETWORK_ERROR": "無法連線至認證伺服器",
             "PARSE_ERROR": "伺服器返回資料格式錯誤",
@@ -2293,7 +2596,7 @@
             "XSTS_BANNED": "您的帳號已被 XBOX 封禁",
             "XSTS_PARENTAL_RESTRICTION": "您的帳號受到家長管控限制",
             "XSTS_NO_XBOX_ACCOUNT": "您的微軟帳號未關聯 XBOX 帳號，請前往 minecraft.net 建立",
-            "XSTS_TERMS_NOT_ACCEPTED": "您需要接受 XBOX 服务条款才能繼續",
+            "XSTS_TERMS_NOT_ACCEPTED": "您需要接受 XBOX 服務條款才能繼續",
             "XSTS_REGION_BANNED": "您所在的國家或地區不受 XBOX Live 支援",
             "XSTS_CHILD_ACCOUNT": "您的帳號為未成年帳號，請前往 family.microsoft.com 進行家長授權",
             "XSTS_UNKNOWN_ERROR": "XSTS 驗證時發生未知錯誤"
@@ -2508,9 +2811,11 @@
           "title": "驗證遊戲檔案失敗",
           "description": {
             "MOD_LOADER_NOT_INSTALLED": "模組載入器未完成安裝",
+            "OPTIFINE_NOT_INSTALLED": "OptiFine 尚未完成安裝",
             "INSTANCE_NOT_FOUND_BY_ID": "實例 ID 不存在",
             "GAME_FILES_INCOMPLETE": "遊戲檔案不完整或缺失",
-            "LAUNCHING_STATE_NOT_FOUND": "啟動狀態遺失"
+            "LAUNCHING_STATE_NOT_FOUND": "啟動狀態遺失",
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
           }
         }
       },
@@ -2601,7 +2906,8 @@
           "title": "下載遊戲伺服器失敗",
           "description": {
             "PARSE_ERROR": "伺服器返回資料格式錯誤",
-            "NETWORK_ERROR": "無法連線到伺服器"
+            "NETWORK_ERROR": "無法連線到伺服器",
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
           }
         }
       },
@@ -2615,13 +2921,14 @@
           }
         }
       },
-      "updateMod": {
+      "updateMods": {
         "error": {
           "title": "更新模組失敗",
           "description": {
             "PARSE_ERROR": "伺服器返回資料格式錯誤",
             "NETWORK_ERROR": "無法連線到伺服器",
-            "FILE_OPERATION_ERROR": "無法重新命名舊模組檔案"
+            "FILE_OPERATION_ERROR": "無法重新命名舊模組檔案",
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
           }
         }
       }
@@ -2647,7 +2954,8 @@
             "FILE_CREATION_FAILED": "目標檔案建立失敗",
             "NETWORK_ERROR": "網路錯誤",
             "CLIENT_JSON_PARSE_ERROR": "實例版本資訊解析錯誤",
-            "ASSET_INDEX_PARSE_ERROR": "資源索引檔案解析錯誤"
+            "ASSET_INDEX_PARSE_ERROR": "資源索引檔案解析錯誤",
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
           }
         }
       },
@@ -2668,7 +2976,7 @@
           }
         }
       },
-      "restoreInstanceGameConfig": {
+      "resetInstanceGameConfig": {
         "success": "實例遊戲設定已重設",
         "error": {
           "title": "實例遊戲設定重設失敗",
@@ -2828,37 +3136,6 @@
           }
         }
       },
-      "finishModLoaderInstall": {
-        "loading": "正在為 {{instanceName}} 安裝模組載入器",
-        "success": "模組載入器安裝完成",
-        "error": {
-          "title": "模組載入器安裝失敗",
-          "description": {
-            "INSTANCE_NOT_FOUND_BY_ID": "實例 ID 不存在",
-            "INSTALLATION_DUPLICATED": "檢測到另一個程式已在安裝中",
-            "MAIN_CLASS_NOT_FOUND": "主類未找到",
-            "PROCESSOR_EXECUTION_FAILED": "安裝任務執行失敗",
-            "LOADER_INSTALLER_NOT_FOUND": "載入器安裝程式不存在"
-          }
-        }
-      },
-      "finishOptiFineLoaderInstall": {
-        "loading": "正在為 {{instanceName}} 安裝 OptiFine",
-        "success": "OptiFine 安裝完成",
-        "error": {
-          "title": "OptiFine 安裝失敗",
-          "description": {
-            "INSTANCE_NOT_FOUND_BY_ID": "實例 ID 不存在",
-            "INSTALLATION_DUPLICATED": "偵測到另一個程序已在安裝中",
-            "PROCESSOR_EXECUTION_FAILED": "安裝工作執行失敗",
-            "LOADER_INSTALLER_NOT_FOUND": "找不到 OptiFine 安裝程式",
-            "MOD_LOADER_VERSION_PARSE_ERROR": "OptiFine 版本資訊解析失敗",
-            "INVALID_SOURCE_PATH": "資源路徑無效",
-            "NO_SUITABLE_JAVA": "沒有找到可用的 Java 執行時",
-            "SELECTED_JAVA_UNAVAILABLE": "所選 Java 執行時不可用"
-          }
-        }
-      },
       "checkChangeModLoaderAvailablity": {
         "error": {
           "title": "無法更改模組載入器",
@@ -2871,7 +3148,36 @@
         "error": {
           "title": "修改模組載入器失敗",
           "description": {
-            "NOT_SUPPORT_CHANGE_MOD_LOADER": "由第三者安裝的版本，無法解除安裝或更換"
+            "NOT_SUPPORT_CHANGE_MOD_LOADER": "由第三者安裝的版本，無法解除安裝或更換",
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
+          }
+        }
+      },
+      "changeOptiFine": {
+        "error": {
+          "title": "修改 OptiFine 失敗",
+          "description": {
+            "DOWNLOAD_ENGINE_ERROR": "下載引擎未能完成操作"
+          }
+        }
+      },
+      "removeModLoader": {
+        "success": "模組載入器移除成功",
+        "error": {
+          "title": "模組載入器移除失敗",
+          "description": {
+            "INSTANCE_NOT_FOUND_BY_ID": "實例 ID 不存在",
+            "FILE_CREATION_FAILED": "實例配置檔案儲存失敗"
+          }
+        }
+      },
+      "removeOptifine": {
+        "success": "OptiFine 移除成功",
+        "error": {
+          "title": "OptiFine 移除失敗",
+          "description": {
+            "INSTANCE_NOT_FOUND_BY_ID": "實例 ID 不存在",
+            "FILE_CREATION_FAILED": "實例配置檔案儲存失敗"
           }
         }
       },
@@ -2936,10 +3242,32 @@
       }
     },
     "task": {
-      "scheduleProgressiveTaskGroup": {
-        "error": "任務建立失敗"
+      "common": {
+        "title": "下載操作失敗",
+        "description": {
+          "NETWORK_ERROR": "網路錯誤：{{details}}",
+          "HTTP_ERROR": "HTTP 錯誤：{{status}}",
+          "IO_ERROR": "檔案操作失敗：{{details}}",
+          "CHECKSUM_MISMATCH": "檔案校驗失敗：預期 {{expected}}，實際 {{actual}}",
+          "CORRUPT_FILES": "檔案損壞：{{paths, list}}",
+          "MISSING_FIELD": "任務缺少欄位：{{field}}",
+          "UNKNOWN_EXECUTOR": "未知的任務執行器：{{executor}}",
+          "INVALID_CONTENT_RANGE": "伺服器傳回了無效的 Content-Range",
+          "RESUME_OFFSET_MISMATCH": "續傳位置不符：預期 {{expected}}，實際 {{actual}}",
+          "OTHER_ERROR": "任務失敗：{{details}}",
+          "EMPTY_GROUP": "任務群組至少需要一項任務",
+          "CHANNEL_CLOSED": "與下載引擎的連線已關閉",
+          "UNKNOWN_GROUP": "找不到任務群組 {{groupId}}",
+          "INVALID_STATE": "任務群組 {{groupId}} 目前狀態不允許此操作",
+          "STORAGE_ERROR": "儲存下載狀態失敗：{{details}}",
+          "ENGINE_NOT_INITIALIZED": "下載引擎尚未初始化",
+          "INSTALLATION_INSTANCE_MISMATCH": "安裝實例與任務不符",
+          "MOD_LOADER_CHANGED": "安裝過程中模組載入器已變更",
+          "OPTIFINE_MISSING": "找不到 OptiFine",
+          "OPTIFINE_CHANGED": "安裝過程中 OptiFine 已變更"
+        }
       },
-      "onTaskGroupUpdate": {
+      "onDownloadGroupUpdate": {
         "status": {
           "Started": "{{param}} 下載任務已開始",
           "Failed": "{{param}} 部分下載失敗，請重試",
@@ -2954,6 +3282,32 @@
         "success": "刪除檔案成功",
         "error": {
           "title": "刪除檔案失敗"
+        }
+      }
+    },
+    "intelligence": {
+      "checkLLMServiceAvailability": {
+        "success": "GenAI service available",
+        "error": {
+          "title": "GenAI service unavailable",
+          "description": {
+            "NETWORK_ERROR": "Network error",
+            "API_PARSE_ERROR": "Failed to parse service API",
+            "NO_SUCH_MODEL": "The specified model does not exist, please check if the name is correct",
+            "INVALID_API_KEY": "Invalid API key"
+          }
+        }
+      },
+      "fetchLLMChatResponse": {
+        "error": {
+          "title": "Failed to retrieve AI chat response",
+          "description": {
+            "NETWORK_ERROR": "Network error",
+            "NOT_ENABLED": "GenAI feature not enabled",
+            "API_PARSE_ERROR": "Failed to parse service API",
+            "INVALID_API_KEY": "Invalid API key",
+            "NO_RESPONSE": "No response received"
+          }
         }
       }
     }
@@ -2980,6 +3334,7 @@
       "wave": "揮手"
     },
     "button": {
+      "saveToLocal": "儲存至本機",
       "enableRotation": "啟用旋轉",
       "disableRotation": "停用旋轉",
       "play": "播放",
@@ -2987,6 +3342,10 @@
     },
     "error": {
       "loadSkin": "載入外觀失敗"
+    },
+    "toast": {
+      "error": "儲存外觀至本機失敗",
+      "success": "已將外觀儲存至本機"
     }
   },
   "SpotlightSearchModal": {
@@ -3057,6 +3416,12 @@
     }
   },
   "Utils": {
+    "byteSize": {
+      "b": "B",
+      "kib": "KiB",
+      "mib": "MiB",
+      "gib": "GiB"
+    },
     "datetime": {
       "formatRelativeTime": {
         "now": "現在",
@@ -3098,6 +3463,9 @@
     "button": {
       "agree": "同意並繼續"
     }
+  },
+  "WindowTitlebar": {
+    "extensionProvidedPage": "此頁面由擴充套件 {{name}} 提供"
   },
   "WorldLevelDataModal": {
     "header": {

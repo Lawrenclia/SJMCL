@@ -1,14 +1,16 @@
 mod account;
 mod debug;
 mod discover;
+mod download;
 mod extension;
 mod instance;
 mod launch;
 mod launcher_config;
 mod resource;
 
-use crate::intelligence::mcp_server::launcher::McpContext;
 use rmcp::handler::server::tool::ToolRoute;
+
+use crate::intelligence::mcp_server::launcher::McpContext;
 
 pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
   let mut routes = Vec::new();
@@ -16,6 +18,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
   routes.extend(launcher_config::tool_routes());
   routes.extend(account::tool_routes());
   routes.extend(discover::tool_routes());
+  routes.extend(download::tool_routes());
   routes.extend(extension::tool_routes());
   routes.extend(instance::tool_routes());
   routes.extend(launch::tool_routes());
