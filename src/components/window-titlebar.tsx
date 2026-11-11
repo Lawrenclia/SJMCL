@@ -6,8 +6,10 @@ import { useTranslation } from "react-i18next";
 import { LuMaximize2, LuMinimize2, LuMinus, LuX } from "react-icons/lu";
 import { CommonIconButton } from "@/components/common/common-icon-button";
 import HeadNavBar from "@/components/head-navbar-v2";
+import LiquidGlassEffect from "@/components/special/liquid-glass-effect";
 import { useLauncherConfig } from "@/contexts/config";
 import { useExtensionHost } from "@/contexts/extension/host";
+import liquidGlassStyles from "@/styles/liquid-glass.module.css";
 
 const MainWindowExtensionTitle = ({
   titlebarHeight,
@@ -46,7 +48,7 @@ const MainWindowExtensionTitle = ({
         h={`${titlebarHeight}px`}
         minH={`${titlebarHeight}px`}
         pos="absolute"
-        zIndex={1}
+        zIndex={4}
         left="50%"
         transform="translateX(-50%)"
       />
@@ -57,6 +59,7 @@ const MainWindowExtensionTitle = ({
     <Flex
       position="absolute"
       inset={0}
+      zIndex={3}
       align="center"
       justify="center"
       pointerEvents="none"
@@ -79,6 +82,7 @@ const WindowTitlebar = () => {
   const isLinux = osType === "linux";
   const isMac = osType === "macos" || osType === "darwin";
   const isWindows = osType === "windows";
+  const useLiquidGlass = isMac && config.appearance.theme.useLiquidGlassDesign;
 
   const titlebarHeight = 40;
   const decorumButtonSize = titlebarHeight - 10;
@@ -214,8 +218,12 @@ const WindowTitlebar = () => {
     <Flex
       h={`${titlebarHeight}px`}
       minH={`${titlebarHeight}px`}
-      bg={titlebarBg}
-      backdropFilter="blur(3px) saturate(140%)"
+      className={useLiquidGlass ? liquidGlassStyles.wrapper : undefined}
+      position="relative"
+      isolation="isolate"
+      borderRadius={0}
+      bg={useLiquidGlass ? "transparent" : titlebarBg}
+      backdropFilter={useLiquidGlass ? "none" : "blur(3px) saturate(140%)"}
       borderBottom="1px solid"
       borderColor={titlebarBorderColor}
       zIndex={9999}
@@ -243,12 +251,15 @@ const WindowTitlebar = () => {
         },
       }}
     >
+      {useLiquidGlass && <LiquidGlassEffect />}
       {isMainWindow && !router.pathname.startsWith("/standalone") && (
         <MainWindowExtensionTitle titlebarHeight={titlebarHeight} />
       )}
       <Flex
         id="sjmcl-window-drag-region"
         data-tauri-drag-region
+        position="relative"
+        zIndex={3}
         flex="1"
         h="100%"
         align="center"
