@@ -1,6 +1,6 @@
 {
   "name": "sjmcl",
-  "version": "1.4.0-miu",
+  "version": "1.4.0-miu-beta2",
   "private": true,
   "browserslist": [
     "Safari >= 14"

@@ -27,7 +27,6 @@ import {
 } from "react-icons/lu";
 import { BeatLoader } from "react-spinners";
 import AgentChat from "@/components/agent-chat";
-import AgentHostess from "@/components/agent-hostess";
 import AdvancedCard from "@/components/common/advanced-card";
 import DevToolbar from "@/components/dev/dev-toolbar";
 import LanguageMenu from "@/components/language-menu";
@@ -497,7 +496,26 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </Flex>
           </Flex>
           {isLaunchPage && !isAgentChatOpen && (
-            <AgentHostess onToggleAgentChat={() => handleAgentChatOpen(true)} />
+            <Box
+              as="button"
+              type="button"
+              aria-label={t("AgentButton.startChatting")}
+              position="absolute"
+              left={0}
+              top={0}
+              bottom={0}
+              w={2}
+              zIndex={5}
+              bg="transparent"
+              onMouseEnter={(event: React.MouseEvent) => {
+                if (event.buttons === 0) handleAgentChatOpen(true);
+              }}
+              onClick={() => handleAgentChatOpen(true)}
+              _focusVisible={{
+                outline: "2px solid",
+                outlineColor: `${primaryColor}.500`,
+              }}
+            />
           )}
           <WelcomeAndTermsModal
             isOpen={isWelcomeAndTermsModalOpen}

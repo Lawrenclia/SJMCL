@@ -103,9 +103,12 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
   const topicSuggestionsValue = t("AgentChatPage.suggestions.items", {
     returnObjects: true,
   });
-  const topicSuggestions = Array.isArray(topicSuggestionsValue)
-    ? topicSuggestionsValue
-    : [];
+  const topicSuggestions = [
+    { label: t("AgentButton.joinGame"), kind: "join-game" as const },
+    ...(Array.isArray(topicSuggestionsValue) ? topicSuggestionsValue : []).map(
+      (label: string) => ({ label, kind: "chat" as const })
+    ),
+  ];
   const shouldShowTopicSuggestions =
     topicSuggestions.length > 0 &&
     input.trim().length === 0 &&
@@ -394,14 +397,21 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
     event.preventDefault();
   };
 
-  const handleSuggestionClick = async (suggestion: string) => {
+  const handleSuggestionClick = async (
+    suggestion: (typeof topicSuggestions)[number]
+  ) => {
     if (suggestionDragStateRef.current.moved || isBusy) return;
 
     if (!config.intelligence.enabled) {
       return;
     }
 
-    const userMsg: ChatMessage = { role: "user", content: suggestion };
+    if (suggestion.kind === "join-game") {
+      openSharedModal("agent-join-game");
+      return;
+    }
+
+    const userMsg: ChatMessage = { role: "user", content: suggestion.label };
     const newMessages = [...messages, userMsg];
 
     setMessages(newMessages);
@@ -739,7 +749,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
                     >
                       {topicSuggestions.map((suggestion) => (
                         <Button
-                          key={suggestion}
+                          key={`${suggestion.kind}-${suggestion.label}`}
                           size="xs"
                           h="30px"
                           px={3}
@@ -751,7 +761,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onAgentChatPanelClose }) => {
                           isDisabled={isBusy}
                           onClick={() => handleSuggestionClick(suggestion)}
                         >
-                          {suggestion}
+                          {suggestion.label}
                         </Button>
                       ))}
                     </Flex>
