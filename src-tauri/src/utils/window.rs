@@ -129,7 +129,7 @@ pub async fn create_webview_window_with_config(
       config.decorations = true;
       config.title_bar_style = TitleBarStyle::Overlay;
       config.hidden_title = true;
-      config.traffic_light_position = Some(LogicalPosition { x: 10.0, y: 12.0 });
+      config.traffic_light_position = Some(LogicalPosition { x: 10.0, y: 22.0 });
     }
   }
 

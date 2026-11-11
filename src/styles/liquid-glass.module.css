@@ -9,6 +9,10 @@
     0 8px 24px rgba(0, 0, 0, 0.14);
 }
 
+.titlebar {
+  border-radius: var(--chakra-radii-xl) var(--chakra-radii-xl) 0 0;
+}
+
 .effect,
 .refraction,
 .shine {

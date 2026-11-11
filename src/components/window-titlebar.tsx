@@ -218,7 +218,11 @@ const WindowTitlebar = () => {
     <Flex
       h={`${titlebarHeight}px`}
       minH={`${titlebarHeight}px`}
-      className={useLiquidGlass ? liquidGlassStyles.wrapper : undefined}
+      className={
+        useLiquidGlass
+          ? `${liquidGlassStyles.wrapper} ${liquidGlassStyles.titlebar}`
+          : undefined
+      }
       position="relative"
       isolation="isolate"
       borderRadius={0}
