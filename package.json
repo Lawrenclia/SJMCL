@@ -6,8 +6,8 @@
     "Safari >= 14"
   ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build --webpack",
+    "dev": "node scripts/next.js dev --webpack",
+    "build": "node scripts/next.js build --webpack",
     "start": "next start",
     "lint": "eslint",
     "tauri": "node scripts/tauri.js",
